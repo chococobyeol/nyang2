@@ -74,7 +74,7 @@ type Voice = {
   baseMidi: number;
   pitchClass: number;
   gain: GainNode;
-  oscillators: OscillatorNode[];
+  sources: AudioScheduledSourceNode[];
   released: boolean;
   stopped: boolean;
 };
@@ -137,6 +137,17 @@ const TRANSPOSE_SHORTCUT_LABELS: Record<TransposeShortcutAction, string> = {
   reset: "C로 초기화",
 };
 
+const NYANG_SAMPLES = [
+  { midi: 60, url: "/audio/nyang/c4.mp3" },
+  { midi: 62, url: "/audio/nyang/d4.mp3" },
+  { midi: 64, url: "/audio/nyang/e4.mp3" },
+  { midi: 65, url: "/audio/nyang/f4.mp3" },
+  { midi: 67, url: "/audio/nyang/g4.mp3" },
+  { midi: 69, url: "/audio/nyang/a4.mp3" },
+  { midi: 71, url: "/audio/nyang/b4.mp3" },
+  { midi: 72, url: "/audio/nyang/c5.mp3" },
+] as const;
+
 const DEFAULT_SETTINGS: Settings = {
   keyboardCount: 1,
   leftOctavePresets: [2, 3, 4, 5],
@@ -154,7 +165,7 @@ const DEFAULT_SETTINGS: Settings = {
   octaveShortcuts: OCTAVE_SHORTCUTS,
   transposeShortcuts: TRANSPOSE_SHORTCUTS,
   masterVolume: 0.72,
-  themeId: "warm-cat",
+  themeId: "nyang-voice",
   breathEnabled: false,
   microphoneSensitivity: 2.1,
   breathGate: 0.035,
@@ -170,9 +181,20 @@ const DEFAULT_VISUALS = {
 
 const THEMES: Theme[] = [
   {
-    id: "warm-cat",
-    name: "따뜻한 고양이",
-    description: "부드러운 임시 피아노 음색",
+    id: "nyang-voice",
+    name: "냥 보이스",
+    description: "직접 녹음한 진짜 냥 소리",
+    waveform: "triangle",
+    harmonic: "sine",
+    harmonicGain: 0.18,
+    accent: "#ef6b5a",
+    accentSoft: "#ffd9d2",
+    visuals: DEFAULT_VISUALS,
+  },
+  {
+    id: "soft-synth",
+    name: "포근 신스",
+    description: "부드럽고 둥근 합성음",
     waveform: "triangle",
     harmonic: "sine",
     harmonicGain: 0.18,
@@ -183,7 +205,7 @@ const THEMES: Theme[] = [
   {
     id: "glass-bell",
     name: "유리 방울",
-    description: "맑고 가벼운 임시 음색",
+    description: "맑고 가벼운 합성음",
     waveform: "sine",
     harmonic: "triangle",
     harmonicGain: 0.28,
@@ -194,7 +216,7 @@ const THEMES: Theme[] = [
   {
     id: "soft-organ",
     name: "말랑 오르간",
-    description: "길고 포근한 임시 음색",
+    description: "길고 포근한 합성음",
     waveform: "square",
     harmonic: "sine",
     harmonicGain: 0.12,
@@ -232,6 +254,22 @@ function codeLabel(code: string) {
     Equal: "=",
   };
   return labels[code] ?? code.replace(/^Numpad/, "Num ");
+}
+
+function quietLoopPoint(buffer: AudioBuffer, ratio: number) {
+  const data = buffer.getChannelData(0);
+  const target = Math.round(data.length * ratio);
+  const radius = Math.min(Math.round(buffer.sampleRate * 0.018), target, data.length - target - 1);
+  let best = target;
+  let bestLevel = Math.abs(data[target]);
+  for (let index = target - radius; index <= target + radius; index += 1) {
+    const level = Math.abs(data[index]);
+    if (level < bestLevel) {
+      best = index;
+      bestLevel = level;
+    }
+  }
+  return best / buffer.sampleRate;
 }
 
 function sanitizeSettings(raw: unknown): Settings {
@@ -299,6 +337,11 @@ function sanitizeSettings(raw: unknown): Settings {
     rightMapping: validMapping(value.rightMapping, RIGHT_MAPPING),
     octaveShortcuts: validOctaveShortcuts,
     transposeShortcuts,
+    themeId: value.themeId === "warm-cat"
+      ? "nyang-voice"
+      : THEMES.some((theme) => theme.id === value.themeId)
+        ? value.themeId as string
+        : DEFAULT_SETTINGS.themeId,
     masterVolume: Math.max(0, Math.min(1, Number(value.masterVolume ?? DEFAULT_SETTINGS.masterVolume))),
     microphoneSensitivity: Math.max(
       0.5,
@@ -515,7 +558,11 @@ export default function Home() {
   const audioRef = useRef<AudioGraph | null>(null);
   const voicesRef = useRef<Map<string, Voice>>(new Map());
   const inputVoiceRef = useRef<Map<string, string>>(new Map());
+  const pendingNoteRef = useRef<Map<string, number>>(new Map());
   const voiceCounterRef = useRef(0);
+  const noteRequestCounterRef = useRef(0);
+  const sampleDataRef = useRef<Map<string, Promise<ArrayBuffer>>>(new Map());
+  const sampleBufferRef = useRef<Map<string, Promise<AudioBuffer>>>(new Map());
   const activePointersRef = useRef<Map<number, string>>(new Map());
   const microphoneRef = useRef<{
     stream: MediaStream;
@@ -528,6 +575,38 @@ export default function Home() {
     () => THEMES.find((candidate) => candidate.id === settings.themeId) ?? THEMES[0],
     [settings.themeId],
   );
+
+  const fetchSampleData = useCallback((url: string) => {
+    const cached = sampleDataRef.current.get(url);
+    if (cached) return cached;
+    const request = fetch(url).then((response) => {
+      if (!response.ok) throw new Error(`음원 파일을 불러오지 못했습니다: ${url}`);
+      return response.arrayBuffer();
+    });
+    sampleDataRef.current.set(url, request);
+    return request;
+  }, []);
+
+  const loadSampleBuffer = useCallback((context: AudioContext, url: string) => {
+    const cached = sampleBufferRef.current.get(url);
+    if (cached) return cached;
+    const request = fetchSampleData(url)
+      .then((data) => context.decodeAudioData(data.slice(0)))
+      .catch((error) => {
+        sampleBufferRef.current.delete(url);
+        throw error;
+      });
+    sampleBufferRef.current.set(url, request);
+    return request;
+  }, [fetchSampleData]);
+
+  useEffect(() => {
+    NYANG_SAMPLES.forEach((sample) => {
+      void fetchSampleData(sample.url).catch(() => {
+        sampleDataRef.current.delete(sample.url);
+      });
+    });
+  }, [fetchSampleData]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -591,6 +670,9 @@ export default function Home() {
       master.connect(compressor);
       compressor.connect(context.destination);
       audioRef.current = { context, master, breath, compressor };
+      void Promise.all(NYANG_SAMPLES.map((sample) => loadSampleBuffer(context, sample.url))).catch(() => {
+        // If preload fails, the selected note retries and can fall back to the synth voice.
+      });
 
       // Mobile Safari needs an audio graph to start directly inside the first touch gesture.
       const unlockSource = context.createBufferSource();
@@ -605,7 +687,7 @@ export default function Home() {
     }
     setAudioReady(true);
     return audioRef.current;
-  }, []);
+  }, [loadSampleBuffer]);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -649,11 +731,11 @@ export default function Home() {
       voice.gain.gain.cancelScheduledValues(now);
       voice.gain.gain.setValueAtTime(Math.max(0.0001, voice.gain.gain.value), now);
       voice.gain.gain.exponentialRampToValueAtTime(0.0001, now + (immediate ? 0.025 : 0.16));
-      voice.oscillators.forEach((oscillator) => {
+      voice.sources.forEach((source) => {
         try {
-          oscillator.stop(now + (immediate ? 0.04 : 0.2));
+          source.stop(now + (immediate ? 0.04 : 0.2));
         } catch {
-          // The oscillator may already be stopped.
+          // The source may already be stopped.
         }
       });
       window.setTimeout(
@@ -670,6 +752,7 @@ export default function Home() {
 
   const releaseInput = useCallback(
     (inputId: string, force = false) => {
+      pendingNoteRef.current.delete(inputId);
       const voiceId = inputVoiceRef.current.get(inputId);
       if (!voiceId) return;
       inputVoiceRef.current.delete(inputId);
@@ -686,12 +769,15 @@ export default function Home() {
   );
 
   const startNote = useCallback(
-    (inputId: string, side: KeyboardSide, offset: number) => {
+    async (inputId: string, side: KeyboardSide, offset: number) => {
       releaseInput(inputId, true);
+      const requestId = ++noteRequestCounterRef.current;
+      pendingNoteRef.current.set(inputId, requestId);
       let graph: AudioGraph;
       try {
         graph = initAudio();
       } catch {
+        pendingNoteRef.current.delete(inputId);
         return;
       }
 
@@ -705,32 +791,72 @@ export default function Home() {
           ? graph.context.sampleRate * 8
           : 0.001;
       const selectedTheme = THEMES.find((item) => item.id === settingsRef.current.themeId) ?? THEMES[0];
+      const nearestSample = NYANG_SAMPLES.reduce((nearest, sample) => {
+        const pitchDistance = Math.min(mod(sample.midi - soundingMidi, 12), mod(soundingMidi - sample.midi, 12));
+        const nearestPitchDistance = Math.min(
+          mod(nearest.midi - soundingMidi, 12),
+          mod(soundingMidi - nearest.midi, 12),
+        );
+        if (pitchDistance !== nearestPitchDistance) return pitchDistance < nearestPitchDistance ? sample : nearest;
+        return Math.abs(sample.midi - soundingMidi) < Math.abs(nearest.midi - soundingMidi) ? sample : nearest;
+      });
+      let sampleBuffer: AudioBuffer | null = null;
+      if (selectedTheme.id === "nyang-voice") {
+        try {
+          sampleBuffer = await loadSampleBuffer(graph.context, nearestSample.url);
+        } catch {
+          sampleBuffer = null;
+        }
+      }
+      if (pendingNoteRef.current.get(inputId) !== requestId) return;
+      pendingNoteRef.current.delete(inputId);
+
       const gain = graph.context.createGain();
       gain.gain.value = 0.0001;
       gain.connect(graph.breath);
-
-      const primary = graph.context.createOscillator();
-      primary.type = selectedTheme.waveform;
-      primary.frequency.setValueAtTime(frequency, graph.context.currentTime);
-      primary.connect(gain);
-
-      const harmonic = graph.context.createOscillator();
-      const harmonicGain = graph.context.createGain();
-      harmonic.type = selectedTheme.harmonic;
-      harmonic.frequency.setValueAtTime(Math.min(graph.context.sampleRate * 8, frequency * 2.003), graph.context.currentTime);
-      harmonicGain.gain.value = selectedTheme.harmonicGain;
-      harmonic.connect(harmonicGain);
-      harmonicGain.connect(gain);
-
       const now = graph.context.currentTime;
-      const peak = selectedTheme.id === "soft-organ" ? 0.17 : 0.24;
-      const sustain = selectedTheme.id === "glass-bell" ? 0.035 : selectedTheme.id === "soft-organ" ? 0.105 : 0.07;
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(peak, now + 0.012);
-      gain.gain.exponentialRampToValueAtTime(sustain, now + (selectedTheme.id === "glass-bell" ? 1.2 : 0.8));
+      const sources: AudioScheduledSourceNode[] = [];
 
-      primary.start(now);
-      harmonic.start(now);
+      if (sampleBuffer) {
+        const source = graph.context.createBufferSource();
+        const rawRate = 2 ** ((soundingMidi - nearestSample.midi) / 12);
+        source.buffer = sampleBuffer;
+        source.playbackRate.setValueAtTime(Math.max(0.0001, Math.min(1024, rawRate)), now);
+        const loopStart = quietLoopPoint(sampleBuffer, 0.34);
+        const loopEnd = quietLoopPoint(sampleBuffer, 0.76);
+        if (loopEnd - loopStart > 0.08) {
+          source.loop = true;
+          source.loopStart = loopStart;
+          source.loopEnd = loopEnd;
+        }
+        source.connect(gain);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.62, now + 0.012);
+        source.start(now);
+        sources.push(source);
+      } else {
+        const primary = graph.context.createOscillator();
+        primary.type = selectedTheme.waveform;
+        primary.frequency.setValueAtTime(frequency, now);
+        primary.connect(gain);
+
+        const harmonic = graph.context.createOscillator();
+        const harmonicGain = graph.context.createGain();
+        harmonic.type = selectedTheme.harmonic;
+        harmonic.frequency.setValueAtTime(Math.min(graph.context.sampleRate * 8, frequency * 2.003), now);
+        harmonicGain.gain.value = selectedTheme.harmonicGain;
+        harmonic.connect(harmonicGain);
+        harmonicGain.connect(gain);
+
+        const peak = selectedTheme.id === "soft-organ" ? 0.17 : 0.24;
+        const sustain = selectedTheme.id === "glass-bell" ? 0.035 : selectedTheme.id === "soft-organ" ? 0.105 : 0.07;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(peak, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(sustain, now + (selectedTheme.id === "glass-bell" ? 1.2 : 0.8));
+        primary.start(now);
+        harmonic.start(now);
+        sources.push(primary, harmonic);
+      }
 
       const voiceId = `voice-${++voiceCounterRef.current}`;
       const voice: Voice = {
@@ -740,7 +866,7 @@ export default function Home() {
         baseMidi,
         pitchClass: mod(baseMidi, 12),
         gain,
-        oscillators: [primary, harmonic],
+        sources,
         released: false,
         stopped: false,
       };
@@ -748,10 +874,11 @@ export default function Home() {
       inputVoiceRef.current.set(inputId, voiceId);
       refreshVoiceUI();
     },
-    [initAudio, refreshVoiceUI, releaseInput],
+    [initAudio, loadSampleBuffer, refreshVoiceUI, releaseInput],
   );
 
   const allNotesOff = useCallback(() => {
+    pendingNoteRef.current.clear();
     inputVoiceRef.current.clear();
     activePointersRef.current.clear();
     voicesRef.current.forEach((voice) => stopVoice(voice, true));
@@ -1372,7 +1499,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <p className="setting-note">현재 음색은 제공될 샘플 음원으로 교체하기 전의 테스트용입니다.</p>
+                <p className="setting-note">냥 보이스는 O3 C–O4 C 녹음본을 A4=440Hz 기준으로 보정한 기본 음색입니다.</p>
               </section>
 
               <section className="settings-section">
