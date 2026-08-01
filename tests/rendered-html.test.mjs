@@ -94,10 +94,15 @@ test("publishes a privacy policy and links it from settings", async () => {
   assert.doesNotMatch(page, /기기 저장 설정과 마이크 처리 방식을 확인/);
 });
 
-test("keeps the upper mobile keyboard clear of the key display", async () => {
+test("aligns compact octave, key, and settings controls", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(css, /\.transpose-panel \{[^}]*height: 50px/s);
-  assert.match(css, /\.transpose-grid \{\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);[^}]*height: 50px/s);
+  assert.match(css, /\.octave-buttons \{[^}]*repeat\(4, minmax\(0, 64px\)\)/s);
+  assert.match(css, /\.octave-button \{[^}]*aspect-ratio: 1;/s);
+  assert.match(css, /\.transpose-panel \{[^}]*height: 64px/s);
+  assert.match(css, /\.settings-button \{[^}]*height: 64px/s);
+  assert.match(css, /\.transpose-panel \{[^}]*height: 42px/s);
+  assert.match(css, /\.transpose-grid \{\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);[^}]*height: 42px/s);
+  assert.match(css, /\.settings-button \{[^}]*height: 42px/s);
   assert.match(css, /\.transpose-status \{\s*min-height: 0;\s*height: 100%/);
   assert.match(css, /\.transpose-grid button \{\s*display: flex;\s*align-items: center;\s*justify-content: center;/);
 });

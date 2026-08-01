@@ -81,7 +81,7 @@ button {
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: 155px minmax(330px, 1fr) 330px 92px;
+  grid-template-columns: 155px minmax(330px, 1fr) 330px 68px;
   align-items: start;
   gap: 18px;
   padding: 22px 24px 10px;
@@ -125,32 +125,38 @@ button {
 
 .octave-area {
   display: grid;
-  grid-template-columns: minmax(320px, 590px);
+  grid-template-columns: minmax(272px, 590px);
   gap: 12px;
   justify-content: center;
   min-width: 0;
 }
 
 .octave-area.is-double {
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
 }
 
 .octave-panel {
-  padding: 1px 0 0;
+  position: relative;
+  padding: 0;
   min-width: 0;
 }
 
 .panel-eyebrow {
-  margin: 0 0 8px 3px;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 3px;
+  margin: 0;
   color: var(--muted);
   font-size: 9px;
   font-weight: 900;
+  line-height: 1;
   letter-spacing: -0.02em;
 }
 
 .octave-buttons {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 64px));
+  justify-content: center;
   gap: 9px;
 }
 
@@ -173,7 +179,9 @@ button {
 
 .octave-button {
   position: relative;
-  height: 54px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   overflow: hidden;
   border: 2px solid var(--ink);
   border-radius: 18px 18px 15px 15px;
@@ -236,19 +244,21 @@ button {
 
 .transpose-panel {
   display: grid;
-  grid-template-columns: 68px minmax(132px, 1fr) 58px;
-  gap: 9px;
+  grid-template-columns: 64px minmax(132px, 1fr) 54px;
+  gap: 8px;
   min-width: 0;
+  height: 64px;
 }
 
 .transpose-status {
   display: flex;
-  min-height: 90px;
+  min-height: 0;
+  height: 100%;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--ink);
-  border-radius: 24px;
+  border-radius: 18px;
   background: var(--ink);
   color: #fff;
 }
@@ -263,22 +273,28 @@ button {
 
 .transpose-status strong {
   margin: 2px 0;
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
 }
 
 .transpose-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  height: 64px;
 }
 
 .transpose-grid button {
-  min-height: 41px;
-  padding: 4px;
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px;
   border: 2px solid var(--ink);
-  border-radius: 15px;
-  font-size: 13px;
+  border-radius: 11px;
+  font-size: 11px;
   font-weight: 900;
 }
 
@@ -289,38 +305,36 @@ button {
 
 .transpose-reset {
   display: flex;
-  min-height: 90px;
+  min-height: 0;
+  height: 100%;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 1px;
   border: 2px solid var(--ink);
-  border-radius: 18px;
+  border-radius: 14px;
   color: var(--ink);
   font-weight: 900;
 }
 
 .transpose-reset span {
-  font-size: 22px;
+  font-size: 17px;
   line-height: 1;
 }
 
 .transpose-reset small {
-  font-size: 9px;
+  font-size: 7px;
   font-weight: 900;
 }
 
 .transpose-grid button small {
-  margin-top: 1px;
-  color: var(--muted);
-  font-size: 8px;
-  font-weight: 700;
+  display: none;
 }
 
 .transpose-command .control-shortcut,
 .transpose-reset .control-shortcut {
-  margin-top: 2px;
-  font-size: 7px;
+  margin-top: 0;
+  font-size: 6px;
 }
 
 .header-actions {
@@ -328,6 +342,7 @@ button {
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
+  min-height: 64px;
 }
 
 .settings-button,
@@ -347,7 +362,8 @@ button {
   justify-content: center;
   flex-direction: column;
   gap: 1px;
-  min-height: 58px;
+  min-height: 64px;
+  height: 64px;
   border: 2px solid var(--ink);
   background: #fffdf7;
 }
@@ -1512,8 +1528,8 @@ summary:focus-visible {
   }
 
   .top-bar {
-    grid-template-columns: 82px minmax(200px, 1fr) 218px 52px;
-    gap: 10px;
+    grid-template-columns: 82px minmax(200px, 1fr) 210px 42px;
+    gap: 8px;
     padding: 8px 10px 4px;
   }
 
@@ -1544,20 +1560,26 @@ summary:focus-visible {
 
   .octave-area.is-double {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 7px;
+    gap: 4px;
   }
 
   .panel-eyebrow {
-    margin-bottom: 4px;
+    bottom: 100%;
+    left: 2px;
+    margin: 0;
     font-size: 7px;
+    line-height: 7px;
   }
 
   .octave-buttons {
-    gap: 5px;
+    grid-template-columns: repeat(4, minmax(0, 42px));
+    gap: 3px;
   }
 
   .octave-button {
-    height: 36px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
     border-radius: 12px;
     background-size: 28px;
     font-size: 13px;
@@ -1576,37 +1598,37 @@ summary:focus-visible {
   }
 
   .transpose-panel {
-    grid-template-columns: 48px minmax(112px, 1fr) 42px;
-    gap: 5px;
-    height: 50px;
+    grid-template-columns: 42px minmax(110px, 1fr) 38px;
+    gap: 4px;
+    height: 42px;
   }
 
   .transpose-status {
     min-height: 0;
     height: 100%;
-    border-radius: 15px;
+    border-radius: 12px;
   }
 
   .transpose-status strong {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .transpose-grid {
     grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 4px;
-    height: 50px;
+    height: 42px;
   }
 
   .transpose-grid button {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
     min-height: 0;
     overflow: hidden;
     padding: 1px;
-    border-radius: 10px;
-    font-size: 9px;
+    border-radius: 9px;
+    font-size: 8px;
   }
 
   .transpose-grid button small {
@@ -1623,11 +1645,11 @@ summary:focus-visible {
   .transpose-reset {
     min-height: 0;
     height: 100%;
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
   .transpose-reset span {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .transpose-reset small {
@@ -1635,8 +1657,9 @@ summary:focus-visible {
   }
 
   .settings-button {
-    min-height: 48px;
-    border-radius: 12px;
+    min-height: 42px;
+    height: 42px;
+    border-radius: 10px;
     font-size: 9px;
   }
 
