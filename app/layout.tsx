@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -32,6 +32,19 @@ export const metadata: Metadata = {
     icon: "/assets/themes/default/pawpad.svg",
     shortcut: "/assets/themes/default/pawpad.svg",
   },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "nyangnyang",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f7f2e8",
 };
 
 export default function RootLayout({

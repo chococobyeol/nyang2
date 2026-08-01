@@ -1,0 +1,18 @@
+{
+  "name": "nyangnyang",
+  "short_name": "nyangnyang",
+  "description": "고양이와 함께 연주하는 멀티터치 발바닥 악기",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#f7f2e8",
+  "theme_color": "#ef6b5a",
+  "icons": [
+    {
+      "src": "/assets/themes/default/pawpad.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

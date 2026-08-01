@@ -24,6 +24,7 @@ type Settings = {
   noteLabelMode: NoteLabelMode;
   accidentalStyle: AccidentalStyle;
   showKeyMapping: boolean;
+  mobileLandscape: boolean;
   leftMapping: string[];
   rightMapping: string[];
   masterVolume: number;
@@ -117,6 +118,7 @@ const DEFAULT_SETTINGS: Settings = {
   noteLabelMode: "base",
   accidentalStyle: "sharp",
   showKeyMapping: true,
+  mobileLandscape: true,
   leftMapping: LEFT_MAPPING,
   rightMapping: RIGHT_MAPPING,
   masterVolume: 0.72,
@@ -439,7 +441,7 @@ export default function Home() {
     setSettings((current) => ({ ...current, ...patch }));
   }, []);
 
-  const initAudio = useCallback(async () => {
+  const initAudio = useCallback(() => {
     if (!audioRef.current) {
       const AudioContextCtor = window.AudioContext ||
         (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -459,11 +461,33 @@ export default function Home() {
       master.connect(compressor);
       compressor.connect(context.destination);
       audioRef.current = { context, master, breath, compressor };
+
+      // Mobile Safari needs an audio graph to start directly inside the first touch gesture.
+      const unlockSource = context.createBufferSource();
+      unlockSource.buffer = context.createBuffer(1, 1, context.sampleRate);
+      unlockSource.connect(context.destination);
+      unlockSource.start(0);
     }
-    if (audioRef.current.context.state !== "running") await audioRef.current.context.resume();
+    if (audioRef.current.context.state !== "running") {
+      void audioRef.current.context.resume().catch(() => {
+        // A later touch gesture retries the resume operation.
+      });
+    }
     setAudioReady(true);
     return audioRef.current;
   }, []);
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      try {
+        initAudio();
+      } catch {
+        // Unsupported browsers are handled when a note is pressed.
+      }
+    };
+    window.addEventListener("touchstart", unlockAudio, { passive: true, capture: true });
+    return () => window.removeEventListener("touchstart", unlockAudio, { capture: true });
+  }, [initAudio]);
 
   useEffect(() => {
     const graph = audioRef.current;
@@ -532,11 +556,11 @@ export default function Home() {
   );
 
   const startNote = useCallback(
-    async (inputId: string, side: KeyboardSide, offset: number) => {
+    (inputId: string, side: KeyboardSide, offset: number) => {
       releaseInput(inputId, true);
       let graph: AudioGraph;
       try {
-        graph = await initAudio();
+        graph = initAudio();
       } catch {
         return;
       }
@@ -911,7 +935,7 @@ export default function Home() {
   };
 
   return (
-    <main className="app-viewport" style={appStyle} onContextMenu={(event) => event.preventDefault()}>
+    <main className={`app-viewport ${settings.mobileLandscape ? "force-mobile-landscape" : ""}`} style={appStyle} onContextMenu={(event) => event.preventDefault()}>
       <div className="app-stage">
         <header className="top-bar">
           <div className="brand-block">
@@ -1039,6 +1063,7 @@ export default function Home() {
                 />
                 <Toggle checked={settings.showLowerB} onChange={(checked) => updateSettings({ showLowerB: checked })} label="낮은 B 표시" />
                 <Toggle checked={settings.showUpperC} onChange={(checked) => updateSettings({ showUpperC: checked })} label="높은 C 표시" />
+                <Toggle checked={settings.mobileLandscape} onChange={(checked) => updateSettings({ mobileLandscape: checked })} label="휴대폰 세로 화면을 가로로 표시" />
                 <div className="setting-field">
                   <label>옥타브 선택 버튼</label>
                   <div className="preset-inputs">
