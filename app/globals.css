@@ -87,9 +87,11 @@ button {
 
 .brand-mark {
   display: grid;
+  flex: 0 0 48px;
   place-items: center;
   width: 48px;
   height: 48px;
+  aspect-ratio: 1;
   border: 2px solid var(--ink);
   border-radius: 50% 50% 44% 44%;
   background: var(--accent-soft);
@@ -100,6 +102,7 @@ button {
 .brand-mark img {
   width: 31px;
   height: 31px;
+  object-fit: contain;
   opacity: 0.78;
 }
 
@@ -460,20 +463,14 @@ button {
   position: absolute;
   inset: 7%;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 34% 25%, rgba(255, 255, 255, 0.92), transparent 32%),
-    linear-gradient(145deg, #fff8eb, #e8ddca);
-  box-shadow:
-    inset 0 -8px 18px rgba(91, 71, 45, 0.1),
-    0 7px 13px rgba(55, 44, 30, 0.11);
+  background: #f4ead9;
+  box-shadow: 0 4px 0 rgba(31, 37, 36, 0.1);
   content: "";
   transition: background 90ms ease, box-shadow 90ms ease;
 }
 
 .paw-note-accidental::before {
-  background:
-    radial-gradient(circle at 34% 25%, rgba(255, 255, 255, 0.62), transparent 31%),
-    linear-gradient(145deg, var(--accent-soft), color-mix(in srgb, var(--accent) 45%, #fff4e7));
+  background: #f3b7ad;
 }
 
 .paw-note:hover {
@@ -513,8 +510,8 @@ button {
 }
 
 .paw-note.is-active::before {
-  background: linear-gradient(145deg, var(--accent), color-mix(in srgb, var(--accent) 68%, white));
-  box-shadow: inset 0 7px 16px rgba(31, 37, 36, 0.14), 0 2px 5px rgba(31, 37, 36, 0.12);
+  background: var(--accent);
+  box-shadow: 0 1px 0 rgba(31, 37, 36, 0.12);
 }
 
 .paw-note-accidental.is-active {
@@ -1079,6 +1076,7 @@ summary:focus-visible {
   }
 
   .brand-mark {
+    flex-basis: 34px;
     width: 34px;
     height: 34px;
     box-shadow: 2px 2px 0 var(--ink);
@@ -1228,8 +1226,8 @@ summary:focus-visible {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vh;
-    height: 100vw;
+    width: calc(100dvh - 52px);
+    height: 100dvw;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
@@ -1238,9 +1236,9 @@ summary:focus-visible {
   }
 
   .app-viewport.force-mobile-landscape .app-stage {
-    width: calc(100vh - 12px);
+    width: calc(100dvh - 64px);
     min-width: 628px;
-    height: calc(100vw - 12px);
+    height: calc(100dvw - 12px);
     min-height: 338px;
   }
 }
