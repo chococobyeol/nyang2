@@ -113,3 +113,14 @@ test("aligns compact octave, key, and settings controls", async () => {
   assert.match(page, /settings\.keyboardCount === 1\s*\? "옥타브"/);
   assert.match(page, /side === "left" \? "왼쪽 옥타브" : "오른쪽 옥타브"/);
 });
+
+test("renders the optional lower B and upper C at accidental-key scale", async () => {
+  const [css, page] = await Promise.all([
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /const edgeNote = offset === -1 \|\| offset === 12;/);
+  assert.match(page, /edgeNote \? "is-edge-note" : ""/);
+  assert.match(css, /\.paw-note-natural\.is-edge-note \{\s*transform: scale\(0\.72\);\s*transform-origin: center bottom;/);
+  assert.match(css, /\.paw-note-natural\.is-edge-note\.is-active \{\s*transform: translateY\(5px\) scale\(0\.64\);/);
+});

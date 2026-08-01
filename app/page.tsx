@@ -495,10 +495,11 @@ function KeyboardGroup({
         {visibleWhites.map((offset) => {
           const keyId = `${side}:${offset}`;
           const active = activeKeys.has(keyId);
+          const edgeNote = offset === -1 || offset === 12;
           return (
             <button
               type="button"
-              className={`paw-note paw-note-natural ${active ? "is-active" : ""}`}
+              className={`paw-note paw-note-natural ${edgeNote ? "is-edge-note" : ""} ${active ? "is-active" : ""}`}
               key={keyId}
               data-piano-key={keyId}
               data-side={side}

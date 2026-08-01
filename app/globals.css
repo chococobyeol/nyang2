@@ -595,6 +595,15 @@ button {
   transform: translateY(-3px);
 }
 
+.paw-note-natural.is-edge-note {
+  transform: scale(0.72);
+  transform-origin: center bottom;
+}
+
+.paw-note-natural.is-edge-note:hover {
+  transform: translateY(-3px) scale(0.72);
+}
+
 .paw-note:focus-visible {
   border-radius: 50%;
   outline: 3px solid var(--accent);
@@ -625,6 +634,10 @@ button {
 .paw-note.is-active {
   transform: translateY(5px) scale(0.88);
   filter: drop-shadow(0 0 12px var(--accent));
+}
+
+.paw-note-natural.is-edge-note.is-active {
+  transform: translateY(5px) scale(0.64);
 }
 
 .paw-note.is-active::before {
