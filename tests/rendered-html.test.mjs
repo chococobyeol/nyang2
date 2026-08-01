@@ -96,7 +96,8 @@ test("publishes a privacy policy and links it from settings", async () => {
 
 test("keeps the upper mobile keyboard clear of the key display", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(css, /\.transpose-panel \{[^}]*height: 62px/s);
-  assert.match(css, /\.transpose-grid \{\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);[^}]*height: 62px/s);
+  assert.match(css, /\.transpose-panel \{[^}]*height: 50px/s);
+  assert.match(css, /\.transpose-grid \{\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);[^}]*height: 50px/s);
   assert.match(css, /\.transpose-status \{\s*min-height: 0;\s*height: 100%/);
+  assert.match(css, /\.transpose-grid button \{\s*display: flex;\s*align-items: center;\s*justify-content: center;/);
 });
