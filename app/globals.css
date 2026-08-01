@@ -1239,12 +1239,6 @@ button {
   font-size: 12px;
 }
 
-.settings-legal p {
-  margin: 7px 0 0;
-  color: var(--muted);
-  font-size: 8px;
-}
-
 .privacy-page {
   min-height: 100vh;
   padding: 28px;

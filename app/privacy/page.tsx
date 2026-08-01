@@ -78,8 +78,8 @@ export default function PrivacyPage() {
             <span>06</span>
             <div>
               <h2>문의와 방침 변경</h2>
-              <p>개인정보 처리와 관련된 문의는 냥냥 GitHub 저장소의 이슈로 남길 수 있습니다. 방침의 내용이 달라지면 이 페이지의 시행일과 함께 변경 사항을 알립니다.</p>
-              <p><a href="https://github.com/chococobyeol/nyang2/issues" target="_blank" rel="noreferrer">GitHub에서 문의하기 ↗</a></p>
+              <p>개인정보 처리와 관련된 문의는 아래 이메일로 보내주세요. 방침의 내용이 달라지면 이 페이지의 시행일과 함께 변경 사항을 알립니다.</p>
+              <p><a href="mailto:chaamu.channel@gmail.com">chaamu.channel@gmail.com</a></p>
             </div>
           </section>
         </div>

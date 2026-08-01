@@ -86,5 +86,8 @@ test("publishes a privacy policy and links it from settings", async () => {
   assert.match(html, /마이크 소리는 기기 안에서만 실시간으로 처리/);
   assert.match(html, /로컬 저장소에만 보관/);
   assert.match(html, /Cloudflare/);
+  assert.match(html, /mailto:chaamu\.channel@gmail\.com/);
+  assert.doesNotMatch(html, /github\.com\/chococobyeol\/nyang2\/issues/);
   assert.match(page, /href="\/privacy"/);
+  assert.doesNotMatch(page, /기기 저장 설정과 마이크 처리 방식을 확인/);
 });

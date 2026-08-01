@@ -1667,7 +1667,6 @@ export default function Home() {
                   <span>개인정보처리방침</span>
                   <strong aria-hidden="true">↗</strong>
                 </a>
-                <p>기기 저장 설정과 마이크 처리 방식을 확인할 수 있습니다.</p>
               </div>
             </div>
           </aside>
