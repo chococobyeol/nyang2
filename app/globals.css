@@ -476,7 +476,7 @@ button {
 
 .keyboard-deck.is-double .paw-keyboard-group:last-child {
   right: 0;
-  bottom: 0;
+  bottom: clamp(20px, 2.2vh, 28px);
 }
 
 .paw-keyboard-group {
@@ -1351,6 +1351,10 @@ summary:focus-visible {
   .keyboard-deck.is-double .paw-keyboard-group {
     width: 78%;
     height: 112px;
+  }
+
+  .keyboard-deck.is-double .paw-keyboard-group:last-child {
+    bottom: 0;
   }
 
   .keyboard-deck.is-double .paw-row-natural {
