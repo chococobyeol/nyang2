@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "OmuDaye";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2304-01@1.0/omyu_pretty.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --paper: #f7f2e8;
   --paper-deep: #eee4d4;
@@ -26,7 +34,7 @@ body {
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "OmuDaye", Arial, Helvetica, sans-serif;
   overflow: auto;
 }
 
@@ -456,7 +464,9 @@ button {
 .keyboard-deck.is-double .paw-keyboard-group {
   position: absolute;
   width: 66%;
-  height: min(250px, 46%);
+  height: auto;
+  max-height: 220px;
+  aspect-ratio: 4.5 / 1;
 }
 
 .keyboard-deck.is-double .paw-keyboard-group:first-child {
