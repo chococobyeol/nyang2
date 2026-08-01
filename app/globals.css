@@ -476,7 +476,7 @@ button {
 
 .keyboard-deck.is-double .paw-keyboard-group:last-child {
   right: 0;
-  bottom: clamp(20px, 2.2vh, 28px);
+  bottom: clamp(48px, 5vh, 64px);
 }
 
 .paw-keyboard-group {
