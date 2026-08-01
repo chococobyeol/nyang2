@@ -204,6 +204,35 @@ button {
   color: rgba(255, 255, 255, 0.76);
 }
 
+.control-shortcut {
+  display: inline-flex;
+  min-width: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  border: 1px solid rgba(31, 37, 36, 0.34);
+  border-radius: 5px;
+  background: rgba(247, 242, 232, 0.9);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.octave-shortcut {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+}
+
+.octave-button.is-selected .control-shortcut {
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+}
+
 .transpose-panel {
   display: grid;
   grid-template-columns: 68px minmax(132px, 1fr) 58px;
@@ -285,6 +314,12 @@ button {
   color: var(--muted);
   font-size: 8px;
   font-weight: 700;
+}
+
+.transpose-command .control-shortcut,
+.transpose-reset .control-shortcut {
+  margin-top: 2px;
+  font-size: 7px;
 }
 
 .header-actions {
@@ -1266,6 +1301,14 @@ summary:focus-visible {
     font-size: 13px;
   }
 
+  .octave-shortcut {
+    bottom: 3px;
+    left: 4px;
+    min-width: 15px;
+    padding: 0 3px;
+    font-size: 6px;
+  }
+
   .octave-button.is-selected {
     box-shadow: 2px 2px 0 var(--ink);
   }
@@ -1292,6 +1335,17 @@ summary:focus-visible {
     min-height: 29px;
     border-radius: 10px;
     font-size: 10px;
+  }
+
+  .transpose-grid button small {
+    display: none;
+  }
+
+  .transpose-command .control-shortcut,
+  .transpose-reset .control-shortcut {
+    margin-top: 1px;
+    padding: 0 3px;
+    font-size: 6px;
   }
 
   .transpose-reset {

@@ -1071,6 +1071,7 @@ export default function Home() {
     const selected = side === "left" ? leftOctave : rightOctave;
     const setter = side === "left" ? setLeftOctave : setRightOctave;
     const presets = side === "left" ? settings.leftOctavePresets : settings.rightOctavePresets;
+    const shortcutOffset = side === "left" ? 0 : 4;
     return (
       <section className="octave-panel" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} 옥타브 선택`}>
         <div className="panel-eyebrow">{side === "left" ? "왼쪽 옥타브" : "오른쪽 옥타브"}</div>
@@ -1084,6 +1085,9 @@ export default function Home() {
               aria-pressed={selected === octave}
             >
               <span>O</span>{octave}
+              <kbd className="control-shortcut octave-shortcut">
+                {codeLabel(settings.octaveShortcuts[shortcutOffset + index])}
+              </kbd>
             </button>
           ))}
         </div>
@@ -1193,22 +1197,27 @@ export default function Home() {
               <small>{transpose > 0 ? `+${transpose}` : transpose} ST</small>
             </div>
             <div className="transpose-grid">
-              <button type="button" className="control-button" onClick={() => setTranspose((value) => value - 1)}>
+              <button type="button" className="control-button transpose-command" onClick={() => setTranspose((value) => value - 1)}>
                 <span>−1</span><small>반음</small>
+                <kbd className="control-shortcut">{codeLabel(settings.transposeShortcuts.downSemitone)}</kbd>
               </button>
-              <button type="button" className="control-button" onClick={() => setTranspose((value) => value + 1)}>
+              <button type="button" className="control-button transpose-command" onClick={() => setTranspose((value) => value + 1)}>
                 <span>+1</span><small>반음</small>
+                <kbd className="control-shortcut">{codeLabel(settings.transposeShortcuts.upSemitone)}</kbd>
               </button>
-              <button type="button" className="control-button" onClick={() => setTranspose((value) => value - 7)}>
+              <button type="button" className="control-button transpose-command" onClick={() => setTranspose((value) => value - 7)}>
                 <span>−5th</span><small>완전5도</small>
+                <kbd className="control-shortcut">{codeLabel(settings.transposeShortcuts.downFifth)}</kbd>
               </button>
-              <button type="button" className="control-button" onClick={() => setTranspose((value) => value + 7)}>
+              <button type="button" className="control-button transpose-command" onClick={() => setTranspose((value) => value + 7)}>
                 <span>+5th</span><small>완전5도</small>
+                <kbd className="control-shortcut">{codeLabel(settings.transposeShortcuts.upFifth)}</kbd>
               </button>
             </div>
             <button type="button" className="transpose-reset control-button" onClick={resetTranspose} aria-label="조성을 C로 초기화">
               <span aria-hidden="true">↺</span>
               <small>초기화</small>
+              <kbd className="control-shortcut">{codeLabel(settings.transposeShortcuts.reset)}</kbd>
             </button>
           </section>
 
