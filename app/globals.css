@@ -351,6 +351,15 @@ button {
   grid-template-columns: 1fr 124px;
 }
 
+.cat-zone.is-double {
+  top: 137px;
+  right: 34px;
+  bottom: auto;
+  left: 60%;
+  height: 250px;
+  min-height: 0;
+}
+
 .cat-track {
   display: flex;
   min-width: 0;
@@ -439,7 +448,25 @@ button {
 }
 
 .keyboard-deck.is-double {
-  grid-template-columns: 1fr 1fr;
+  top: 230px;
+  display: block;
+  height: auto;
+}
+
+.keyboard-deck.is-double .paw-keyboard-group {
+  position: absolute;
+  width: 66%;
+  height: min(250px, 46%);
+}
+
+.keyboard-deck.is-double .paw-keyboard-group:first-child {
+  top: 0;
+  left: 0;
+}
+
+.keyboard-deck.is-double .paw-keyboard-group:last-child {
+  right: 0;
+  bottom: 0;
 }
 
 .paw-keyboard-group {
@@ -1285,6 +1312,15 @@ summary:focus-visible {
     min-height: 82px;
   }
 
+  .cat-zone.is-double {
+    top: 100px;
+    right: 10px;
+    bottom: auto;
+    left: 64%;
+    height: 108px;
+    min-height: 0;
+  }
+
   .cat-track {
     height: var(--cat-height);
   }
@@ -1294,6 +1330,33 @@ summary:focus-visible {
     bottom: 24px;
     left: 10px;
     height: 138px;
+  }
+
+  .keyboard-deck.is-double {
+    top: 82px;
+    display: block;
+    height: auto;
+  }
+
+  .keyboard-deck.is-double .paw-keyboard-group {
+    width: 78%;
+    height: 112px;
+  }
+
+  .keyboard-deck.is-double .paw-row-natural {
+    height: 72px;
+  }
+
+  .keyboard-deck.is-double .paw-row-accidental {
+    height: 50px;
+  }
+
+  .keyboard-deck.is-double .paw-note {
+    max-width: 70px;
+  }
+
+  .keyboard-deck.is-double .paw-note-accidental {
+    max-width: 50px;
   }
 
   .paw-row-natural {

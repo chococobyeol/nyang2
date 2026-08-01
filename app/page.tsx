@@ -21,7 +21,8 @@ type TransposeShortcuts = Record<TransposeShortcutAction, string>;
 
 type Settings = {
   keyboardCount: 1 | 2;
-  octavePresets: [number, number, number, number];
+  leftOctavePresets: [number, number, number, number];
+  rightOctavePresets: [number, number, number, number];
   leftShowLowerB: boolean;
   leftShowUpperC: boolean;
   rightShowLowerB: boolean;
@@ -138,7 +139,8 @@ const TRANSPOSE_SHORTCUT_LABELS: Record<TransposeShortcutAction, string> = {
 
 const DEFAULT_SETTINGS: Settings = {
   keyboardCount: 1,
-  octavePresets: [2, 3, 4, 5],
+  leftOctavePresets: [2, 3, 4, 5],
+  rightOctavePresets: [3, 4, 5, 6],
   leftShowLowerB: true,
   leftShowUpperC: true,
   rightShowLowerB: true,
@@ -234,15 +236,31 @@ function codeLabel(code: string) {
 
 function sanitizeSettings(raw: unknown): Settings {
   const value = raw && typeof raw === "object" ? (raw as Partial<Settings>) : {};
-  const presets = Array.isArray(value.octavePresets)
-    ? value.octavePresets.slice(0, 4).map((item, index) => {
+  const legacy = value as Partial<Settings> & {
+    octavePresets?: unknown;
+    showLowerB?: boolean;
+    showUpperC?: boolean;
+  };
+  const normalizePresets = (candidate: unknown, fallback: Settings["leftOctavePresets"]) => {
+    const presets = Array.isArray(candidate)
+      ? candidate.slice(0, 4).map((item, index) => {
         const parsed = Number(item);
         return Number.isFinite(parsed)
           ? Math.max(0, Math.min(8, Math.round(parsed)))
-          : DEFAULT_SETTINGS.octavePresets[index];
+          : fallback[index];
       })
-    : DEFAULT_SETTINGS.octavePresets;
-  while (presets.length < 4) presets.push(DEFAULT_SETTINGS.octavePresets[presets.length]);
+      : [...fallback];
+    while (presets.length < 4) presets.push(fallback[presets.length]);
+    return presets as Settings["leftOctavePresets"];
+  };
+  const leftPresets = normalizePresets(
+    value.leftOctavePresets ?? legacy.octavePresets,
+    DEFAULT_SETTINGS.leftOctavePresets,
+  );
+  const rightPresets = normalizePresets(
+    value.rightOctavePresets,
+    DEFAULT_SETTINGS.rightOctavePresets,
+  );
   const validMapping = (candidate: unknown, fallback: string[]) =>
     Array.isArray(candidate) && candidate.length === NOTE_OFFSETS.length
       ? candidate.map((item, index) => (typeof item === "string" ? item : fallback[index]))
@@ -250,7 +268,6 @@ function sanitizeSettings(raw: unknown): Settings {
   const validOctaveShortcuts = Array.isArray(value.octaveShortcuts) && value.octaveShortcuts.length === 8
     ? value.octaveShortcuts.map((item, index) => (typeof item === "string" ? item : OCTAVE_SHORTCUTS[index]))
     : OCTAVE_SHORTCUTS;
-  const legacy = value as Partial<Settings> & { showLowerB?: boolean; showUpperC?: boolean };
   const legacyLowerB = typeof legacy.showLowerB === "boolean" ? legacy.showLowerB : true;
   const legacyUpperC = typeof legacy.showUpperC === "boolean" ? legacy.showUpperC : true;
   const transposeShortcuts = value.transposeShortcuts && typeof value.transposeShortcuts === "object"
@@ -268,7 +285,8 @@ function sanitizeSettings(raw: unknown): Settings {
     ...DEFAULT_SETTINGS,
     ...value,
     keyboardCount: value.keyboardCount === 2 ? 2 : 1,
-    octavePresets: presets as Settings["octavePresets"],
+    leftOctavePresets: leftPresets,
+    rightOctavePresets: rightPresets,
     leftShowLowerB: typeof value.leftShowLowerB === "boolean" ? value.leftShowLowerB : legacyLowerB,
     leftShowUpperC: typeof value.leftShowUpperC === "boolean" ? value.leftShowUpperC : legacyUpperC,
     rightShowLowerB: typeof value.rightShowLowerB === "boolean" ? value.rightShowLowerB : legacyLowerB,
@@ -315,10 +333,12 @@ function Toggle({
 }
 
 function OctavePresetInput({
+  sideLabel,
   index,
   value,
   onCommit,
 }: {
+  sideLabel: string;
   index: number;
   value: number;
   onCommit: (value: number) => void;
@@ -348,7 +368,7 @@ function OctavePresetInput({
         inputMode="numeric"
         pattern="[0-8]*"
         value={draft}
-        aria-label={`${index + 1}번 옥타브 값`}
+        aria-label={`${sideLabel} ${index + 1}번 옥타브 값`}
         onFocus={(event) => event.currentTarget.select()}
         onClick={(event) => event.currentTarget.select()}
         onChange={(event) => {
@@ -818,9 +838,11 @@ export default function Home() {
       const octaveShortcutIndex = current.octaveShortcuts.indexOf(event.code);
       if (octaveShortcutIndex >= 0) {
         event.preventDefault();
-        const preset = current.octavePresets[octaveShortcutIndex % 4];
-        if (octaveShortcutIndex < 4) setLeftOctave(preset);
-        else if (current.keyboardCount === 2) setRightOctave(preset);
+        if (octaveShortcutIndex < 4) {
+          setLeftOctave(current.leftOctavePresets[octaveShortcutIndex]);
+        } else if (current.keyboardCount === 2) {
+          setRightOctave(current.rightOctavePresets[octaveShortcutIndex - 4]);
+        }
         return;
       }
       const transposeAction = (Object.keys(current.transposeShortcuts) as TransposeShortcutAction[])
@@ -1002,15 +1024,16 @@ export default function Home() {
   );
 
   const updatePreset = useCallback(
-    (index: number, value: number) => {
+    (side: KeyboardSide, index: number, value: number) => {
       const nextValue = Math.max(0, Math.min(8, Math.round(value)));
       setSettings((current) => {
-        const previousValue = current.octavePresets[index];
-        const next = [...current.octavePresets] as Settings["octavePresets"];
+        const key = side === "left" ? "leftOctavePresets" : "rightOctavePresets";
+        const previousValue = current[key][index];
+        const next = [...current[key]] as Settings["leftOctavePresets"];
         next[index] = nextValue;
-        if (leftOctaveRef.current === previousValue) setLeftOctave(nextValue);
-        if (rightOctaveRef.current === previousValue) setRightOctave(nextValue);
-        return { ...current, octavePresets: next };
+        if (side === "left" && leftOctaveRef.current === previousValue) setLeftOctave(nextValue);
+        if (side === "right" && rightOctaveRef.current === previousValue) setRightOctave(nextValue);
+        return { ...current, [key]: next };
       });
     },
     [],
@@ -1047,11 +1070,12 @@ export default function Home() {
   const renderOctavePanel = (side: KeyboardSide) => {
     const selected = side === "left" ? leftOctave : rightOctave;
     const setter = side === "left" ? setLeftOctave : setRightOctave;
+    const presets = side === "left" ? settings.leftOctavePresets : settings.rightOctavePresets;
     return (
       <section className="octave-panel" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} 옥타브 선택`}>
         <div className="panel-eyebrow">{side === "left" ? "왼쪽 옥타브" : "오른쪽 옥타브"}</div>
         <div className="octave-buttons">
-          {settings.octavePresets.map((octave, index) => (
+          {presets.map((octave, index) => (
             <button
               type="button"
               className={`control-button octave-button ${selected === octave ? "is-selected" : ""}`}
@@ -1101,6 +1125,9 @@ export default function Home() {
           {settings.octaveShortcuts.map((code, index) => {
             const isCapture = captureTarget?.kind === "octave" && captureTarget.index === index;
             const side = index < 4 ? "왼쪽" : "오른쪽";
+            const octave = index < 4
+              ? settings.leftOctavePresets[index]
+              : settings.rightOctavePresets[index - 4];
             return (
               <button
                 type="button"
@@ -1111,7 +1138,7 @@ export default function Home() {
                   setMappingError("");
                 }}
               >
-                <span>{side} O{settings.octavePresets[index % 4]}</span>
+                <span>{side} O{octave}</span>
                 <strong>{isCapture ? "키 입력…" : codeLabel(code)}</strong>
               </button>
             );
@@ -1203,7 +1230,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className={`cat-zone ${settings.breathEnabled ? "has-breath" : ""}`} aria-label={`고양이 길이 ${catNote}, ${segmentCount + 1}단계`}>
+        <section className={`cat-zone ${settings.keyboardCount === 2 ? "is-double" : ""} ${settings.breathEnabled ? "has-breath" : ""}`} aria-label={`고양이 길이 ${catNote}, ${segmentCount + 1}단계`}>
           <div className="cat-track">
             <div className="cat-assembly" aria-hidden="true">
               <img className="cat-mouth" src={mouthOpen ? theme.visuals.mouthOpen : theme.visuals.mouthClosed} alt="" draggable={false} />
@@ -1287,11 +1314,19 @@ export default function Home() {
                     <Toggle checked={settings.rightShowUpperC} onChange={(checked) => updateSettings({ rightShowUpperC: checked })} label="높은 C 표시" />
                   </div>
                 </div>
-                <div className="setting-field">
-                  <label>옥타브 선택 버튼</label>
+                <div className="setting-field octave-preset-field">
+                  <label>왼쪽 옥타브 선택 버튼</label>
                   <div className="preset-inputs">
-                    {settings.octavePresets.map((value, index) => (
-                      <OctavePresetInput key={`preset-${index}-${value}`} index={index} value={value} onCommit={(next) => updatePreset(index, next)} />
+                    {settings.leftOctavePresets.map((value, index) => (
+                      <OctavePresetInput key={`left-preset-${index}-${value}`} sideLabel="왼쪽" index={index} value={value} onCommit={(next) => updatePreset("left", index, next)} />
+                    ))}
+                  </div>
+                </div>
+                <div className="setting-field octave-preset-field">
+                  <label>오른쪽 옥타브 선택 버튼</label>
+                  <div className="preset-inputs">
+                    {settings.rightOctavePresets.map((value, index) => (
+                      <OctavePresetInput key={`right-preset-${index}-${value}`} sideLabel="오른쪽" index={index} value={value} onCommit={(next) => updatePreset("right", index, next)} />
                     ))}
                   </div>
                 </div>
