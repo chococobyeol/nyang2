@@ -596,12 +596,20 @@ button {
 }
 
 .paw-note-natural.is-edge-note {
-  transform: scale(0.72);
-  transform-origin: center bottom;
+  --edge-note-shift: 0%;
+  transform: translateX(var(--edge-note-shift)) scale(0.72);
+}
+
+.paw-note-natural.is-edge-note:first-child {
+  --edge-note-shift: 14%;
+}
+
+.paw-note-natural.is-edge-note:last-child {
+  --edge-note-shift: -14%;
 }
 
 .paw-note-natural.is-edge-note:hover {
-  transform: translateY(-3px) scale(0.72);
+  transform: translateX(var(--edge-note-shift)) translateY(-3px) scale(0.72);
 }
 
 .paw-note:focus-visible {
@@ -637,7 +645,7 @@ button {
 }
 
 .paw-note-natural.is-edge-note.is-active {
-  transform: translateY(5px) scale(0.64);
+  transform: translateX(var(--edge-note-shift)) translateY(5px) scale(0.64);
 }
 
 .paw-note.is-active::before {

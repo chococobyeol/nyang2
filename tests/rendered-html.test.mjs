@@ -121,6 +121,8 @@ test("renders the optional lower B and upper C at accidental-key scale", async (
   ]);
   assert.match(page, /const edgeNote = offset === -1 \|\| offset === 12;/);
   assert.match(page, /edgeNote \? "is-edge-note" : ""/);
-  assert.match(css, /\.paw-note-natural\.is-edge-note \{\s*transform: scale\(0\.72\);\s*transform-origin: center bottom;/);
-  assert.match(css, /\.paw-note-natural\.is-edge-note\.is-active \{\s*transform: translateY\(5px\) scale\(0\.64\);/);
+  assert.match(css, /\.paw-note-natural\.is-edge-note \{\s*--edge-note-shift: 0%;\s*transform: translateX\(var\(--edge-note-shift\)\) scale\(0\.72\);/);
+  assert.match(css, /\.paw-note-natural\.is-edge-note:first-child \{\s*--edge-note-shift: 14%;/);
+  assert.match(css, /\.paw-note-natural\.is-edge-note:last-child \{\s*--edge-note-shift: -14%;/);
+  assert.match(css, /\.paw-note-natural\.is-edge-note\.is-active \{\s*transform: translateX\(var\(--edge-note-shift\)\) translateY\(5px\) scale\(0\.64\);/);
 });
