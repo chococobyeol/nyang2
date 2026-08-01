@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(`http://localhost${pathname}`, {
       headers: { accept: "text/html" },
     }),
     {
@@ -72,4 +72,19 @@ test("ships the tuned E4 nyang sample with conditional tail-only reverb", async 
   assert.match(page, /const \[rightOctave, setRightOctave\] = useState\(5\)/);
   assert.match(layout, /title:\s*"냥냥"/);
   await assert.rejects(access(new URL("../app/_sites-preview/", import.meta.url)));
+});
+
+test("publishes a privacy policy and links it from settings", async () => {
+  const [response, page] = await Promise.all([
+    render("/privacy"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /개인정보처리방침/);
+  assert.match(html, /마이크 소리는 기기 안에서만 실시간으로 처리/);
+  assert.match(html, /로컬 저장소에만 보관/);
+  assert.match(html, /Cloudflare/);
+  assert.match(page, /href="\/privacy"/);
 });

@@ -1661,6 +1661,14 @@ export default function Home() {
                 <div><strong>설정 초기화</strong><p>저장된 설정을 지우고 기본값으로 돌아갑니다.</p></div>
                 <button type="button" onClick={resetSettings}>초기화</button>
               </section>
+
+              <div className="settings-legal">
+                <a href="/privacy" target="_blank" rel="noreferrer">
+                  <span>개인정보처리방침</span>
+                  <strong aria-hidden="true">↗</strong>
+                </a>
+                <p>기기 저장 설정과 마이크 처리 방식을 확인할 수 있습니다.</p>
+              </div>
             </div>
           </aside>
         </div>
