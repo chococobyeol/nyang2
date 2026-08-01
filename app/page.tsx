@@ -66,6 +66,18 @@ type AudioGraph = {
   master: GainNode;
   breath: GainNode;
   compressor: DynamicsCompressorNode;
+  reverbImpulse: AudioBuffer;
+};
+
+type SampleVoiceState = {
+  buffer: AudioBuffer;
+  playbackRate: number;
+  startedAt: number;
+  dryEnded: boolean;
+  tailStarted: boolean;
+  holdTimer: number | null;
+  cleanupTimer: number | null;
+  tailGain: GainNode | null;
 };
 
 type Voice = {
@@ -76,7 +88,7 @@ type Voice = {
   pitchClass: number;
   gain: GainNode;
   sources: AudioScheduledSourceNode[];
-  allowsTail: boolean;
+  sampleState?: SampleVoiceState;
   released: boolean;
   stopped: boolean;
 };
@@ -140,6 +152,9 @@ const TRANSPOSE_SHORTCUT_LABELS: Record<TransposeShortcutAction, string> = {
 };
 
 const NYANG_SAMPLE = { midi: 64, url: "/audio/nyang/e4.mp3" } as const;
+const NYANG_LONG_PRESS_MS = 260;
+const NYANG_TAIL_SOURCE_SECONDS = 0.22;
+const NYANG_REVERB_SECONDS = 2.6;
 
 const DEFAULT_SETTINGS: Settings = {
   keyboardCount: 1,
@@ -251,6 +266,27 @@ function codeLabel(code: string) {
     Equal: "=",
   };
   return labels[code] ?? code.replace(/^Numpad/, "Num ");
+}
+
+function createReverbImpulse(context: AudioContext) {
+  const length = Math.round(context.sampleRate * NYANG_REVERB_SECONDS);
+  const impulse = context.createBuffer(2, length, context.sampleRate);
+  let seed = 20260801;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 0xffffffff;
+  };
+  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+    const data = impulse.getChannelData(channel);
+    let softened = 0;
+    for (let index = 0; index < length; index += 1) {
+      const progress = index / length;
+      const noise = random() * 2 - 1;
+      softened = softened * 0.56 + noise * 0.44;
+      data[index] = softened * (1 - progress) ** 3.2;
+    }
+  }
+  return impulse;
 }
 
 function sanitizeSettings(raw: unknown): Settings {
@@ -514,8 +550,8 @@ function KeyboardGroup({
 export default function Home() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [leftOctave, setLeftOctave] = useState(2);
-  const [rightOctave, setRightOctave] = useState(3);
+  const [leftOctave, setLeftOctave] = useState(4);
+  const [rightOctave, setRightOctave] = useState(5);
   const [transpose, setTranspose] = useState(0);
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [sustainPressed, setSustainPressed] = useState(false);
@@ -648,7 +684,13 @@ export default function Home() {
       breath.connect(master);
       master.connect(compressor);
       compressor.connect(context.destination);
-      audioRef.current = { context, master, breath, compressor };
+      audioRef.current = {
+        context,
+        master,
+        breath,
+        compressor,
+        reverbImpulse: createReverbImpulse(context),
+      };
       void loadSampleBuffer(context, NYANG_SAMPLE.url).catch(() => {
         // If preload fails, the selected note retries and can fall back to the synth voice.
       });
@@ -700,6 +742,50 @@ export default function Home() {
     }
   }, []);
 
+  const finishSampleVoice = useCallback((voice: Voice) => {
+    if (voice.stopped) return;
+    voice.stopped = true;
+    const state = voice.sampleState;
+    if (state?.holdTimer !== null && state?.holdTimer !== undefined) window.clearTimeout(state.holdTimer);
+    if (state?.cleanupTimer !== null && state?.cleanupTimer !== undefined) window.clearTimeout(state.cleanupTimer);
+    voicesRef.current.delete(voice.id);
+    if (inputVoiceRef.current.get(voice.inputId) === voice.id) inputVoiceRef.current.delete(voice.inputId);
+    refreshVoiceUI();
+  }, [refreshVoiceUI]);
+
+  const triggerSampleTail = useCallback((voice: Voice) => {
+    const graph = audioRef.current;
+    const state = voice.sampleState;
+    if (!graph || !state || state.tailStarted || voice.stopped) return;
+    state.tailStarted = true;
+    if (state.holdTimer !== null) {
+      window.clearTimeout(state.holdTimer);
+      state.holdTimer = null;
+    }
+
+    const source = graph.context.createBufferSource();
+    const convolver = graph.context.createConvolver();
+    const tailGain = graph.context.createGain();
+    const offset = Math.max(0, state.buffer.duration - NYANG_TAIL_SOURCE_SECONDS);
+    const duration = Math.min(NYANG_TAIL_SOURCE_SECONDS, state.buffer.duration - offset);
+    const naturalTailTime = state.startedAt + offset / state.playbackRate;
+    const startAt = Math.max(graph.context.currentTime, naturalTailTime);
+
+    source.buffer = state.buffer;
+    source.playbackRate.setValueAtTime(state.playbackRate, startAt);
+    convolver.buffer = graph.reverbImpulse;
+    tailGain.gain.value = 0.38;
+    source.connect(convolver);
+    convolver.connect(tailGain);
+    tailGain.connect(graph.breath);
+    source.start(startAt, offset, duration);
+    voice.sources.push(source);
+    state.tailGain = tailGain;
+
+    const tailDuration = Math.max(0, startAt - graph.context.currentTime) + duration / state.playbackRate + NYANG_REVERB_SECONDS;
+    state.cleanupTimer = window.setTimeout(() => finishSampleVoice(voice), (tailDuration + 0.12) * 1000);
+  }, [finishSampleVoice]);
+
   const stopVoice = useCallback(
     (voice: Voice, immediate = false) => {
       if (voice.stopped) return;
@@ -707,6 +793,20 @@ export default function Home() {
       const graph = audioRef.current;
       if (!graph) return;
       const now = graph.context.currentTime;
+      const sampleState = voice.sampleState;
+      if (sampleState?.holdTimer !== null && sampleState?.holdTimer !== undefined) {
+        window.clearTimeout(sampleState.holdTimer);
+        sampleState.holdTimer = null;
+      }
+      if (sampleState?.cleanupTimer !== null && sampleState?.cleanupTimer !== undefined) {
+        window.clearTimeout(sampleState.cleanupTimer);
+        sampleState.cleanupTimer = null;
+      }
+      if (sampleState?.tailGain) {
+        sampleState.tailGain.gain.cancelScheduledValues(now);
+        sampleState.tailGain.gain.setValueAtTime(sampleState.tailGain.gain.value, now);
+        sampleState.tailGain.gain.linearRampToValueAtTime(0, now + (immediate ? 0.02 : 0.12));
+      }
       voice.gain.gain.cancelScheduledValues(now);
       voice.gain.gain.setValueAtTime(Math.max(0.0001, voice.gain.gain.value), now);
       voice.gain.gain.exponentialRampToValueAtTime(0.0001, now + (immediate ? 0.025 : 0.16));
@@ -738,7 +838,16 @@ export default function Home() {
       const voice = voicesRef.current.get(voiceId);
       if (!voice) return;
       voice.released = true;
-      if (voice.allowsTail && !force) {
+      if (voice.sampleState && !force) {
+        if (voice.sampleState.holdTimer !== null) {
+          window.clearTimeout(voice.sampleState.holdTimer);
+          voice.sampleState.holdTimer = null;
+        }
+        if (sustainRef.current) triggerSampleTail(voice);
+        if (voice.sampleState.dryEnded && !voice.sampleState.tailStarted) {
+          finishSampleVoice(voice);
+          return;
+        }
         refreshVoiceUI();
         return;
       }
@@ -748,7 +857,7 @@ export default function Home() {
       }
       stopVoice(voice, force);
     },
-    [refreshVoiceUI, stopVoice],
+    [finishSampleVoice, refreshVoiceUI, stopVoice, triggerSampleTail],
   );
 
   const startNote = useCallback(
@@ -791,12 +900,14 @@ export default function Home() {
       const now = graph.context.currentTime;
       const sources: AudioScheduledSourceNode[] = [];
       let sampleSource: AudioBufferSourceNode | null = null;
+      let samplePlaybackRate = 1;
 
       if (sampleBuffer) {
         const source = graph.context.createBufferSource();
         const rawRate = 2 ** ((soundingMidi - NYANG_SAMPLE.midi) / 12);
+        samplePlaybackRate = Math.max(0.0001, Math.min(1024, rawRate));
         source.buffer = sampleBuffer;
-        source.playbackRate.setValueAtTime(Math.max(0.0001, Math.min(1024, rawRate)), now);
+        source.playbackRate.setValueAtTime(samplePlaybackRate, now);
         source.connect(gain);
         gain.gain.setValueAtTime(0.0001, now);
         gain.gain.exponentialRampToValueAtTime(0.82, now + 0.012);
@@ -836,24 +947,37 @@ export default function Home() {
         pitchClass: mod(baseMidi, 12),
         gain,
         sources,
-        allowsTail: Boolean(sampleSource),
+        sampleState: sampleSource && sampleBuffer
+          ? {
+              buffer: sampleBuffer,
+              playbackRate: samplePlaybackRate,
+              startedAt: now,
+              dryEnded: false,
+              tailStarted: false,
+              holdTimer: null,
+              cleanupTimer: null,
+              tailGain: null,
+            }
+          : undefined,
         released: false,
         stopped: false,
       };
       voicesRef.current.set(voiceId, voice);
       inputVoiceRef.current.set(inputId, voiceId);
-      if (sampleSource) {
+      if (sampleSource && voice.sampleState) {
         sampleSource.onended = () => {
           if (voice.stopped || voicesRef.current.get(voiceId) !== voice) return;
-          voice.stopped = true;
-          voicesRef.current.delete(voiceId);
-          if (inputVoiceRef.current.get(inputId) === voiceId) inputVoiceRef.current.delete(inputId);
-          refreshVoiceUI();
+          if (voice.sampleState) voice.sampleState.dryEnded = true;
+          if (!voice.sampleState?.tailStarted && voice.released) finishSampleVoice(voice);
         };
+        voice.sampleState.holdTimer = window.setTimeout(() => {
+          if (!voice.released) triggerSampleTail(voice);
+        }, NYANG_LONG_PRESS_MS);
+        if (sustainRef.current) triggerSampleTail(voice);
       }
       refreshVoiceUI();
     },
-    [initAudio, loadSampleBuffer, refreshVoiceUI, releaseInput],
+    [finishSampleVoice, initAudio, loadSampleBuffer, refreshVoiceUI, releaseInput, triggerSampleTail],
   );
 
   const allNotesOff = useCallback(() => {
@@ -869,13 +993,17 @@ export default function Home() {
     (pressed: boolean) => {
       sustainRef.current = pressed;
       setSustainPressed(pressed);
-      if (!pressed) {
+      if (pressed) {
         voicesRef.current.forEach((voice) => {
-          if (voice.released && !voice.allowsTail) stopVoice(voice);
+          if (voice.sampleState) triggerSampleTail(voice);
+        });
+      } else {
+        voicesRef.current.forEach((voice) => {
+          if (voice.released && !voice.sampleState) stopVoice(voice);
         });
       }
     },
-    [stopVoice],
+    [stopVoice, triggerSampleTail],
   );
 
   const sideAndOffsetForCode = useCallback((code: string) => {
@@ -1151,8 +1279,8 @@ export default function Home() {
     allNotesOff();
     window.localStorage.removeItem(STORAGE_KEY);
     setSettings(DEFAULT_SETTINGS);
-    setLeftOctave(2);
-    setRightOctave(3);
+    setLeftOctave(4);
+    setRightOctave(5);
     setTranspose(0);
     setLastCatPitchClass(11);
     setMouthOpen(false);
@@ -1414,7 +1542,10 @@ export default function Home() {
                 <div className="settings-section-title"><span>01</span><h3>건반과 옥타브</h3></div>
                 <Toggle
                   checked={settings.keyboardCount === 2}
-                  onChange={(checked) => updateSettings({ keyboardCount: checked ? 2 : 1 })}
+                  onChange={(checked) => {
+                    if (checked) setRightOctave(Math.min(8, leftOctaveRef.current + 1));
+                    updateSettings({ keyboardCount: checked ? 2 : 1 });
+                  }}
                   label="건반 한 세트 추가"
                 />
                 <Toggle checked={settings.mobileLandscape} onChange={(checked) => updateSettings({ mobileLandscape: checked })} label="휴대폰 세로 화면을 가로로 표시" />
@@ -1479,7 +1610,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 기준음에 맞춰 사용하며, 반복 없이 끝에 긴 잔향이 남습니다.</p>
+                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용하며, 길게 누르거나 서스테인할 때만 음의 끝부분에 잔향이 붙습니다.</p>
               </section>
 
               <section className="settings-section">

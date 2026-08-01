@@ -36,7 +36,7 @@ test("server-renders the finished nyangnyang app", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Building your site/i);
 });
 
-test("ships the tuned E4 nyang sample and one-shot player", async () => {
+test("ships the tuned E4 nyang sample with conditional tail-only reverb", async () => {
   const audioRoot = new URL("../public/audio/nyang/", import.meta.url);
   const expectedFiles = ["e4.mp3"];
   const [page, layout, files] = await Promise.all([
@@ -56,11 +56,15 @@ test("ships the tuned E4 nyang sample and one-shot player", async () => {
   assert.match(page, /name: "냥 보이스"/);
   assert.match(page, /name: "포근 신스"/);
   assert.match(page, /O3 E 녹음본/);
-  assert.match(page, /긴 잔향/);
+  assert.match(page, /길게 누르거나 서스테인할 때만 음의 끝부분에 잔향/);
   assert.match(page, /createBufferSource\(\)/);
   assert.match(page, /source\.playbackRate/);
   assert.doesNotMatch(page, /source\.loop = true/);
-  assert.match(page, /allowsTail/);
+  assert.match(page, /triggerSampleTail/);
+  assert.match(page, /createConvolver\(\)/);
+  assert.match(page, /NYANG_LONG_PRESS_MS/);
+  assert.match(page, /const \[leftOctave, setLeftOctave\] = useState\(4\)/);
+  assert.match(page, /const \[rightOctave, setRightOctave\] = useState\(5\)/);
   assert.match(layout, /title:\s*"냥냥"/);
   await assert.rejects(access(new URL("../app/_sites-preview/", import.meta.url)));
 });
