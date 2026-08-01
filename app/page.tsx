@@ -192,7 +192,7 @@ const THEMES: Theme[] = [
   {
     id: "nyang-voice",
     name: "냥 보이스",
-    description: "직접 녹음한 진짜 냥 소리",
+    description: "냥..",
     waveform: "triangle",
     harmonic: "sine",
     harmonicGain: 0.18,

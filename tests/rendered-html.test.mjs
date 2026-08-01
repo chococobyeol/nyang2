@@ -54,6 +54,8 @@ test("ships the tuned E4 nyang sample with conditional tail-only reverb", async 
   assert.match(page, /const NYANG_SAMPLE = \{ midi: 64/);
   assert.match(page, /themeId: "nyang-voice"/);
   assert.match(page, /name: "냥 보이스"/);
+  assert.match(page, /description: "냥\.\."/);
+  assert.doesNotMatch(page, /직접 녹음한 진짜 냥 소리/);
   assert.match(page, /name: "포근 신스"/);
   assert.match(page, /O3 E 녹음본/);
   assert.match(page, /길게 눌러도 손을 떼면 바로 멈추며/);
