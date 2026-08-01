@@ -13,19 +13,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NYANG KEYS — 길어지는 고양이 건반",
+  title: "냥냥",
   description:
     "옥타브와 조성을 자유롭게 바꾸며 고양이와 함께 연주하는 멀티터치 웹 건반입니다.",
   openGraph: {
-    title: "NYANG KEYS",
-    description: "PLAY · STRETCH · MEOW — 길어지는 고양이 건반",
+    title: "냥냥",
+    description: "고양이와 함께 연주하는 멀티터치 웹 건반",
     type: "website",
-    images: [{ url: "/og.png", width: 1536, height: 1024, alt: "NYANG KEYS 고양이 건반" }],
+    images: [{ url: "/og.png", width: 1080, height: 796, alt: "냥냥 고양이 건반" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "NYANG KEYS",
-    description: "PLAY · STRETCH · MEOW — 길어지는 고양이 건반",
+    title: "냥냥",
+    description: "고양이와 함께 연주하는 멀티터치 웹 건반",
     images: ["/og.png"],
   },
   icons: {

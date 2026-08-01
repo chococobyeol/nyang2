@@ -868,7 +868,7 @@ export default function Home() {
     const setter = side === "left" ? setLeftOctave : setRightOctave;
     return (
       <section className="octave-panel" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} 옥타브 선택`}>
-        <div className="panel-eyebrow">{side === "left" ? "LEFT OCTAVE" : "RIGHT OCTAVE"}</div>
+        <div className="panel-eyebrow">{side === "left" ? "왼쪽 옥타브" : "오른쪽 옥타브"}</div>
         <div className="octave-buttons">
           {settings.octavePresets.map((octave, index) => (
             <button
@@ -916,10 +916,9 @@ export default function Home() {
       <div className="app-stage">
         <header className="top-bar">
           <div className="brand-block">
-            <div className="brand-mark">N</div>
+            <div className="brand-mark"><img src={theme.visuals.pawPad} alt="" /></div>
             <div>
-              <h1>NYANG KEYS</h1>
-              <p>길어지는 고양이 건반</p>
+              <h1>냥냥</h1>
             </div>
           </div>
 
@@ -1021,7 +1020,7 @@ export default function Home() {
         <footer className="performance-footer">
           <span className={audioReady ? "is-ready" : ""}>{audioReady ? "● AUDIO READY" : "첫 건반을 누르면 오디오가 시작됩니다"}</span>
           <span className={sustainPressed ? "sustain-on" : ""}>SPACE · SUSTAIN {sustainPressed ? "ON" : ""}</span>
-          <button type="button" onClick={allNotesOff}>ALL NOTES OFF</button>
+          <button type="button" onClick={allNotesOff}>모든 음 끄기</button>
         </footer>
       </div>
 
@@ -1032,7 +1031,7 @@ export default function Home() {
           <aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div className="settings-header">
               <div>
-                <span>NYANG KEYS</span>
+                <span>냥냥</span>
                 <h2 id="settings-title">연주 설정</h2>
               </div>
               <button type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기">×</button>

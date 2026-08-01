@@ -72,7 +72,7 @@ button {
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: 190px minmax(410px, 1fr) 310px 128px;
+  grid-template-columns: 146px minmax(330px, 1fr) 266px 92px;
   align-items: start;
   gap: 18px;
   padding: 22px 24px 10px;
@@ -92,33 +92,28 @@ button {
   height: 48px;
   border: 2px solid var(--ink);
   border-radius: 50% 50% 44% 44%;
-  background: var(--accent);
-  color: #fff;
-  font-size: 24px;
-  font-weight: 900;
+  background: var(--accent-soft);
   transform: rotate(-7deg);
   box-shadow: 4px 4px 0 var(--ink);
 }
 
-.brand-block h1 {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1;
-  letter-spacing: 0.08em;
-  font-weight: 900;
+.brand-mark img {
+  width: 31px;
+  height: 31px;
+  opacity: 0.78;
 }
 
-.brand-block p {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.brand-block h1 {
+  margin: 0;
+  font-size: 29px;
+  line-height: 1;
+  letter-spacing: -0.09em;
+  font-weight: 900;
 }
 
 .octave-area {
   display: grid;
-  grid-template-columns: minmax(390px, 650px);
+  grid-template-columns: minmax(320px, 590px);
   gap: 12px;
   justify-content: center;
 }
@@ -128,25 +123,21 @@ button {
 }
 
 .octave-panel {
-  padding: 10px 12px 12px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(255, 253, 247, 0.75);
-  box-shadow: 0 5px 18px rgba(53, 43, 31, 0.05);
+  padding: 1px 0 0;
 }
 
 .panel-eyebrow {
-  margin-bottom: 7px;
+  margin: 0 0 8px 3px;
   color: var(--muted);
   font-size: 9px;
   font-weight: 900;
-  letter-spacing: 0.15em;
+  letter-spacing: -0.02em;
 }
 
 .octave-buttons {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 7px;
+  gap: 9px;
 }
 
 .control-button {
@@ -167,8 +158,17 @@ button {
 }
 
 .octave-button {
-  height: 46px;
-  font-size: 19px;
+  position: relative;
+  height: 54px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 18px 18px 15px 15px;
+  background-color: #fffdf7;
+  background-image: url('/assets/themes/default/pawpad.svg');
+  background-position: calc(100% + 8px) calc(100% + 12px);
+  background-size: 42px;
+  background-repeat: no-repeat;
+  font-size: 18px;
   font-weight: 900;
 }
 
@@ -183,6 +183,7 @@ button {
   border-color: var(--ink);
   background: var(--accent);
   color: #fff;
+  background-image: none;
   box-shadow: 3px 3px 0 var(--ink);
 }
 
@@ -192,18 +193,18 @@ button {
 
 .transpose-panel {
   display: grid;
-  grid-template-columns: 76px 1fr;
+  grid-template-columns: 68px 1fr;
   gap: 9px;
 }
 
 .transpose-status {
   display: flex;
-  min-height: 97px;
+  min-height: 90px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--ink);
-  border-radius: 16px;
+  border-radius: 24px;
   background: var(--ink);
   color: #fff;
 }
@@ -225,13 +226,15 @@ button {
 .transpose-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 7px;
+  gap: 8px;
 }
 
 .transpose-grid button {
-  min-height: 45px;
+  min-height: 41px;
   padding: 4px;
-  font-size: 14px;
+  border: 2px solid var(--ink);
+  border-radius: 15px;
+  font-size: 13px;
   font-weight: 900;
 }
 
@@ -258,7 +261,7 @@ button {
 .mic-status {
   min-height: 43px;
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: 16px;
   background: rgba(255, 253, 247, 0.8);
   cursor: pointer;
   font-size: 11px;
@@ -269,11 +272,15 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 58px;
+  border: 2px solid var(--ink);
+  background: #fffdf7;
 }
 
 .settings-button span {
-  font-size: 18px;
+  font-size: 19px;
 }
 
 .mic-status {
