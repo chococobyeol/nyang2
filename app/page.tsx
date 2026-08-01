@@ -844,8 +844,8 @@ export default function Home() {
           voice.sampleState.holdTimer = null;
         }
         if (sustainRef.current) triggerSampleTail(voice);
-        if (voice.sampleState.dryEnded && !voice.sampleState.tailStarted) {
-          finishSampleVoice(voice);
+        if (!voice.sampleState.tailStarted) {
+          stopVoice(voice, true);
           return;
         }
         refreshVoiceUI();
@@ -857,7 +857,7 @@ export default function Home() {
       }
       stopVoice(voice, force);
     },
-    [finishSampleVoice, refreshVoiceUI, stopVoice, triggerSampleTail],
+    [refreshVoiceUI, stopVoice, triggerSampleTail],
   );
 
   const startNote = useCallback(
@@ -1610,7 +1610,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용하며, 길게 누르거나 서스테인할 때만 음의 끝부분에 잔향이 붙습니다.</p>
+                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용합니다. 손을 떼면 바로 멈추며, 길게 누르거나 서스테인할 때만 음의 끝부분에 잔향이 붙습니다.</p>
               </section>
 
               <section className="settings-section">
