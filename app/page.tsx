@@ -51,6 +51,7 @@ type Theme = {
   harmonicGain: number;
   accent: string;
   accentSoft: string;
+  keyAccent: string;
   visuals: {
     pawPad: string;
     mouthClosed: string;
@@ -75,6 +76,7 @@ type Voice = {
   pitchClass: number;
   gain: GainNode;
   sources: AudioScheduledSourceNode[];
+  allowsTail: boolean;
   released: boolean;
   stopped: boolean;
 };
@@ -137,16 +139,7 @@ const TRANSPOSE_SHORTCUT_LABELS: Record<TransposeShortcutAction, string> = {
   reset: "C로 초기화",
 };
 
-const NYANG_SAMPLES = [
-  { midi: 60, url: "/audio/nyang/c4.mp3" },
-  { midi: 62, url: "/audio/nyang/d4.mp3" },
-  { midi: 64, url: "/audio/nyang/e4.mp3" },
-  { midi: 65, url: "/audio/nyang/f4.mp3" },
-  { midi: 67, url: "/audio/nyang/g4.mp3" },
-  { midi: 69, url: "/audio/nyang/a4.mp3" },
-  { midi: 71, url: "/audio/nyang/b4.mp3" },
-  { midi: 72, url: "/audio/nyang/c5.mp3" },
-] as const;
+const NYANG_SAMPLE = { midi: 64, url: "/audio/nyang/e4.mp3" } as const;
 
 const DEFAULT_SETTINGS: Settings = {
   keyboardCount: 1,
@@ -189,6 +182,7 @@ const THEMES: Theme[] = [
     harmonicGain: 0.18,
     accent: "#ef6b5a",
     accentSoft: "#ffd9d2",
+    keyAccent: "#f3b7ad",
     visuals: DEFAULT_VISUALS,
   },
   {
@@ -198,8 +192,9 @@ const THEMES: Theme[] = [
     waveform: "triangle",
     harmonic: "sine",
     harmonicGain: 0.18,
-    accent: "#ef6b5a",
-    accentSoft: "#ffd9d2",
+    accent: "#c98a2f",
+    accentSoft: "#f5dfb4",
+    keyAccent: "#e8bc70",
     visuals: DEFAULT_VISUALS,
   },
   {
@@ -211,6 +206,7 @@ const THEMES: Theme[] = [
     harmonicGain: 0.28,
     accent: "#3e8f98",
     accentSoft: "#ccebed",
+    keyAccent: "#9ed7dc",
     visuals: DEFAULT_VISUALS,
   },
   {
@@ -222,6 +218,7 @@ const THEMES: Theme[] = [
     harmonicGain: 0.12,
     accent: "#7769b5",
     accentSoft: "#ded8f5",
+    keyAccent: "#c1b5ea",
     visuals: DEFAULT_VISUALS,
   },
 ];
@@ -254,22 +251,6 @@ function codeLabel(code: string) {
     Equal: "=",
   };
   return labels[code] ?? code.replace(/^Numpad/, "Num ");
-}
-
-function quietLoopPoint(buffer: AudioBuffer, ratio: number) {
-  const data = buffer.getChannelData(0);
-  const target = Math.round(data.length * ratio);
-  const radius = Math.min(Math.round(buffer.sampleRate * 0.018), target, data.length - target - 1);
-  let best = target;
-  let bestLevel = Math.abs(data[target]);
-  for (let index = target - radius; index <= target + radius; index += 1) {
-    const level = Math.abs(data[index]);
-    if (level < bestLevel) {
-      best = index;
-      bestLevel = level;
-    }
-  }
-  return best / buffer.sampleRate;
 }
 
 function sanitizeSettings(raw: unknown): Settings {
@@ -601,10 +582,8 @@ export default function Home() {
   }, [fetchSampleData]);
 
   useEffect(() => {
-    NYANG_SAMPLES.forEach((sample) => {
-      void fetchSampleData(sample.url).catch(() => {
-        sampleDataRef.current.delete(sample.url);
-      });
+    void fetchSampleData(NYANG_SAMPLE.url).catch(() => {
+      sampleDataRef.current.delete(NYANG_SAMPLE.url);
     });
   }, [fetchSampleData]);
 
@@ -670,7 +649,7 @@ export default function Home() {
       master.connect(compressor);
       compressor.connect(context.destination);
       audioRef.current = { context, master, breath, compressor };
-      void Promise.all(NYANG_SAMPLES.map((sample) => loadSampleBuffer(context, sample.url))).catch(() => {
+      void loadSampleBuffer(context, NYANG_SAMPLE.url).catch(() => {
         // If preload fails, the selected note retries and can fall back to the synth voice.
       });
 
@@ -759,6 +738,10 @@ export default function Home() {
       const voice = voicesRef.current.get(voiceId);
       if (!voice) return;
       voice.released = true;
+      if (voice.allowsTail && !force) {
+        refreshVoiceUI();
+        return;
+      }
       if (sustainRef.current && !force) {
         refreshVoiceUI();
         return;
@@ -791,19 +774,10 @@ export default function Home() {
           ? graph.context.sampleRate * 8
           : 0.001;
       const selectedTheme = THEMES.find((item) => item.id === settingsRef.current.themeId) ?? THEMES[0];
-      const nearestSample = NYANG_SAMPLES.reduce((nearest, sample) => {
-        const pitchDistance = Math.min(mod(sample.midi - soundingMidi, 12), mod(soundingMidi - sample.midi, 12));
-        const nearestPitchDistance = Math.min(
-          mod(nearest.midi - soundingMidi, 12),
-          mod(soundingMidi - nearest.midi, 12),
-        );
-        if (pitchDistance !== nearestPitchDistance) return pitchDistance < nearestPitchDistance ? sample : nearest;
-        return Math.abs(sample.midi - soundingMidi) < Math.abs(nearest.midi - soundingMidi) ? sample : nearest;
-      });
       let sampleBuffer: AudioBuffer | null = null;
       if (selectedTheme.id === "nyang-voice") {
         try {
-          sampleBuffer = await loadSampleBuffer(graph.context, nearestSample.url);
+          sampleBuffer = await loadSampleBuffer(graph.context, NYANG_SAMPLE.url);
         } catch {
           sampleBuffer = null;
         }
@@ -816,24 +790,19 @@ export default function Home() {
       gain.connect(graph.breath);
       const now = graph.context.currentTime;
       const sources: AudioScheduledSourceNode[] = [];
+      let sampleSource: AudioBufferSourceNode | null = null;
 
       if (sampleBuffer) {
         const source = graph.context.createBufferSource();
-        const rawRate = 2 ** ((soundingMidi - nearestSample.midi) / 12);
+        const rawRate = 2 ** ((soundingMidi - NYANG_SAMPLE.midi) / 12);
         source.buffer = sampleBuffer;
         source.playbackRate.setValueAtTime(Math.max(0.0001, Math.min(1024, rawRate)), now);
-        const loopStart = quietLoopPoint(sampleBuffer, 0.34);
-        const loopEnd = quietLoopPoint(sampleBuffer, 0.76);
-        if (loopEnd - loopStart > 0.08) {
-          source.loop = true;
-          source.loopStart = loopStart;
-          source.loopEnd = loopEnd;
-        }
         source.connect(gain);
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.62, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.82, now + 0.012);
         source.start(now);
         sources.push(source);
+        sampleSource = source;
       } else {
         const primary = graph.context.createOscillator();
         primary.type = selectedTheme.waveform;
@@ -867,11 +836,21 @@ export default function Home() {
         pitchClass: mod(baseMidi, 12),
         gain,
         sources,
+        allowsTail: Boolean(sampleSource),
         released: false,
         stopped: false,
       };
       voicesRef.current.set(voiceId, voice);
       inputVoiceRef.current.set(inputId, voiceId);
+      if (sampleSource) {
+        sampleSource.onended = () => {
+          if (voice.stopped || voicesRef.current.get(voiceId) !== voice) return;
+          voice.stopped = true;
+          voicesRef.current.delete(voiceId);
+          if (inputVoiceRef.current.get(inputId) === voiceId) inputVoiceRef.current.delete(inputId);
+          refreshVoiceUI();
+        };
+      }
       refreshVoiceUI();
     },
     [initAudio, loadSampleBuffer, refreshVoiceUI, releaseInput],
@@ -892,7 +871,7 @@ export default function Home() {
       setSustainPressed(pressed);
       if (!pressed) {
         voicesRef.current.forEach((voice) => {
-          if (voice.released) stopVoice(voice);
+          if (voice.released && !voice.allowsTail) stopVoice(voice);
         });
       }
     },
@@ -1192,6 +1171,7 @@ export default function Home() {
   const appStyle = {
     "--accent": theme.accent,
     "--accent-soft": theme.accentSoft,
+    "--key-accent": theme.keyAccent,
   } as CSSProperties;
 
   const renderOctavePanel = (side: KeyboardSide) => {
@@ -1499,7 +1479,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <p className="setting-note">냥 보이스는 O3 C–O4 C 녹음본을 A4=440Hz 기준으로 보정한 기본 음색입니다.</p>
+                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 기준음에 맞춰 사용하며, 반복 없이 끝에 긴 잔향이 남습니다.</p>
               </section>
 
               <section className="settings-section">

@@ -36,9 +36,9 @@ test("server-renders the finished nyangnyang app", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Building your site/i);
 });
 
-test("ships the tuned nyang sample set and sample player", async () => {
+test("ships the tuned E4 nyang sample and one-shot player", async () => {
   const audioRoot = new URL("../public/audio/nyang/", import.meta.url);
-  const expectedFiles = ["a4.mp3", "b4.mp3", "c4.mp3", "c5.mp3", "d4.mp3", "e4.mp3", "f4.mp3", "g4.mp3"];
+  const expectedFiles = ["e4.mp3"];
   const [page, layout, files] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -51,14 +51,16 @@ test("ships the tuned nyang sample set and sample player", async () => {
     assert.ok(details.size > 10_000, `${file} should contain an encoded sample`);
   }
 
-  assert.match(page, /const NYANG_SAMPLES/);
+  assert.match(page, /const NYANG_SAMPLE = \{ midi: 64/);
   assert.match(page, /themeId: "nyang-voice"/);
   assert.match(page, /name: "냥 보이스"/);
   assert.match(page, /name: "포근 신스"/);
-  assert.match(page, /A4=440Hz/);
+  assert.match(page, /O3 E 녹음본/);
+  assert.match(page, /긴 잔향/);
   assert.match(page, /createBufferSource\(\)/);
   assert.match(page, /source\.playbackRate/);
-  assert.match(page, /source\.loop = true/);
+  assert.doesNotMatch(page, /source\.loop = true/);
+  assert.match(page, /allowsTail/);
   assert.match(layout, /title:\s*"냥냥"/);
   await assert.rejects(access(new URL("../app/_sites-preview/", import.meta.url)));
 });
