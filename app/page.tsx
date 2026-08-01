@@ -74,6 +74,8 @@ type SampleVoiceState = {
   playbackRate: number;
   startedAt: number;
   dryEnded: boolean;
+  heldLong: boolean;
+  sustainLatched: boolean;
   tailStarted: boolean;
   holdTimer: number | null;
   cleanupTimer: number | null;
@@ -839,12 +841,16 @@ export default function Home() {
       if (!voice) return;
       voice.released = true;
       if (voice.sampleState && !force) {
-        if (voice.sampleState.holdTimer !== null) {
-          window.clearTimeout(voice.sampleState.holdTimer);
-          voice.sampleState.holdTimer = null;
+        const state = voice.sampleState;
+        if (state.holdTimer !== null) {
+          window.clearTimeout(state.holdTimer);
+          state.holdTimer = null;
         }
-        if (sustainRef.current) triggerSampleTail(voice);
-        if (!voice.sampleState.tailStarted) {
+        if (sustainRef.current) {
+          state.sustainLatched = true;
+          triggerSampleTail(voice);
+        }
+        if (!state.heldLong && !state.sustainLatched) {
           stopVoice(voice, true);
           return;
         }
@@ -953,6 +959,8 @@ export default function Home() {
               playbackRate: samplePlaybackRate,
               startedAt: now,
               dryEnded: false,
+              heldLong: false,
+              sustainLatched: false,
               tailStarted: false,
               holdTimer: null,
               cleanupTimer: null,
@@ -971,7 +979,10 @@ export default function Home() {
           if (!voice.sampleState?.tailStarted && voice.released) finishSampleVoice(voice);
         };
         voice.sampleState.holdTimer = window.setTimeout(() => {
-          if (!voice.released) triggerSampleTail(voice);
+          if (!voice.released && voice.sampleState) {
+            voice.sampleState.heldLong = true;
+            triggerSampleTail(voice);
+          }
         }, NYANG_LONG_PRESS_MS);
         if (sustainRef.current) triggerSampleTail(voice);
       }
@@ -999,7 +1010,9 @@ export default function Home() {
         });
       } else {
         voicesRef.current.forEach((voice) => {
-          if (voice.released && !voice.sampleState) stopVoice(voice);
+          if (voice.released && (!voice.sampleState || voice.sampleState.sustainLatched)) {
+            stopVoice(voice, true);
+          }
         });
       }
     },
@@ -1610,7 +1623,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용합니다. 손을 떼면 바로 멈추며, 길게 누르거나 서스테인할 때만 음의 끝부분에 잔향이 붙습니다.</p>
+                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용합니다. 손을 떼면 바로 멈추고, 서스테인으로 유지된 음도 서스테인을 떼면 멈춥니다. 길게 누르거나 서스테인할 때만 음의 끝부분에 잔향이 붙습니다.</p>
               </section>
 
               <section className="settings-section">

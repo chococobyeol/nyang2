@@ -56,12 +56,14 @@ test("ships the tuned E4 nyang sample with conditional tail-only reverb", async 
   assert.match(page, /name: "냥 보이스"/);
   assert.match(page, /name: "포근 신스"/);
   assert.match(page, /O3 E 녹음본/);
-  assert.match(page, /손을 떼면 바로 멈추며, 길게 누르거나 서스테인할 때만 음의 끝부분에 잔향/);
+  assert.match(page, /서스테인으로 유지된 음도 서스테인을 떼면 멈춥니다/);
   assert.match(page, /createBufferSource\(\)/);
   assert.match(page, /source\.playbackRate/);
   assert.doesNotMatch(page, /source\.loop = true/);
   assert.match(page, /triggerSampleTail/);
-  assert.match(page, /if \(!voice\.sampleState\.tailStarted\) \{\s*stopVoice\(voice, true\)/);
+  assert.match(page, /sustainLatched: boolean/);
+  assert.match(page, /if \(!state\.heldLong && !state\.sustainLatched\) \{\s*stopVoice\(voice, true\)/);
+  assert.match(page, /voice\.released && \(!voice\.sampleState \|\| voice\.sampleState\.sustainLatched\)/);
   assert.match(page, /createConvolver\(\)/);
   assert.match(page, /NYANG_LONG_PRESS_MS/);
   assert.match(page, /const \[leftOctave, setLeftOctave\] = useState\(4\)/);
