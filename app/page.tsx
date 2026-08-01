@@ -72,7 +72,7 @@ type Voice = {
 
 type CaptureTarget = { side: KeyboardSide; index: number } | null;
 
-const STORAGE_KEY = "nyang-keys-settings-v1";
+const STORAGE_KEY = "nyangnyang-settings-v1";
 const NOTE_OFFSETS = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const WHITE_OFFSETS = [-1, 0, 2, 4, 5, 7, 9, 11, 12];
 const BLACK_OFFSETS = [1, 3, 6, 8, 10];
@@ -297,20 +297,20 @@ function KeyboardGroup({
   };
 
   return (
-    <div className="keyboard-group" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} 건반`}>
-      <div className="white-keys">
+    <div className="paw-keyboard-group" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} O${octave} 발바닥 음판`}>
+      <div className="paw-row paw-row-natural">
         {visibleWhites.map((offset) => {
           const keyId = `${side}:${offset}`;
           const active = activeKeys.has(keyId);
           return (
             <button
               type="button"
-              className={`piano-key white-key ${active ? "is-active" : ""}`}
+              className={`paw-note paw-note-natural ${active ? "is-active" : ""}`}
               key={keyId}
               data-piano-key={keyId}
               data-side={side}
               data-offset={offset}
-              aria-label={`${labelFor(offset) || noteName(offset, settings.accidentalStyle)} 건반`}
+              aria-label={`${labelFor(offset) || noteName(offset, settings.accidentalStyle)} 음`}
               onPointerDown={(event) => onPointerDown(event, side, offset)}
             >
               <img className="paw-mark" src={pawPad} alt="" draggable={false} />
@@ -322,7 +322,7 @@ function KeyboardGroup({
           );
         })}
       </div>
-      <div className="black-keys" aria-hidden="false">
+      <div className="paw-row paw-row-accidental" aria-hidden="false">
         {BLACK_OFFSETS.map((offset) => {
           const previousWhiteOffset = offset === 1 ? 0 : offset === 3 ? 2 : offset === 6 ? 5 : offset === 8 ? 7 : 9;
           const previousIndex = visibleWhites.indexOf(previousWhiteOffset);
@@ -333,13 +333,13 @@ function KeyboardGroup({
           return (
             <button
               type="button"
-              className={`piano-key black-key ${active ? "is-active" : ""}`}
-              style={{ left: `${left}%`, width: `${Math.min(7.4, 68 / visibleWhites.length)}%` }}
+              className={`paw-note paw-note-accidental ${active ? "is-active" : ""}`}
+              style={{ left: `${left}%`, width: `${Math.min(10.5, 88 / visibleWhites.length)}%` }}
               key={keyId}
               data-piano-key={keyId}
               data-side={side}
               data-offset={offset}
-              aria-label={`${labelFor(offset) || noteName(offset, settings.accidentalStyle)} 건반`}
+              aria-label={`${labelFor(offset) || noteName(offset, settings.accidentalStyle)} 음`}
               onPointerDown={(event) => onPointerDown(event, side, offset)}
             >
               <img className="paw-mark" src={pawPad} alt="" draggable={false} />
@@ -351,7 +351,6 @@ function KeyboardGroup({
           );
         })}
       </div>
-      <div className="keyboard-octave-badge">O{octave}</div>
     </div>
   );
 }
@@ -918,7 +917,7 @@ export default function Home() {
           <div className="brand-block">
             <div className="brand-mark"><img src={theme.visuals.pawPad} alt="" /></div>
             <div>
-              <h1>냥냥</h1>
+              <h1>nyangnyang</h1>
             </div>
           </div>
 
@@ -967,14 +966,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="cat-zone" aria-label={`고양이 길이 ${catNote}, ${segmentCount + 1}단계`}>
-          <div className="cat-status-card">
-            <span className={`sound-indicator ${mouthOpen ? "is-playing" : ""}`} />
-            <div>
-              <strong>{mouthOpen ? "노래하는 중" : "기다리는 중"}</strong>
-              <small>{catNote} 길이 · {segmentCount + 1}/12</small>
-            </div>
-          </div>
+        <section className={`cat-zone ${settings.breathEnabled ? "has-breath" : ""}`} aria-label={`고양이 길이 ${catNote}, ${segmentCount + 1}단계`}>
           <div className="cat-track">
             <div className="cat-assembly" aria-hidden="true">
               <img className="cat-mouth" src={mouthOpen ? theme.visuals.mouthOpen : theme.visuals.mouthClosed} alt="" draggable={false} />
@@ -992,7 +984,7 @@ export default function Home() {
           )}
         </section>
 
-        <section className={`keyboard-deck ${settings.keyboardCount === 2 ? "is-double" : ""}`} aria-label="피아노 건반">
+        <section className={`keyboard-deck ${settings.keyboardCount === 2 ? "is-double" : ""}`} aria-label="발바닥 음판">
           <KeyboardGroup
             side="left"
             octave={leftOctave}
@@ -1031,7 +1023,7 @@ export default function Home() {
           <aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div className="settings-header">
               <div>
-                <span>냥냥</span>
+                <span>nyangnyang</span>
                 <h2 id="settings-title">연주 설정</h2>
               </div>
               <button type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기">×</button>

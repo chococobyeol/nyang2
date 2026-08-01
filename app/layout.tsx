@@ -13,18 +13,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "냥냥",
+  title: "nyangnyang",
   description:
     "옥타브와 조성을 자유롭게 바꾸며 고양이와 함께 연주하는 멀티터치 웹 건반입니다.",
   openGraph: {
-    title: "냥냥",
+    title: "nyangnyang",
     description: "고양이와 함께 연주하는 멀티터치 웹 건반",
     type: "website",
-    images: [{ url: "/og.png", width: 1080, height: 796, alt: "냥냥 고양이 건반" }],
+    images: [{ url: "/og.png", width: 1080, height: 796, alt: "nyangnyang 고양이 발바닥 연주 앱" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "냥냥",
+    title: "nyangnyang",
     description: "고양이와 함께 연주하는 멀티터치 웹 건반",
     images: ["/og.png"],
   },
