@@ -15,18 +15,25 @@ import {
 type NoteLabelMode = "hidden" | "base" | "transposed";
 type AccidentalStyle = "sharp" | "flat";
 type KeyboardSide = "left" | "right";
+type TransposeShortcutAction = "downSemitone" | "upSemitone" | "downFifth" | "upFifth" | "reset";
+
+type TransposeShortcuts = Record<TransposeShortcutAction, string>;
 
 type Settings = {
   keyboardCount: 1 | 2;
   octavePresets: [number, number, number, number];
-  showLowerB: boolean;
-  showUpperC: boolean;
+  leftShowLowerB: boolean;
+  leftShowUpperC: boolean;
+  rightShowLowerB: boolean;
+  rightShowUpperC: boolean;
   noteLabelMode: NoteLabelMode;
   accidentalStyle: AccidentalStyle;
   showKeyMapping: boolean;
   mobileLandscape: boolean;
   leftMapping: string[];
   rightMapping: string[];
+  octaveShortcuts: string[];
+  transposeShortcuts: TransposeShortcuts;
   masterVolume: number;
   themeId: string;
   breathEnabled: boolean;
@@ -71,7 +78,11 @@ type Voice = {
   stopped: boolean;
 };
 
-type CaptureTarget = { side: KeyboardSide; index: number } | null;
+type CaptureTarget =
+  | { kind: "note"; side: KeyboardSide; index: number }
+  | { kind: "octave"; index: number }
+  | { kind: "transpose"; action: TransposeShortcutAction }
+  | null;
 
 const STORAGE_KEY = "nyangnyang-settings-v1";
 const NOTE_OFFSETS = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -109,18 +120,37 @@ const RIGHT_MAPPING = [
   "Period",
   "Slash",
 ];
+const OCTAVE_SHORTCUTS = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8"];
+const TRANSPOSE_SHORTCUTS: TransposeShortcuts = {
+  downSemitone: "Minus",
+  upSemitone: "Equal",
+  downFifth: "BracketLeft",
+  upFifth: "BracketRight",
+  reset: "Backslash",
+};
+const TRANSPOSE_SHORTCUT_LABELS: Record<TransposeShortcutAction, string> = {
+  downSemitone: "−1 반음",
+  upSemitone: "+1 반음",
+  downFifth: "−5도",
+  upFifth: "+5도",
+  reset: "C로 초기화",
+};
 
 const DEFAULT_SETTINGS: Settings = {
   keyboardCount: 1,
   octavePresets: [2, 3, 4, 5],
-  showLowerB: true,
-  showUpperC: true,
+  leftShowLowerB: true,
+  leftShowUpperC: true,
+  rightShowLowerB: true,
+  rightShowUpperC: true,
   noteLabelMode: "base",
   accidentalStyle: "sharp",
   showKeyMapping: true,
   mobileLandscape: true,
   leftMapping: LEFT_MAPPING,
   rightMapping: RIGHT_MAPPING,
+  octaveShortcuts: OCTAVE_SHORTCUTS,
+  transposeShortcuts: TRANSPOSE_SHORTCUTS,
   masterVolume: 0.72,
   themeId: "warm-cat",
   breathEnabled: false,
@@ -195,6 +225,7 @@ function codeLabel(code: string) {
     Quote: "'",
     BracketLeft: "[",
     BracketRight: "]",
+    Backslash: "\\",
     Minus: "-",
     Equal: "=",
   };
@@ -204,25 +235,52 @@ function codeLabel(code: string) {
 function sanitizeSettings(raw: unknown): Settings {
   const value = raw && typeof raw === "object" ? (raw as Partial<Settings>) : {};
   const presets = Array.isArray(value.octavePresets)
-    ? value.octavePresets.slice(0, 4).map((item) => Math.max(0, Math.min(8, Number(item))))
+    ? value.octavePresets.slice(0, 4).map((item, index) => {
+        const parsed = Number(item);
+        return Number.isFinite(parsed)
+          ? Math.max(0, Math.min(8, Math.round(parsed)))
+          : DEFAULT_SETTINGS.octavePresets[index];
+      })
     : DEFAULT_SETTINGS.octavePresets;
   while (presets.length < 4) presets.push(DEFAULT_SETTINGS.octavePresets[presets.length]);
   const validMapping = (candidate: unknown, fallback: string[]) =>
     Array.isArray(candidate) && candidate.length === NOTE_OFFSETS.length
       ? candidate.map((item, index) => (typeof item === "string" ? item : fallback[index]))
       : fallback;
+  const validOctaveShortcuts = Array.isArray(value.octaveShortcuts) && value.octaveShortcuts.length === 8
+    ? value.octaveShortcuts.map((item, index) => (typeof item === "string" ? item : OCTAVE_SHORTCUTS[index]))
+    : OCTAVE_SHORTCUTS;
+  const legacy = value as Partial<Settings> & { showLowerB?: boolean; showUpperC?: boolean };
+  const legacyLowerB = typeof legacy.showLowerB === "boolean" ? legacy.showLowerB : true;
+  const legacyUpperC = typeof legacy.showUpperC === "boolean" ? legacy.showUpperC : true;
+  const transposeShortcuts = value.transposeShortcuts && typeof value.transposeShortcuts === "object"
+    ? Object.fromEntries(
+        (Object.keys(TRANSPOSE_SHORTCUTS) as TransposeShortcutAction[]).map((action) => [
+          action,
+          typeof value.transposeShortcuts?.[action] === "string"
+            ? value.transposeShortcuts[action]
+            : TRANSPOSE_SHORTCUTS[action],
+        ]),
+      ) as TransposeShortcuts
+    : TRANSPOSE_SHORTCUTS;
 
   return {
     ...DEFAULT_SETTINGS,
     ...value,
     keyboardCount: value.keyboardCount === 2 ? 2 : 1,
     octavePresets: presets as Settings["octavePresets"],
+    leftShowLowerB: typeof value.leftShowLowerB === "boolean" ? value.leftShowLowerB : legacyLowerB,
+    leftShowUpperC: typeof value.leftShowUpperC === "boolean" ? value.leftShowUpperC : legacyUpperC,
+    rightShowLowerB: typeof value.rightShowLowerB === "boolean" ? value.rightShowLowerB : legacyLowerB,
+    rightShowUpperC: typeof value.rightShowUpperC === "boolean" ? value.rightShowUpperC : legacyUpperC,
     noteLabelMode: ["hidden", "base", "transposed"].includes(value.noteLabelMode ?? "")
       ? (value.noteLabelMode as NoteLabelMode)
       : DEFAULT_SETTINGS.noteLabelMode,
     accidentalStyle: value.accidentalStyle === "flat" ? "flat" : "sharp",
     leftMapping: validMapping(value.leftMapping, LEFT_MAPPING),
     rightMapping: validMapping(value.rightMapping, RIGHT_MAPPING),
+    octaveShortcuts: validOctaveShortcuts,
+    transposeShortcuts,
     masterVolume: Math.max(0, Math.min(1, Number(value.masterVolume ?? DEFAULT_SETTINGS.masterVolume))),
     microphoneSensitivity: Math.max(
       0.5,
@@ -256,6 +314,56 @@ function Toggle({
   );
 }
 
+function OctavePresetInput({
+  index,
+  value,
+  onCommit,
+}: {
+  index: number;
+  value: number;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+
+  const commit = () => {
+    if (draft === "") {
+      setDraft(String(value));
+      return;
+    }
+    const parsed = Number(draft);
+    if (!Number.isFinite(parsed)) {
+      setDraft(String(value));
+      return;
+    }
+    const next = Math.max(0, Math.min(8, Math.round(parsed)));
+    setDraft(String(next));
+    onCommit(next);
+  };
+
+  return (
+    <label>
+      <span>O</span>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-8]*"
+        value={draft}
+        aria-label={`${index + 1}번 옥타브 값`}
+        onFocus={(event) => event.currentTarget.select()}
+        onClick={(event) => event.currentTarget.select()}
+        onChange={(event) => {
+          const next = event.target.value;
+          if (/^\d?$/.test(next)) setDraft(next);
+        }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+        }}
+      />
+    </label>
+  );
+}
+
 type KeyboardGroupProps = {
   side: KeyboardSide;
   octave: number;
@@ -281,8 +389,10 @@ function KeyboardGroup({
   pawPad,
   onPointerDown,
 }: KeyboardGroupProps) {
+  const showLowerB = side === "left" ? settings.leftShowLowerB : settings.rightShowLowerB;
+  const showUpperC = side === "left" ? settings.leftShowUpperC : settings.rightShowUpperC;
   const visibleWhites = WHITE_OFFSETS.filter(
-    (offset) => (offset !== -1 || settings.showLowerB) && (offset !== 12 || settings.showUpperC),
+    (offset) => (offset !== -1 || showLowerB) && (offset !== 12 || showUpperC),
   );
 
   const labelFor = (offset: number) => {
@@ -669,21 +779,64 @@ export default function Home() {
           return;
         }
         const current = settingsRef.current;
-        const allCodes = [...current.leftMapping, ...current.rightMapping];
-        const oldCode = target.side === "left" ? current.leftMapping[target.index] : current.rightMapping[target.index];
+        const allCodes = [
+          ...current.leftMapping,
+          ...current.rightMapping,
+          ...current.octaveShortcuts,
+          ...Object.values(current.transposeShortcuts),
+          "Space",
+        ];
+        const oldCode = target.kind === "note"
+          ? (target.side === "left" ? current.leftMapping[target.index] : current.rightMapping[target.index])
+          : target.kind === "octave"
+            ? current.octaveShortcuts[target.index]
+            : current.transposeShortcuts[target.action];
         if (allCodes.includes(event.code) && event.code !== oldCode) {
-          setMappingError(`${codeLabel(event.code)} 키는 이미 다른 음에 사용 중입니다.`);
+          setMappingError(`${codeLabel(event.code)} 키는 이미 다른 기능에 사용 중입니다.`);
           return;
         }
-        const key = target.side === "left" ? "leftMapping" : "rightMapping";
-        const next = [...current[key]];
-        next[target.index] = event.code;
-        updateSettings({ [key]: next } as Partial<Settings>);
+        if (target.kind === "note") {
+          const key = target.side === "left" ? "leftMapping" : "rightMapping";
+          const next = [...current[key]];
+          next[target.index] = event.code;
+          updateSettings({ [key]: next } as Partial<Settings>);
+        } else if (target.kind === "octave") {
+          const next = [...current.octaveShortcuts];
+          next[target.index] = event.code;
+          updateSettings({ octaveShortcuts: next });
+        } else {
+          updateSettings({
+            transposeShortcuts: { ...current.transposeShortcuts, [target.action]: event.code },
+          });
+        }
         setCaptureTarget(null);
         setMappingError("");
         return;
       }
       if (isTypingTarget(event.target) || event.repeat) return;
+      const current = settingsRef.current;
+      const octaveShortcutIndex = current.octaveShortcuts.indexOf(event.code);
+      if (octaveShortcutIndex >= 0) {
+        event.preventDefault();
+        const preset = current.octavePresets[octaveShortcutIndex % 4];
+        if (octaveShortcutIndex < 4) setLeftOctave(preset);
+        else if (current.keyboardCount === 2) setRightOctave(preset);
+        return;
+      }
+      const transposeAction = (Object.keys(current.transposeShortcuts) as TransposeShortcutAction[])
+        .find((action) => current.transposeShortcuts[action] === event.code);
+      if (transposeAction) {
+        event.preventDefault();
+        if (transposeAction === "downSemitone") setTranspose((value) => value - 1);
+        if (transposeAction === "upSemitone") setTranspose((value) => value + 1);
+        if (transposeAction === "downFifth") setTranspose((value) => value - 7);
+        if (transposeAction === "upFifth") setTranspose((value) => value + 7);
+        if (transposeAction === "reset") {
+          allNotesOff();
+          setTranspose(0);
+        }
+        return;
+      }
       if (event.code === "Space") {
         event.preventDefault();
         setSustain(true);
@@ -919,14 +1072,14 @@ export default function Home() {
     return (
       <div className="mapping-editor">
         {NOTE_OFFSETS.map((offset, index) => {
-          const isCapture = captureTarget?.side === side && captureTarget.index === index;
+          const isCapture = captureTarget?.kind === "note" && captureTarget.side === side && captureTarget.index === index;
           return (
             <button
               type="button"
               className={`mapping-chip ${isCapture ? "is-capturing" : ""}`}
               key={`${side}-map-${offset}`}
               onClick={() => {
-                setCaptureTarget({ side, index });
+                setCaptureTarget({ kind: "note", side, index });
                 setMappingError("");
               }}
             >
@@ -938,6 +1091,57 @@ export default function Home() {
       </div>
     );
   };
+
+  const shortcutEditor = () => (
+    <div className="shortcut-settings">
+      <div className="shortcut-group">
+        <h4>옥타브 선택</h4>
+        <p>왼쪽 F1–F4 · 오른쪽 F5–F8</p>
+        <div className="shortcut-grid octave-shortcut-grid">
+          {settings.octaveShortcuts.map((code, index) => {
+            const isCapture = captureTarget?.kind === "octave" && captureTarget.index === index;
+            const side = index < 4 ? "왼쪽" : "오른쪽";
+            return (
+              <button
+                type="button"
+                className={`mapping-chip shortcut-chip ${isCapture ? "is-capturing" : ""}`}
+                key={`octave-shortcut-${index}`}
+                onClick={() => {
+                  setCaptureTarget({ kind: "octave", index });
+                  setMappingError("");
+                }}
+              >
+                <span>{side} O{settings.octavePresets[index % 4]}</span>
+                <strong>{isCapture ? "키 입력…" : codeLabel(code)}</strong>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="shortcut-group">
+        <h4>이조</h4>
+        <div className="shortcut-grid transpose-shortcut-grid">
+          {(Object.keys(TRANSPOSE_SHORTCUT_LABELS) as TransposeShortcutAction[]).map((action) => {
+            const isCapture = captureTarget?.kind === "transpose" && captureTarget.action === action;
+            return (
+              <button
+                type="button"
+                className={`mapping-chip shortcut-chip ${isCapture ? "is-capturing" : ""}`}
+                key={`transpose-shortcut-${action}`}
+                onClick={() => {
+                  setCaptureTarget({ kind: "transpose", action });
+                  setMappingError("");
+                }}
+              >
+                <span>{TRANSPOSE_SHORTCUT_LABELS[action]}</span>
+                <strong>{isCapture ? "키 입력…" : codeLabel(settings.transposeShortcuts[action])}</strong>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <main className={`app-viewport ${settings.mobileLandscape ? "force-mobile-landscape" : ""}`} style={appStyle} onContextMenu={(event) => event.preventDefault()}>
@@ -1070,14 +1274,24 @@ export default function Home() {
                   onChange={(checked) => updateSettings({ keyboardCount: checked ? 2 : 1 })}
                   label="건반 한 세트 추가"
                 />
-                <Toggle checked={settings.showLowerB} onChange={(checked) => updateSettings({ showLowerB: checked })} label="낮은 B 표시" />
-                <Toggle checked={settings.showUpperC} onChange={(checked) => updateSettings({ showUpperC: checked })} label="높은 C 표시" />
                 <Toggle checked={settings.mobileLandscape} onChange={(checked) => updateSettings({ mobileLandscape: checked })} label="휴대폰 세로 화면을 가로로 표시" />
+                <div className="side-visibility-grid">
+                  <div>
+                    <strong>왼쪽 건반</strong>
+                    <Toggle checked={settings.leftShowLowerB} onChange={(checked) => updateSettings({ leftShowLowerB: checked })} label="낮은 B 표시" />
+                    <Toggle checked={settings.leftShowUpperC} onChange={(checked) => updateSettings({ leftShowUpperC: checked })} label="높은 C 표시" />
+                  </div>
+                  <div>
+                    <strong>오른쪽 건반</strong>
+                    <Toggle checked={settings.rightShowLowerB} onChange={(checked) => updateSettings({ rightShowLowerB: checked })} label="낮은 B 표시" />
+                    <Toggle checked={settings.rightShowUpperC} onChange={(checked) => updateSettings({ rightShowUpperC: checked })} label="높은 C 표시" />
+                  </div>
+                </div>
                 <div className="setting-field">
                   <label>옥타브 선택 버튼</label>
                   <div className="preset-inputs">
                     {settings.octavePresets.map((value, index) => (
-                      <label key={`preset-${index}`}><span>O</span><input type="number" min="0" max="8" value={value} onChange={(event) => updatePreset(index, Number(event.target.value))} /></label>
+                      <OctavePresetInput key={`preset-${index}-${value}`} index={index} value={value} onCommit={(next) => updatePreset(index, next)} />
                     ))}
                   </div>
                 </div>
@@ -1149,6 +1363,7 @@ export default function Home() {
                   <summary>오른쪽 건반</summary>
                   {mappingEditor("right")}
                 </details>
+                {shortcutEditor()}
                 {mappingError && <p className="error-message">{mappingError}</p>}
               </section>
 

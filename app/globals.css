@@ -856,6 +856,45 @@ button {
   text-align: center;
 }
 
+.side-visibility-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.side-visibility-grid > div {
+  padding: 10px 12px 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.side-visibility-grid > div > strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+}
+
+.side-visibility-grid .toggle-row {
+  min-height: 36px;
+  font-size: 10px;
+}
+
+.side-visibility-grid .toggle {
+  width: 36px;
+  height: 21px;
+}
+
+.side-visibility-grid .toggle-knob {
+  width: 15px;
+  height: 15px;
+}
+
+.side-visibility-grid .toggle.is-on .toggle-knob {
+  transform: translateX(15px);
+}
+
 .segmented-setting {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1019,6 +1058,54 @@ button {
 .mapping-chip.is-capturing {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+.shortcut-settings {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.shortcut-group h4 {
+  margin: 0;
+  font-size: 11px;
+}
+
+.shortcut-group > p {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.shortcut-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.octave-shortcut-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.transpose-shortcut-grid {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.shortcut-chip {
+  height: 46px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  text-align: left;
+}
+
+.shortcut-chip span,
+.shortcut-chip strong {
+  display: block;
+}
+
+.shortcut-chip strong {
+  margin-top: 3px;
+  color: var(--ink);
 }
 
 .error-message {
@@ -1275,10 +1362,11 @@ summary:focus-visible {
   }
 
   .app-viewport.force-mobile-landscape {
+    --mobile-nav-clearance: max(14px, env(safe-area-inset-bottom));
     position: fixed;
     top: 0;
     left: 0;
-    width: calc(100dvh - 52px);
+    width: calc(100dvh - var(--mobile-nav-clearance));
     height: 100dvw;
     min-width: 0;
     min-height: 0;
@@ -1288,7 +1376,7 @@ summary:focus-visible {
   }
 
   .app-viewport.force-mobile-landscape .app-stage {
-    width: calc(100dvh - 64px);
+    width: calc(100dvh - var(--mobile-nav-clearance) - 12px);
     min-width: 628px;
     height: calc(100dvw - 12px);
     min-height: 338px;
