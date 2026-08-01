@@ -95,9 +95,14 @@ test("publishes a privacy policy and links it from settings", async () => {
 });
 
 test("aligns compact octave, key, and settings controls", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const [css, page] = await Promise.all([
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
   assert.match(css, /\.octave-buttons \{[^}]*repeat\(4, minmax\(0, 64px\)\)/s);
   assert.match(css, /\.octave-button \{[^}]*aspect-ratio: 1;/s);
+  assert.match(css, /\.octave-panel \{[^}]*grid-template-rows: auto 64px;[^}]*gap: 6px;/s);
+  assert.match(css, /\.transpose-panel \{[^}]*height: 64px;[^}]*margin-top: 15px;/s);
   assert.match(css, /\.transpose-panel \{[^}]*height: 64px/s);
   assert.match(css, /\.settings-button \{[^}]*height: 64px/s);
   assert.match(css, /\.transpose-panel \{[^}]*height: 42px/s);
@@ -105,4 +110,6 @@ test("aligns compact octave, key, and settings controls", async () => {
   assert.match(css, /\.settings-button \{[^}]*height: 42px/s);
   assert.match(css, /\.transpose-status \{\s*min-height: 0;\s*height: 100%/);
   assert.match(css, /\.transpose-grid button \{\s*display: flex;\s*align-items: center;\s*justify-content: center;/);
+  assert.match(page, /settings\.keyboardCount === 1\s*\? "옥타브"/);
+  assert.match(page, /side === "left" \? "왼쪽 옥타브" : "오른쪽 옥타브"/);
 });
