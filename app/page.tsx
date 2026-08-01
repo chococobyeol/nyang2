@@ -878,6 +878,11 @@ export default function Home() {
     setCaptureTarget(null);
   }, [allNotesOff, stopMicrophone]);
 
+  const resetTranspose = useCallback(() => {
+    allNotesOff();
+    setTranspose(0);
+  }, [allNotesOff]);
+
   const segmentCount = 11 - lastCatPitchClass;
   const currentKey = noteName(transpose, settings.accidentalStyle);
   const catNote = noteName(lastCatPitchClass, settings.accidentalStyle);
@@ -941,7 +946,7 @@ export default function Home() {
           <div className="brand-block">
             <div className="brand-mark"><img src={theme.visuals.pawPad} alt="" /></div>
             <div>
-              <h1>nyangnyang</h1>
+              <h1>냥냥</h1>
             </div>
           </div>
 
@@ -970,6 +975,10 @@ export default function Home() {
                 <span>+5th</span><small>완전5도</small>
               </button>
             </div>
+            <button type="button" className="transpose-reset control-button" onClick={resetTranspose} aria-label="조성을 C로 초기화">
+              <span aria-hidden="true">↺</span>
+              <small>초기화</small>
+            </button>
           </section>
 
           <div className="header-actions">
@@ -1047,7 +1056,7 @@ export default function Home() {
           <aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div className="settings-header">
               <div>
-                <span>nyangnyang</span>
+                <span>냥냥</span>
                 <h2 id="settings-title">연주 설정</h2>
               </div>
               <button type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기">×</button>
