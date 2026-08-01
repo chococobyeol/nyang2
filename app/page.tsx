@@ -74,7 +74,6 @@ type SampleVoiceState = {
   playbackRate: number;
   startedAt: number;
   dryEnded: boolean;
-  heldLong: boolean;
   sustainLatched: boolean;
   tailStarted: boolean;
   holdTimer: number | null;
@@ -850,7 +849,7 @@ export default function Home() {
           state.sustainLatched = true;
           triggerSampleTail(voice);
         }
-        if (!state.heldLong && !state.sustainLatched) {
+        if (!state.sustainLatched) {
           stopVoice(voice, true);
           return;
         }
@@ -959,7 +958,6 @@ export default function Home() {
               playbackRate: samplePlaybackRate,
               startedAt: now,
               dryEnded: false,
-              heldLong: false,
               sustainLatched: false,
               tailStarted: false,
               holdTimer: null,
@@ -979,10 +977,7 @@ export default function Home() {
           if (!voice.sampleState?.tailStarted && voice.released) finishSampleVoice(voice);
         };
         voice.sampleState.holdTimer = window.setTimeout(() => {
-          if (!voice.released && voice.sampleState) {
-            voice.sampleState.heldLong = true;
-            triggerSampleTail(voice);
-          }
+          if (!voice.released) triggerSampleTail(voice);
         }, NYANG_LONG_PRESS_MS);
         if (sustainRef.current) triggerSampleTail(voice);
       }
@@ -1623,7 +1618,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용합니다. 손을 떼면 바로 멈추고, 서스테인으로 유지된 음도 서스테인을 떼면 멈춥니다. 길게 누르거나 서스테인할 때만 음의 끝부분에 잔향이 붙습니다.</p>
+                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용합니다. 길게 눌러도 손을 떼면 바로 멈추며, 서스테인으로 유지된 음은 서스테인을 떼면 멈춥니다. 누르고 있는 동안에만 음의 끝부분에 잔향이 붙습니다.</p>
               </section>
 
               <section className="settings-section">
