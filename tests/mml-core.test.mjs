@@ -47,6 +47,15 @@ test("quantizes raw audio times to the selected rhythm grid", () => {
   assert.equal(result[0].duration, 96);
 });
 
+test("keeps a minimum grid duration for a very short recorded tap", () => {
+  const tracks = [{ id: "t1", recordVelocity: 15 }];
+  const result = recordingToTrackTexts([
+    { id: "tap", side: "left", midi: 60, startedAt: 3, endedAt: 3 },
+  ], tracks, { left: ["t1"], right: [] }, { bpm: 120, quantize: "1/8", origin: 3 });
+  assert.equal(result.endTick, 48);
+  assert.equal(parseTrack(result.texts.get("t1")).notes[0].duration, 48);
+});
+
 test("auto rhythm recognition keeps straight and triplet values in one take", () => {
   const ticksPerSecond = 192;
   const result = quantizeInputs([

@@ -886,7 +886,7 @@ button {
   position: relative;
   z-index: 30;
   display: grid;
-  grid-template-rows: 62px 54px auto minmax(0, 1fr);
+  grid-template-rows: 62px 54px minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -1018,20 +1018,47 @@ button {
 }
 
 .mml-quick-settings {
-  grid-row: 3;
-  display: flex;
+  position: absolute;
+  z-index: 70;
+  top: 122px;
+  right: 8px;
+  left: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(78px, 1fr));
   min-width: 0;
-  overflow-x: auto;
+  max-height: calc(100% - 130px);
+  overflow: auto;
   align-items: flex-end;
-  gap: 7px;
-  padding: 7px 8px;
-  border-bottom: 1px solid var(--line);
+  gap: 9px;
+  padding: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
   background: #efe7da;
+  box-shadow: 5px 5px 0 rgba(31, 37, 36, 0.22);
+}
+
+.mml-quick-settings-head {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.mml-quick-settings-head strong {
+  white-space: nowrap;
+}
+
+.mml-quick-settings-head button {
+  flex: 0 0 52px;
+  width: 52px;
+  min-width: 52px;
 }
 
 .mml-quick-settings label {
   display: grid;
-  flex: 0 0 auto;
   gap: 2px;
   color: var(--muted);
   font-size: 7px;
@@ -1048,6 +1075,7 @@ button {
 .mml-quick-settings button {
   height: 28px;
   min-width: 55px;
+  width: 100%;
   padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1061,7 +1089,7 @@ button {
 }
 
 .mml-main-grid {
-  grid-row: 4;
+  grid-row: 3;
   display: grid;
   grid-template-columns: 146px minmax(0, 1fr);
   min-width: 0;
@@ -1211,6 +1239,32 @@ button {
   position: relative;
   min-width: 100%;
   background: repeating-linear-gradient(90deg, transparent 0 189px, rgba(31, 37, 36, 0.27) 189px 190px);
+}
+
+.mml-pitch-row {
+  position: absolute;
+  z-index: 0;
+  right: 0;
+  left: 0;
+  border-bottom: 1px solid rgba(31, 37, 36, 0.055);
+  pointer-events: none;
+}
+
+.mml-pitch-row.is-accidental {
+  background: rgba(31, 37, 36, 0.035);
+}
+
+.mml-pitch-row em {
+  position: sticky;
+  left: 3px;
+  display: inline-block;
+  width: 27px;
+  padding: 0 2px;
+  background: rgba(247, 243, 235, 0.88);
+  color: var(--muted);
+  font-size: 6px;
+  font-style: normal;
+  font-weight: 900;
 }
 
 .mml-measure-label {
@@ -2139,8 +2193,21 @@ summary:focus-visible {
 }
 
 @media (max-height: 810px) {
+  .app-viewport {
+    min-height: 0;
+    height: 100dvh;
+    padding: 12px;
+  }
+
   .app-stage {
-    height: 760px;
+    height: calc(100dvh - 24px);
+    min-height: 0;
+  }
+}
+
+@media (max-height: 650px) and (min-width: 1001px) {
+  .cat-zone {
+    display: none;
   }
 }
 
@@ -2420,6 +2487,32 @@ summary:focus-visible {
     right: 12px;
     bottom: 6px;
     left: 12px;
+    font-size: 6px;
+  }
+
+  .mml-quick-settings {
+    top: 120px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: calc(100% - 128px);
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .mml-work-area {
+    grid-template-rows: minmax(74px, 1fr) 22px minmax(58px, 0.62fr) 18px;
+  }
+
+  .mml-editor-head {
+    padding: 0 6px;
+    font-size: 7px;
+  }
+
+  .mml-work-area textarea {
+    padding: 7px;
+    font-size: 9px;
+  }
+
+  .mml-status-line {
     font-size: 6px;
   }
 

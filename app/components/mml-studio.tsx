@@ -43,6 +43,8 @@ export type MmlInputSink = {
 type Props = {
   currentThemeId: string;
   themes: ThemeOption[];
+  settingsRequested?: boolean;
+  onSettingsRequestHandled?: () => void;
   onClose: () => void;
   registerInputSink: (sink: MmlInputSink | null) => void;
   playMidi: (sourceId: string, midi: number, themeId: string, volume: number) => void;
@@ -110,6 +112,8 @@ function matchesShortcut(event: KeyboardEvent, shortcut: string) {
 export default function MmlStudio({
   currentThemeId,
   themes,
+  settingsRequested = false,
+  onSettingsRequestHandled,
   onClose,
   registerInputSink,
   playMidi,
@@ -135,11 +139,14 @@ export default function MmlStudio({
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
   const playRafRef = useRef(0);
+  const playSchedulerRef = useRef<number | null>(null);
   const startPlaybackRef = useRef<(fromTick?: number) => void>(() => undefined);
   const playStartedRef = useRef({ audioStartedAt: 0, tick: 0 });
   const countInTimerRef = useRef<number | null>(null);
   const metronomeTimerRef = useRef<number | null>(null);
   const recordingStartRef = useRef(0);
+  const recordingStartTickRef = useRef(0);
+  const playheadRef = useRef(0);
   const recordingInputsRef = useRef<RecordingInput[]>([]);
   const activeRecordingRef = useRef(new Map<string, Omit<RecordingInput, "endedAt">>());
   const appendCursorRef = useRef(0);
@@ -157,6 +164,16 @@ export default function MmlStudio({
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
+
+  useEffect(() => {
+    playheadRef.current = playhead;
+  }, [playhead]);
+
+  useEffect(() => {
+    if (!settingsRequested) return;
+    setSettingsView(true);
+    onSettingsRequestHandled?.();
+  }, [onSettingsRequestHandled, settingsRequested]);
 
   useEffect(() => {
     let cancelled = false;
@@ -280,6 +297,8 @@ export default function MmlStudio({
   const clearPlayback = useCallback(() => {
     playTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     playTimersRef.current = [];
+    if (playSchedulerRef.current !== null) window.clearInterval(playSchedulerRef.current);
+    playSchedulerRef.current = null;
     window.cancelAnimationFrame(playRafRef.current);
     stopMmlAudio();
     setPlaying(false);
@@ -297,19 +316,38 @@ export default function MmlStudio({
     playStartedRef.current = { audioStartedAt: now, tick: startTick };
     setPlaying(true);
 
+    const scheduledNotes: Array<{ note: any; track: any; noteStart: number; noteEnd: number; sourceId: string }> = [];
     project.tracks.forEach((track: any, trackIndex: number) => {
       if (track.muted || (soloed && !track.solo)) return;
       for (const note of displayTracks[trackIndex]?.notes ?? []) {
         if (note.tick + note.duration <= startTick || note.tick >= endTick) continue;
         const noteStart = Math.max(note.tick, startTick);
         const noteEnd = Math.min(note.tick + note.duration, endTick);
-        const delay = Math.max(0, (tickToSeconds(noteStart, allTempoEvents, project.tempo) - startSeconds) * 1000);
-        const duration = Math.max(10, (tickToSeconds(noteEnd, allTempoEvents, project.tempo) - tickToSeconds(noteStart, allTempoEvents, project.tempo)) * 1000);
         const sourceId = `mml:${track.id}:${note.sourceStart}:${now}`;
-        playTimersRef.current.push(window.setTimeout(() => playMidi(sourceId, note.midi, track.themeId, track.mixerVolume * note.velocity / 15), delay));
-        playTimersRef.current.push(window.setTimeout(() => releaseMidi(sourceId), delay + duration));
+        scheduledNotes.push({ note, track, noteStart, noteEnd, sourceId });
       }
     });
+    scheduledNotes.sort((a, b) => a.noteStart - b.noteStart);
+    let scheduleCursor = 0;
+    const scheduleWindow = () => {
+      const elapsed = performance.now() / 1000 - playStartedRef.current.audioStartedAt;
+      while (scheduleCursor < scheduledNotes.length) {
+        const item = scheduledNotes[scheduleCursor];
+        const startsIn = tickToSeconds(item.noteStart, allTempoEvents, project.tempo) - startSeconds - elapsed;
+        if (startsIn > 0.35) break;
+        const duration = Math.max(0.01, tickToSeconds(item.noteEnd, allTempoEvents, project.tempo) - tickToSeconds(item.noteStart, allTempoEvents, project.tempo));
+        const delay = Math.max(0, startsIn) * 1000;
+        playTimersRef.current.push(window.setTimeout(() => playMidi(item.sourceId, item.note.midi, item.track.themeId, item.track.mixerVolume * item.note.velocity / 15), delay));
+        playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), delay + duration * 1000));
+        scheduleCursor += 1;
+      }
+      if (scheduleCursor >= scheduledNotes.length && playSchedulerRef.current !== null) {
+        window.clearInterval(playSchedulerRef.current);
+        playSchedulerRef.current = null;
+      }
+    };
+    scheduleWindow();
+    playSchedulerRef.current = window.setInterval(scheduleWindow, 80);
 
     const finishDelay = Math.max(20, (endSeconds - startSeconds) * 1000);
     playTimersRef.current.push(window.setTimeout(() => {
@@ -364,7 +402,8 @@ export default function MmlStudio({
     for (const rest of explicitRestsRef.current) {
       recordedEndTick = Math.max(recordedEndTick, Math.round(rest.end * TICKS_PER_QUARTER * current.tempo / 60));
     }
-    const startTick = playhead;
+    recordedEndTick = Math.max(recordedEndTick, result.endTick);
+    const startTick = recordingStartTickRef.current;
     const recordingLength = Math.max(0, recordedEndTick);
     const connectedIds = new Set([...current.routing.left, ...current.routing.right]);
     commit((draft: any) => {
@@ -400,7 +439,7 @@ export default function MmlStudio({
     recordingInputsRef.current = [];
     explicitRestsRef.current = [];
     restStartedRef.current = null;
-  }, [commit, playhead]);
+  }, [commit]);
 
   const beginRecording = useCallback(() => {
     if (parseError || tempoConflict) return;
@@ -410,6 +449,7 @@ export default function MmlStudio({
     activeRecordingRef.current.clear();
     explicitRestsRef.current = [];
     appendCursorRef.current = 0;
+    recordingStartTickRef.current = playheadRef.current;
     appendWallStartRef.current = null;
     setDroppedCount(0);
     const begin = () => {
@@ -509,6 +549,8 @@ export default function MmlStudio({
         event.preventDefault();
         clearPlayback();
         if (recordState !== "idle") finishRecording();
+        playheadRef.current = 0;
+        setPlayhead(0);
         return;
       }
       const current = projectRef.current;
@@ -696,7 +738,7 @@ export default function MmlStudio({
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
         <button type="button" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}>{playing ? "Ⅱ" : "▶"}<span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
-        <button type="button" onClick={() => { clearPlayback(); setPlayhead(0); }}>■<span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
+        <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}>■<span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
         <button type="button" className={recordState !== "idle" ? "is-active" : ""} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}>●<span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         <button type="button" className={project.recording.metronome ? "is-active" : ""} onClick={() => commit((draft: any) => { draft.recording.metronome = !draft.recording.metronome; return draft; })}>♩<span>메트로놈</span></button>
         <button type="button" className={project.view.loop ? "is-active" : ""} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}>↻<span>반복</span></button>
@@ -704,13 +746,15 @@ export default function MmlStudio({
         <button type="button" onClick={redo} disabled={!future.length}>↷<span>다시 실행</span></button>
         <button type="button" onClick={() => setSettingsView((value) => !value)}>⚙<span>MML 설정</span></button>
         <button type="button" onClick={exportMml}>MML<span>내보내기</span></button>
+        <button type="button" onClick={() => navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true }))}>ALL<span>전체 복사</span></button>
         <button type="button" onClick={exportProject}>냥<span>프로젝트</span></button>
         <button type="button" onClick={() => fileInputRef.current?.click()}>↥<span>불러오기</span></button>
         <input ref={fileInputRef} type="file" accept=".mml,.nyangmml,text/plain,application/json" hidden onChange={importFile} />
       </div>
 
       {settingsView && (
-        <div className="mml-quick-settings">
+        <div className="mml-quick-settings" role="dialog" aria-label="MML 세부 설정">
+          <div className="mml-quick-settings-head"><strong>MML 설정</strong><button type="button" onClick={() => setSettingsView(false)}>닫기</button></div>
           <label>녹음 방식<select value={project.recording.mode} onChange={(event) => commit((draft: any) => { draft.recording.mode = event.target.value; return draft; })}><option value="realtime">실시간</option><option value="append">이어붙이기</option></select></label>
           <label>편집 방식<select value={project.recording.editMode} onChange={(event) => commit((draft: any) => { draft.recording.editMode = event.target.value; return draft; })}><option value="overwrite">수정</option><option value="insert">삽입</option></select></label>
           {project.recording.editMode === "insert" && <label>삽입 범위<select value={project.recording.insertScope} onChange={(event) => commit((draft: any) => { draft.recording.insertScope = event.target.value; return draft; })}><option value="all">전체 트랙 밀기</option><option value="used">사용 트랙만 밀기</option></select></label>}
@@ -739,11 +783,11 @@ export default function MmlStudio({
           <div className="mml-track-list-title"><strong>트랙</strong><button type="button" onClick={addTrack}>＋ 추가</button></div>
           {project.tracks.map((track: any, index: number) => (
             <article className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id} onClick={() => commit((draft: any) => { draft.view.selectedTrackId = track.id; return draft; })}>
-              <div className="mml-track-head"><input type="color" value={track.color} onChange={(event) => updateTrack(track.id, { color: event.target.value })} aria-label={`${track.name} 색상`} /><input value={track.name} onChange={(event) => updateTrack(track.id, { name: event.target.value })} aria-label={`Track ${index + 1} 이름`} /><button type="button" onClick={(event) => { event.stopPropagation(); removeTrack(track.id); }} disabled={project.tracks.length <= 1}>×</button></div>
-              <div className="mml-track-routes"><button type="button" className={project.routing.left.includes(track.id) ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); toggleRoute("left", track.id); }}>왼쪽</button><button type="button" className={project.routing.right.includes(track.id) ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); toggleRoute("right", track.id); }}>오른쪽</button></div>
+              <div className="mml-track-head"><input type="color" value={track.color} onChange={(event) => updateTrack(track.id, { color: event.target.value })} aria-label={`${track.name} 색상`} /><input value={track.name} onChange={(event) => updateTrack(track.id, { name: event.target.value })} aria-label={`Track ${index + 1} 이름`} /><button type="button" aria-label={`${track.name} 삭제`} title="트랙 삭제" onClick={(event) => { event.stopPropagation(); removeTrack(track.id); }} disabled={project.tracks.length <= 1}>×</button></div>
+              <div className="mml-track-routes"><button type="button" aria-pressed={project.routing.left.includes(track.id)} className={project.routing.left.includes(track.id) ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); toggleRoute("left", track.id); }}>왼쪽</button><button type="button" aria-pressed={project.routing.right.includes(track.id)} className={project.routing.right.includes(track.id) ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); toggleRoute("right", track.id); }}>오른쪽</button></div>
               <select value={track.themeId} onChange={(event) => updateTrack(track.id, { themeId: event.target.value })}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select>
               <input className="mml-track-volume" aria-label={`${track.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={track.mixerVolume} onChange={(event) => updateTrack(track.id, { mixerVolume: Number(event.target.value) })} />
-              <div className="mml-track-switches"><button type="button" className={track.muted ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { muted: !track.muted }); }}>M</button><button type="button" className={track.solo ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { solo: !track.solo }); }}>S</button><button type="button" className={!track.pianoRollVisible ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { pianoRollVisible: !track.pianoRollVisible }); }}>숨김</button></div>
+              <div className="mml-track-switches"><button type="button" aria-label={`${track.name} 음소거`} title="음소거" aria-pressed={track.muted} className={track.muted ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { muted: !track.muted }); }}>M</button><button type="button" aria-label={`${track.name} 혼자 듣기`} title="혼자 듣기" aria-pressed={track.solo} className={track.solo ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { solo: !track.solo }); }}>S</button><button type="button" aria-label={`${track.name} 피아노롤 숨김`} aria-pressed={!track.pianoRollVisible} className={!track.pianoRollVisible ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { pianoRollVisible: !track.pianoRollVisible }); }}>숨김</button></div>
             </article>
           ))}
         </aside>
@@ -753,6 +797,7 @@ export default function MmlStudio({
             if ((event.target as HTMLElement).closest(".mml-note-block")) return;
             const rect = event.currentTarget.getBoundingClientRect();
             const tick = Math.round(((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoWidth) * songDuration);
+            playheadRef.current = Math.max(0, tick);
             setPlayhead(Math.max(0, tick));
             const selectedIndex = project.tracks.findIndex((track: any) => track.id === selectedTrack.id);
             const parsed = displayTracks[selectedIndex];
@@ -765,6 +810,11 @@ export default function MmlStudio({
             });
           }}>
             <div className="mml-piano-canvas" style={{ width: pianoWidth, height: pianoHeight }}>
+              {Array.from({ length: maxMidi - minMidi + 1 }, (_, index) => {
+                const midi = maxMidi - index;
+                const pitchClass = ((midi % 12) + 12) % 12;
+                return <span className={`mml-pitch-row ${[1, 3, 6, 8, 10].includes(pitchClass) ? "is-accidental" : ""}`} style={{ top: `${index * pixelsPerPitch}px`, height: `${pixelsPerPitch}px` }} key={`pitch-${midi}`}><em>{pitchClass === 0 ? noteLabel(midi) : ""}</em></span>;
+              })}
               {Array.from({ length: Math.ceil(songDuration / (TICKS_PER_QUARTER * 4)) + 1 }, (_, index) => <span className="mml-measure-label" style={{ left: `${index * 190}px` }} key={index}>{index + 1}</span>)}
               {project.timeSignatureMap.filter((marker: any) => marker.tick > 0).map((marker: any) => <span className="mml-meter-marker" style={{ left: `${(marker.tick / songDuration) * pianoWidth}px` }} key={`${marker.tick}-${marker.numerator}-${marker.denominator}`}>{marker.numerator}/{marker.denominator}</span>)}
               {visibleNotes.map((note: any) => {
@@ -776,7 +826,7 @@ export default function MmlStudio({
             </div>
           </div>
 
-          <div className="mml-editor-head"><strong>{selectedTrack.name}</strong><span style={{ color: selectedTrack.color }}>●</span><small>v{selectedTrack.recordVelocity}</small><button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button></div>
+          <div className="mml-editor-head"><strong>{selectedTrack.name}</strong><span style={{ color: selectedTrack.color }}>●</span><small>v{selectedTrack.recordVelocity}</small><button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>트랙 복사</button></div>
           <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onPaste={(event) => {
             const text = event.clipboardData.getData("text");
             if (!/^\s*MML@/i.test(text)) return;

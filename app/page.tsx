@@ -564,6 +564,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"keyboard" | "mml">("keyboard");
   const [mmlOpen, setMmlOpen] = useState(false);
+  const [mmlSettingsRequested, setMmlSettingsRequested] = useState(false);
   const [leftOctave, setLeftOctave] = useState(4);
   const [rightOctave, setRightOctave] = useState(5);
   const [transpose, setTranspose] = useState(0);
@@ -882,6 +883,7 @@ export default function Home() {
 
   const startNote = useCallback(
     async (inputId: string, side: KeyboardSide, offset: number, options: NoteStartOptions = {}) => {
+      const inputStartedAt = performance.now() / 1000;
       releaseInput(inputId, true);
       const requestId = ++noteRequestCounterRef.current;
       pendingNoteRef.current.set(inputId, requestId);
@@ -897,7 +899,7 @@ export default function Home() {
       const baseMidi = options.soundingMidi ?? 12 * (octave + 1) + offset;
       const soundingMidi = options.soundingMidi ?? baseMidi + transposeRef.current;
       if (!options.skipRecording) {
-        mmlInputSinkRef.current?.noteOn(inputId, side, soundingMidi, performance.now() / 1000);
+        mmlInputSinkRef.current?.noteOn(inputId, side, soundingMidi, inputStartedAt);
       }
       const rawFrequency = 440 * 2 ** ((soundingMidi - 69) / 12);
       const frequency = Number.isFinite(rawFrequency)
@@ -1504,6 +1506,8 @@ export default function Home() {
           <MmlStudio
             currentThemeId={settings.themeId}
             themes={THEMES.map(({ id, name, accent }) => ({ id, name, accent }))}
+            settingsRequested={mmlSettingsRequested}
+            onSettingsRequestHandled={() => setMmlSettingsRequested(false)}
             onClose={() => setMmlOpen(false)}
             registerInputSink={registerMmlInputSink}
             playMidi={playMmlMidi}
@@ -1649,7 +1653,7 @@ export default function Home() {
                 <section className="settings-section mml-settings-section">
                   <div className="settings-section-title"><span>M</span><h3>MML 스튜디오</h3></div>
                   <p className="setting-note">녹음 방식, 트랙 연결, 박자 보정, 메트로놈과 프로젝트 설정은 MML 화면에서 곡과 함께 관리합니다.</p>
-                  <button type="button" className="connect-mic-button" onClick={() => { setSettingsOpen(false); openMml(); }}>MML 스튜디오 열기</button>
+                  <button type="button" className="connect-mic-button" onClick={() => { setSettingsOpen(false); setMmlSettingsRequested(true); openMml(); }}>MML 설정 열기</button>
                 </section>
               )}
               <section className="settings-section">

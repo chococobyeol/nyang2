@@ -125,5 +125,6 @@ export function recordingToTrackTexts(inputs, tracks, routing, options = {}) {
     texts: new Map(tracks.map((track) => [track.id, serializeTrackEvents(byTrack.get(track.id) ?? [], { velocity: track.recordVelocity ?? 15 })])),
     usedTrackIds: new Set(allocation.assigned.map((item) => item.trackId)),
     dropped: allocation.dropped,
+    endTick: Math.max(0, ...quantized.map((input) => input.tick + input.duration)),
   };
 }
