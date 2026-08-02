@@ -1626,7 +1626,6 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <p className="setting-note">냥 보이스는 O3 E 녹음본 하나를 사용합니다. 길게 눌러도 손을 떼면 바로 멈추며, 서스테인으로 유지된 음은 서스테인을 떼면 멈춥니다. 누르고 있는 동안에만 음의 끝부분에 잔향이 붙습니다.</p>
               </section>
 
               <section className="settings-section">

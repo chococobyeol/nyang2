@@ -58,9 +58,6 @@ test("ships the tuned E4 nyang sample with conditional tail-only reverb", async 
   assert.match(page, /description: "냥\.\."/);
   assert.doesNotMatch(page, /직접 녹음한 진짜 냥 소리/);
   assert.match(page, /name: "포근 신스"/);
-  assert.match(page, /O3 E 녹음본/);
-  assert.match(page, /길게 눌러도 손을 떼면 바로 멈추며/);
-  assert.match(page, /서스테인으로 유지된 음은 서스테인을 떼면 멈춥니다/);
   assert.match(page, /createBufferSource\(\)/);
   assert.match(page, /source\.playbackRate/);
   assert.doesNotMatch(page, /source\.loop = true/);
