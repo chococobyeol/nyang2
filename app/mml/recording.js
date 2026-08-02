@@ -51,13 +51,7 @@ export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
       : division === "auto"
         ? autoQuantizeTick(rawDuration)
         : Math.round(rawDuration / grid) * grid;
-    const snappedEnd = division === "off"
-      ? Math.round(rawEnd)
-      : division === "auto"
-        ? autoQuantizeTick(rawEnd)
-        : Math.round(rawEnd / grid) * grid;
-    const durationByBoundaries = Math.max(minimum, snappedEnd - tick);
-    const duration = Math.max(minimum, durationByLength, durationByBoundaries);
+    const duration = Math.max(minimum, durationByLength);
     return {
       ...input,
       tick,
@@ -68,10 +62,13 @@ export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
   });
 }
 
-function overlapTolerance(division) {
-  if (division === "off") return 12;
-  if (division === "auto") return 48;
-  return QUANTIZE_TICKS[division] ?? QUANTIZE_TICKS["1/8"];
+function overlapTolerances(division) {
+  const snapped = division === "off"
+    ? 12
+    : division === "auto"
+      ? 48
+      : QUANTIZE_TICKS[division] ?? QUANTIZE_TICKS["1/8"];
+  return { snapped, raw: Math.max(4, Math.min(24, snapped * 0.25)) };
 }
 
 /**
@@ -81,7 +78,7 @@ function overlapTolerance(division) {
  */
 export function closeShortLegatoOverlaps(inputs, division = "1/8") {
   const normalized = inputs.map((input) => ({ ...input }));
-  const tolerance = overlapTolerance(division);
+  const tolerance = overlapTolerances(division);
 
   for (const side of ["left", "right"]) {
     const notes = normalized
@@ -102,7 +99,7 @@ export function closeShortLegatoOverlaps(inputs, division = "1/8") {
         const snappedOverlap = note.tick + note.duration - next.tick;
         const rawOverlap = note.rawTick + note.rawDuration - nextRawTick;
         const separateAttack = nextRawTick - note.rawTick > 6;
-        if (separateAttack && snappedOverlap > 0 && snappedOverlap <= tolerance && rawOverlap <= tolerance * 1.25) {
+        if (separateAttack && snappedOverlap > 0 && snappedOverlap <= tolerance.snapped && rawOverlap <= tolerance.raw) {
           note.duration = Math.max(1, next.tick - note.tick);
         }
       }

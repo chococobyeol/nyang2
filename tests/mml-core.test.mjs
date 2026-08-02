@@ -76,7 +76,7 @@ test("snaps a recording start and the visible grid to the selected division", ()
 
 test("keeps a near-half-note release on the half-note grid boundary", () => {
   const [note] = quantizeInputs([
-    { id: "near-half", side: "left", midi: 60, startedAt: 0.2, endedAt: 0.9 },
+    { id: "near-half", side: "left", midi: 60, startedAt: 0.2, endedAt: 1.15 },
   ], 120, "1/4", 0);
   assert.equal(note.tick, 0);
   assert.equal(note.duration, 192);
@@ -139,8 +139,8 @@ test("allocates delayed harmony to stable high and low tracks", () => {
 test("keeps sequential legato notes instead of dropping a boundary overlap", () => {
   const tracks = [{ id: "t1", recordVelocity: 15 }];
   const result = recordingToTrackTexts([
-    { id: "c", side: "left", midi: 60, startedAt: 0, endedAt: 0.75 },
-    { id: "d", side: "left", midi: 62, startedAt: 0.5, endedAt: 1 },
+    { id: "c", side: "left", midi: 60, startedAt: 0, endedAt: 0.63 },
+    { id: "d", side: "left", midi: 62, startedAt: 0.6, endedAt: 1.1 },
   ], tracks, { left: ["t1"], right: [] }, { bpm: 120, quantize: "1/8", pitchPriority: "high", origin: 0 });
   const parsed = parseTrack(result.texts.get("t1"));
   assert.equal(result.dropped.length, 0);
@@ -148,6 +148,18 @@ test("keeps sequential legato notes instead of dropping a boundary overlap", () 
     { tick: 0, duration: 96, midi: 60 },
     { tick: 96, duration: 96, midi: 62 },
   ]);
+});
+
+test("does not shorten a genuine near-half overlap to a quarter note", () => {
+  const tracks = [{ id: "t1", recordVelocity: 15 }];
+  const result = recordingToTrackTexts([
+    { id: "half", side: "left", midi: 60, startedAt: 0, endedAt: 0.95 },
+    { id: "overlap", side: "left", midi: 62, startedAt: 0.5, endedAt: 1.2 },
+  ], tracks, { left: ["t1"], right: [] }, { bpm: 120, quantize: "1/4", pitchPriority: "low", origin: 0 });
+  const parsed = parseTrack(result.texts.get("t1"));
+  assert.equal(parsed.notes[0].midi, 60);
+  assert.equal(parsed.notes[0].duration, 192);
+  assert.equal(result.dropped.length, 1);
 });
 
 test("does not collapse a real delayed harmony or simultaneous chord", () => {
