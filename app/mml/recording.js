@@ -39,8 +39,58 @@ export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
       : division === "auto"
         ? autoQuantizeTick(rawDuration)
         : Math.round(rawDuration / grid) * grid;
-    return { ...input, tick, duration: Math.max(minimum, duration) };
+    return {
+      ...input,
+      tick,
+      duration: Math.max(minimum, duration),
+      rawTick: rawStart,
+      rawDuration,
+    };
   });
+}
+
+function overlapTolerance(division) {
+  if (division === "off") return 12;
+  if (division === "auto") return 48;
+  return QUANTIZE_TICKS[division] ?? QUANTIZE_TICKS["1/8"];
+}
+
+/**
+ * A keyboard player will commonly press the next melody note just before
+ * releasing the previous one. Keep genuine chords, but close a small boundary
+ * overlap at the next snapped onset so a monophonic route does not lose notes.
+ */
+export function closeShortLegatoOverlaps(inputs, division = "1/8") {
+  const normalized = inputs.map((input) => ({ ...input }));
+  const tolerance = overlapTolerance(division);
+
+  for (const side of ["left", "right"]) {
+    const notes = normalized
+      .filter((input) => input.side === side)
+      .sort((a, b) => a.tick - b.tick || a.rawTick - b.rawTick || a.midi - b.midi);
+    const onsetGroups = [];
+    for (const note of notes) {
+      const group = onsetGroups.at(-1);
+      if (group?.tick === note.tick) group.notes.push(note);
+      else onsetGroups.push({ tick: note.tick, notes: [note] });
+    }
+
+    for (let index = 0; index < onsetGroups.length - 1; index += 1) {
+      const current = onsetGroups[index];
+      const next = onsetGroups[index + 1];
+      const nextRawTick = Math.min(...next.notes.map((note) => note.rawTick));
+      for (const note of current.notes) {
+        const snappedOverlap = note.tick + note.duration - next.tick;
+        const rawOverlap = note.rawTick + note.rawDuration - nextRawTick;
+        const separateAttack = nextRawTick - note.rawTick > 6;
+        if (separateAttack && snappedOverlap > 0 && snappedOverlap <= tolerance && rawOverlap <= tolerance * 1.25) {
+          note.duration = Math.max(1, next.tick - note.tick);
+        }
+      }
+    }
+  }
+
+  return normalized;
 }
 
 function overlaps(a, b) {
@@ -121,7 +171,16 @@ export function allocateInputs(inputs, routing, pitchPriority = "high") {
 
 export function recordingToTrackTexts(inputs, tracks, routing, options = {}) {
   const quantized = quantizeInputs(inputs, options.bpm ?? 120, options.quantize ?? "1/8", options.origin ?? null);
-  const allocation = allocateInputs(quantized, routing, options.pitchPriority ?? "high");
+  const initialAllocation = allocateInputs(quantized, routing, options.pitchPriority ?? "high");
+  const normalized = initialAllocation.dropped.length
+    ? closeShortLegatoOverlaps(quantized, options.quantize ?? "1/8")
+    : quantized;
+  const normalizedAllocation = normalized === quantized
+    ? initialAllocation
+    : allocateInputs(normalized, routing, options.pitchPriority ?? "high");
+  const useNormalized = normalizedAllocation.dropped.length < initialAllocation.dropped.length;
+  const finalInputs = useNormalized ? normalized : quantized;
+  const allocation = useNormalized ? normalizedAllocation : initialAllocation;
   const byTrack = new Map(tracks.map((track) => [track.id, []]));
   for (const { input, trackId } of allocation.assigned) {
     byTrack.get(trackId)?.push({ tick: input.tick, duration: input.duration, midi: input.midi });
@@ -131,6 +190,6 @@ export function recordingToTrackTexts(inputs, tracks, routing, options = {}) {
     usedTrackIds: new Set(allocation.assigned.map((item) => item.trackId)),
     dropped: allocation.dropped,
     assigned: allocation.assigned,
-    endTick: Math.max(0, ...quantized.map((input) => input.tick + input.duration)),
+    endTick: Math.max(0, ...finalInputs.map((input) => input.tick + input.duration)),
   };
 }

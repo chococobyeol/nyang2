@@ -1238,7 +1238,6 @@ button {
 .mml-piano-canvas {
   position: relative;
   min-width: 100%;
-  background: repeating-linear-gradient(90deg, transparent 0 189px, rgba(31, 37, 36, 0.27) 189px 190px);
 }
 
 .mml-pitch-row {
@@ -1267,10 +1266,29 @@ button {
   font-weight: 900;
 }
 
+.mml-beat-line,
+.mml-measure-line {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  pointer-events: none;
+}
+
+.mml-beat-line {
+  background: rgba(31, 37, 36, 0.09);
+}
+
+.mml-measure-line {
+  background: rgba(31, 37, 36, 0.34);
+}
+
 .mml-measure-label {
   position: absolute;
   z-index: 2;
   top: 3px;
+  padding-left: 3px;
   color: var(--muted);
   font-size: 7px;
   font-weight: 900;

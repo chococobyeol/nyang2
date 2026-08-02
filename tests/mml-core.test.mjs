@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, quantizeInputs, recordingToTrackTexts } from "../app/mml/recording.js";
+import { allocateInputs, closeShortLegatoOverlaps, quantizeInputs, recordingToTrackTexts } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
+import { buildTimelineGrid } from "../app/mml/timeline.js";
 
 test("uses append recording by default and migrates the previous default", () => {
   assert.equal(createProject().recording.mode, "append");
@@ -113,4 +114,61 @@ test("allocates delayed harmony to stable high and low tracks", () => {
   assert.equal(high.notes[0].tick, 96);
   assert.equal(low.notes[0].midi, 60);
   assert.equal(low.notes[0].duration, 192);
+});
+
+test("keeps sequential legato notes instead of dropping a boundary overlap", () => {
+  const tracks = [{ id: "t1", recordVelocity: 15 }];
+  const result = recordingToTrackTexts([
+    { id: "c", side: "left", midi: 60, startedAt: 0, endedAt: 0.75 },
+    { id: "d", side: "left", midi: 62, startedAt: 0.5, endedAt: 1 },
+  ], tracks, { left: ["t1"], right: [] }, { bpm: 120, quantize: "1/8", pitchPriority: "high", origin: 0 });
+  const parsed = parseTrack(result.texts.get("t1"));
+  assert.equal(result.dropped.length, 0);
+  assert.deepEqual(parsed.notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })), [
+    { tick: 0, duration: 96, midi: 60 },
+    { tick: 96, duration: 96, midi: 62 },
+  ]);
+});
+
+test("does not collapse a real delayed harmony or simultaneous chord", () => {
+  const quantized = quantizeInputs([
+    { id: "c", side: "left", midi: 60, startedAt: 0, endedAt: 1 },
+    { id: "e", side: "left", midi: 64, startedAt: 0.5, endedAt: 1 },
+    { id: "g", side: "right", midi: 67, startedAt: 0, endedAt: 0.5 },
+    { id: "b", side: "right", midi: 71, startedAt: 0, endedAt: 0.5 },
+  ], 120, "1/8", 0);
+  const normalized = closeShortLegatoOverlaps(quantized, "1/8");
+  assert.equal(normalized.find((note) => note.id === "c").duration, 192);
+  assert.equal(normalized.find((note) => note.id === "g").duration, 96);
+  assert.equal(normalized.find((note) => note.id === "b").duration, 96);
+});
+
+test("preserves a short delayed harmony when enough tracks are connected", () => {
+  const tracks = [{ id: "t1", recordVelocity: 15 }, { id: "t2", recordVelocity: 15 }];
+  const result = recordingToTrackTexts([
+    { id: "c", side: "left", midi: 60, startedAt: 0, endedAt: 0.75 },
+    { id: "e", side: "left", midi: 64, startedAt: 0.5, endedAt: 1 },
+  ], tracks, { left: ["t1", "t2"], right: [] }, { bpm: 120, quantize: "1/8", pitchPriority: "high", origin: 0 });
+  assert.equal(result.dropped.length, 0);
+  assert.equal(result.assigned.find((item) => item.input.id === "c").input.duration, 144);
+  assert.notEqual(
+    result.assigned.find((item) => item.input.id === "c").trackId,
+    result.assigned.find((item) => item.input.id === "e").trackId,
+  );
+});
+
+test("builds measure labels and beat lines from the same tick positions", () => {
+  const grid = buildTimelineGrid(1536, [{ tick: 0, numerator: 4, denominator: 4 }], { numerator: 4, denominator: 4 });
+  assert.deepEqual(grid.measures.map((marker) => marker.tick), [0, 384, 768, 1152, 1536]);
+  assert.deepEqual(grid.measures.map((marker) => marker.number), [1, 2, 3, 4, 5]);
+  assert.deepEqual(grid.beats.slice(0, 3).map((marker) => marker.tick), [96, 192, 288]);
+});
+
+test("starts a new measure exactly at a time-signature change", () => {
+  const grid = buildTimelineGrid(960, [
+    { tick: 0, numerator: 4, denominator: 4 },
+    { tick: 384, numerator: 6, denominator: 8 },
+  ], { numerator: 4, denominator: 4 });
+  assert.deepEqual(grid.measures.map((marker) => marker.tick), [0, 384, 672, 960]);
+  assert.deepEqual(grid.measures.map((marker) => marker.number), [1, 2, 3, 4]);
 });
