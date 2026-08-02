@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { chooseSecondKeyboardOctave } from "./octave-selection";
 
 type NoteLabelMode = "hidden" | "base" | "transposed";
 type AccidentalStyle = "sharp" | "flat";
@@ -1555,7 +1556,10 @@ export default function Home() {
                 <Toggle
                   checked={settings.keyboardCount === 2}
                   onChange={(checked) => {
-                    if (checked) setRightOctave(Math.min(8, leftOctaveRef.current + 1));
+                    if (checked) {
+                      const rightPresets = settingsRef.current.rightOctavePresets;
+                      setRightOctave(chooseSecondKeyboardOctave(rightPresets));
+                    }
                     updateSettings({ keyboardCount: checked ? 2 : 1 });
                   }}
                   label="건반 한 세트 추가"

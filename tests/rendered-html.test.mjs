@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
+import { chooseSecondKeyboardOctave } from "../app/octave-selection.js";
 
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -125,4 +126,13 @@ test("renders the optional lower B and upper C at accidental-key scale", async (
   assert.match(css, /\.paw-note-natural\.is-edge-note:first-child \{\s*--edge-note-shift: 14%;/);
   assert.match(css, /\.paw-note-natural\.is-edge-note:last-child \{\s*--edge-note-shift: -14%;/);
   assert.match(css, /\.paw-note-natural\.is-edge-note\.is-active \{\s*transform: translateX\(var\(--edge-note-shift\)\) translateY\(5px\) scale\(0\.64\);/);
+});
+
+test("keeps the selected left octave and opens the second keyboard on octave five", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /const rightPresets = settingsRef\.current\.rightOctavePresets;/);
+  assert.match(page, /setRightOctave\(chooseSecondKeyboardOctave\(rightPresets\)\);/);
+  assert.doesNotMatch(page, /setRightOctave\(Math\.min\(8, leftOctaveRef\.current \+ 1\)\)/);
+  assert.equal(chooseSecondKeyboardOctave([3, 4, 5, 6]), 5);
+  assert.equal(chooseSecondKeyboardOctave([1, 2, 4, 6]), 1);
 });
