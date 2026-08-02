@@ -1344,9 +1344,9 @@ export default function Home() {
     [...inputVoiceRef.current.keys()].filter((inputId) => inputId.startsWith("mml:")).forEach((inputId) => releaseInput(inputId, true));
   }, [releaseInput]);
 
-  const clickMetronome = useCallback((accented: boolean, volume: number) => {
+  const clickMetronome = useCallback((accented: boolean, volume: number, delaySeconds = 0) => {
     const graph = initAudio();
-    const now = graph.context.currentTime;
+    const now = graph.context.currentTime + Math.max(0, delaySeconds);
     const oscillator = graph.context.createOscillator();
     const gain = graph.context.createGain();
     oscillator.type = "sine";

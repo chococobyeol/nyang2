@@ -21,7 +21,7 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 1,
+    version: 2,
     title: "",
     tracks,
     tempo: 120,
@@ -29,7 +29,7 @@ export function createProject(themeId = "nyang-voice") {
     timeSignatureMap: [{ tick: 0, numerator: 4, denominator: 4 }],
     routing: { left: [tracks[0].id, tracks[1].id], right: [tracks[2].id] },
     recording: {
-      mode: "realtime",
+      mode: "append",
       editMode: "overwrite",
       pitchPriority: "high",
       quantize: "1/8",
@@ -62,18 +62,20 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
   }));
   const ids = new Set(tracks.map((track) => track.id));
   const route = (side) => Array.isArray(value.routing?.[side]) ? value.routing[side].filter((id) => ids.has(id)) : [];
+  const recording = {
+    ...fallback.recording,
+    ...value.recording,
+    shortcuts: { ...fallback.recording.shortcuts, ...value.recording?.shortcuts },
+  };
+  if (Number(value.version) < 2) recording.mode = "append";
   return {
     ...fallback,
     ...value,
     format: "nyangmml",
-    version: 1,
+    version: 2,
     tracks,
     routing: { left: route("left"), right: route("right") },
-    recording: {
-      ...fallback.recording,
-      ...value.recording,
-      shortcuts: { ...fallback.recording.shortcuts, ...value.recording?.shortcuts },
-    },
+    recording,
     timeSignature: {
       numerator: Math.max(1, Number(value.timeSignature?.numerator) || 4),
       denominator: Math.max(1, Number(value.timeSignature?.denominator) || 4),

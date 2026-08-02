@@ -31,10 +31,15 @@ export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
   return inputs.map((input) => {
     const rawStart = Math.max(0, (input.startedAt - start) * ticksPerSecond);
     const rawEnd = Math.max(rawStart, (input.endedAt - start) * ticksPerSecond);
+    const rawDuration = Math.max(0, rawEnd - rawStart);
     const tick = division === "off" ? Math.round(rawStart) : division === "auto" ? autoQuantizeTick(rawStart) : Math.round(rawStart / grid) * grid;
-    const end = division === "off" ? Math.round(rawEnd) : division === "auto" ? autoQuantizeTick(rawEnd) : Math.round(rawEnd / grid) * grid;
     const minimum = division === "off" ? 1 : division === "auto" ? 12 : grid;
-    return { ...input, tick, duration: Math.max(minimum, end - tick) };
+    const duration = division === "off"
+      ? Math.round(rawDuration)
+      : division === "auto"
+        ? autoQuantizeTick(rawDuration)
+        : Math.round(rawDuration / grid) * grid;
+    return { ...input, tick, duration: Math.max(minimum, duration) };
   });
 }
 
@@ -125,6 +130,7 @@ export function recordingToTrackTexts(inputs, tracks, routing, options = {}) {
     texts: new Map(tracks.map((track) => [track.id, serializeTrackEvents(byTrack.get(track.id) ?? [], { velocity: track.recordVelocity ?? 15 })])),
     usedTrackIds: new Set(allocation.assigned.map((item) => item.trackId)),
     dropped: allocation.dropped,
+    assigned: allocation.assigned,
     endTick: Math.max(0, ...quantized.map((input) => input.tick + input.duration)),
   };
 }

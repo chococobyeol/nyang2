@@ -271,11 +271,11 @@ function encodeEvent(midi, duration, currentOctave) {
   };
 }
 
-export function serializeTrackEvents(events, { velocity = 15, initialOctave = 4 } = {}) {
+export function serializeTrackEvents(events, { velocity = 15, initialOctave = 4, tempo = null } = {}) {
   const ordered = [...events].sort((a, b) => a.tick - b.tick || b.midi - a.midi);
   let cursor = 0;
   let octave = initialOctave;
-  let result = `v${velocity}`;
+  let result = `${Number.isFinite(tempo) && tempo > 0 ? `t${Math.round(tempo)}` : ""}v${velocity}`;
   for (const event of ordered) {
     const gap = Math.max(0, Math.round(event.tick - cursor));
     if (gap > 0) result += encodeDuration(gap).map((length) => `r${length}`).join("");
@@ -285,6 +285,15 @@ export function serializeTrackEvents(events, { velocity = 15, initialOctave = 4 
     cursor = Math.max(cursor, event.tick + event.duration);
   }
   return result;
+}
+
+export function tempoAtTick(tick, tempoEvents, defaultTempo = 120) {
+  let bpm = defaultTempo;
+  for (const event of [...tempoEvents].sort((a, b) => a.tick - b.tick)) {
+    if (event.tick > tick) break;
+    bpm = event.bpm;
+  }
+  return bpm;
 }
 
 export function tickToSeconds(tick, tempoEvents, defaultTempo = 120) {
@@ -300,4 +309,3 @@ export function tickToSeconds(tick, tempoEvents, defaultTempo = 120) {
   }
   return seconds + ((tick - cursorTick) / TICKS_PER_QUARTER) * (60 / bpm);
 }
-

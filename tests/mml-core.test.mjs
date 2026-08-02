@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tickToSeconds } from "../app/mml/core.js";
+import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, quantizeInputs, recordingToTrackTexts } from "../app/mml/recording.js";
+import { createProject, sanitizeProject } from "../app/mml/project.js";
+
+test("uses append recording by default and migrates the previous default", () => {
+  assert.equal(createProject().recording.mode, "append");
+  const legacy = createProject();
+  legacy.version = 1;
+  legacy.recording.mode = "realtime";
+  assert.equal(sanitizeProject(legacy).recording.mode, "append");
+});
 
 test("parses Mabinogi-style notes, commands, dotted lengths, ties and absolute notes", () => {
   const parsed = parseTrack("t120o3l8v15c+4.d8&d8n61r4");
@@ -39,12 +48,26 @@ test("serializes events with rests and exact note lengths", () => {
 
 test("converts ticks through tempo changes", () => {
   assert.equal(tickToSeconds(192, [{ tick: 96, bpm: 60 }]), 1.5);
+  assert.equal(tempoAtTick(95, [{ tick: 0, bpm: 90 }, { tick: 96, bpm: 140 }]), 90);
+  assert.equal(tempoAtTick(96, [{ tick: 0, bpm: 90 }, { tick: 96, bpm: 140 }]), 140);
 });
 
 test("quantizes raw audio times to the selected rhythm grid", () => {
   const result = quantizeInputs([{ id: "a", side: "left", midi: 60, startedAt: 10, endedAt: 10.49 }], 120, "1/8");
   assert.equal(result[0].tick, 0);
   assert.equal(result[0].duration, 96);
+});
+
+test("quantizes note length independently from a slightly late onset", () => {
+  const result = quantizeInputs([{ id: "late", side: "left", midi: 60, startedAt: 10.14, endedAt: 10.54 }], 120, "1/8", 10);
+  assert.equal(result[0].tick, 48);
+  assert.equal(result[0].duration, 96);
+  const ninetyBpm = quantizeInputs([{ id: "quarter", side: "left", midi: 60, startedAt: 3, endedAt: 3 + 2 / 3 }], 90, "1/8", 3);
+  assert.equal(ninetyBpm[0].duration, 96);
+});
+
+test("serializes the recording tempo into the generated master track", () => {
+  assert.match(serializeTrackEvents([{ tick: 0, duration: 96, midi: 60 }], { tempo: 90 }), /^t90v15/);
 });
 
 test("keeps a minimum grid duration for a very short recorded tap", () => {
