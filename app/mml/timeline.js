@@ -49,3 +49,12 @@ export function buildTimelineGrid(duration, timeSignatureMap = [], fallback = { 
 
   return { measures, beats };
 }
+
+export function followTimelineScroll(scrollLeft, viewportWidth, contentWidth, playheadX, anchor = 0.65) {
+  const width = Math.max(0, Number(viewportWidth) || 0);
+  const maxScroll = Math.max(0, (Number(contentWidth) || 0) - width);
+  const current = Math.max(0, Math.min(maxScroll, Number(scrollLeft) || 0));
+  const position = Math.max(0, Number(playheadX) || 0);
+  if (width === 0 || position <= current + width * anchor) return current;
+  return Math.max(current, Math.min(maxScroll, position - width * anchor));
+}

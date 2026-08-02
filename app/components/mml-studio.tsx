@@ -27,7 +27,7 @@ import {
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { quantizationGridTicks, quantizeInputs, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { buildTimelineGrid } from "../mml/timeline.js";
+import { buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
 
 type KeyboardSide = "left" | "right";
 
@@ -212,6 +212,7 @@ export default function MmlStudio({
   const [fileMenuView, setFileMenuView] = useState(false);
   const [importPayload, setImportPayload] = useState<string[] | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
@@ -867,7 +868,11 @@ export default function MmlStudio({
   };
 
   const pianoPixelsPerTick = 190 / (TICKS_PER_QUARTER * 4);
-  const pianoTimelineDuration = Math.max(songDuration, TICKS_PER_QUARTER * 16);
+  const pianoTimelineDuration = Math.max(
+    songDuration,
+    TICKS_PER_QUARTER * 16,
+    recordState === "recording" ? playhead + TICKS_PER_QUARTER * 12 : 0,
+  );
   const pianoWidth = pianoTimelineDuration * pianoPixelsPerTick;
   const timelineGrid = buildTimelineGrid(pianoTimelineDuration, project.timeSignatureMap, project.timeSignature);
   const tickToPianoX = (tick: number) => tick * pianoPixelsPerTick;
@@ -888,6 +893,18 @@ export default function MmlStudio({
   const minMidi = Math.min(36, ...visibleNotes.map((note: any) => note.midi));
   const maxMidi = Math.max(84, ...visibleNotes.map((note: any) => note.midi));
   const pixelsPerPitch = pianoHeight / (maxMidi - minMidi + 1);
+
+  useEffect(() => {
+    if (recordState !== "recording") return;
+    const roll = pianoRollRef.current;
+    if (!roll) return;
+    roll.scrollLeft = followTimelineScroll(
+      roll.scrollLeft,
+      roll.clientWidth,
+      roll.scrollWidth,
+      tickToPianoX(playhead),
+    );
+  }, [playhead, recordState]);
 
   const timelineContext = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -1024,7 +1041,7 @@ export default function MmlStudio({
         </aside>
 
         <div className="mml-work-area">
-          <div className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onContextMenu={timelineContext} onClick={(event) => {
+          <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onContextMenu={timelineContext} onClick={(event) => {
             if ((event.target as HTMLElement).closest(".mml-note-block")) return;
             const rect = event.currentTarget.getBoundingClientRect();
             const rawTick = Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick);

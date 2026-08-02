@@ -3,7 +3,7 @@ import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, closeShortLegatoOverlaps, quantizationGridTicks, quantizeInputs, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
-import { buildTimelineGrid } from "../app/mml/timeline.js";
+import { buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
 
 test("uses append recording by default and migrates the previous default", () => {
   assert.equal(createProject().recording.mode, "append");
@@ -203,4 +203,11 @@ test("starts a new measure exactly at a time-signature change", () => {
   ], { numerator: 4, denominator: 4 });
   assert.deepEqual(grid.measures.map((marker) => marker.tick), [0, 384, 672, 960]);
   assert.deepEqual(grid.measures.map((marker) => marker.number), [1, 2, 3, 4]);
+});
+
+test("follows a recording playhead after it reaches the visible timeline anchor", () => {
+  assert.equal(followTimelineScroll(0, 1000, 3000, 600), 0);
+  assert.equal(followTimelineScroll(0, 1000, 3000, 700), 50);
+  assert.equal(followTimelineScroll(50, 1000, 3000, 800), 150);
+  assert.equal(followTimelineScroll(1800, 1000, 2500, 2500), 1500);
 });
