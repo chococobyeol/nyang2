@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { chooseSecondKeyboardOctave } from "./octave-selection";
+import MmlStudio, { type MmlInputSink } from "./components/mml-studio";
 
 type NoteLabelMode = "hidden" | "base" | "transposed";
 type AccidentalStyle = "sharp" | "flat";
@@ -100,6 +101,14 @@ type CaptureTarget =
   | { kind: "octave"; index: number }
   | { kind: "transpose"; action: TransposeShortcutAction }
   | null;
+
+type NoteStartOptions = {
+  soundingMidi?: number;
+  themeId?: string;
+  volume?: number;
+  keyId?: string;
+  skipRecording?: boolean;
+};
 
 const STORAGE_KEY = "nyangnyang-settings-v1";
 const NOTE_OFFSETS = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -553,6 +562,8 @@ function KeyboardGroup({
 export default function Home() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"keyboard" | "mml">("keyboard");
+  const [mmlOpen, setMmlOpen] = useState(false);
   const [leftOctave, setLeftOctave] = useState(4);
   const [rightOctave, setRightOctave] = useState(5);
   const [transpose, setTranspose] = useState(0);
@@ -590,6 +601,7 @@ export default function Home() {
     analyser: AnalyserNode;
     frame: number;
   } | null>(null);
+  const mmlInputSinkRef = useRef<MmlInputSink | null>(null);
 
   const theme = useMemo(
     () => THEMES.find((candidate) => candidate.id === settings.themeId) ?? THEMES[0],
@@ -834,6 +846,7 @@ export default function Home() {
 
   const releaseInput = useCallback(
     (inputId: string, force = false) => {
+      mmlInputSinkRef.current?.noteOff(inputId, performance.now() / 1000);
       pendingNoteRef.current.delete(inputId);
       const voiceId = inputVoiceRef.current.get(inputId);
       if (!voiceId) return;
@@ -868,7 +881,7 @@ export default function Home() {
   );
 
   const startNote = useCallback(
-    async (inputId: string, side: KeyboardSide, offset: number) => {
+    async (inputId: string, side: KeyboardSide, offset: number, options: NoteStartOptions = {}) => {
       releaseInput(inputId, true);
       const requestId = ++noteRequestCounterRef.current;
       pendingNoteRef.current.set(inputId, requestId);
@@ -881,15 +894,19 @@ export default function Home() {
       }
 
       const octave = side === "left" ? leftOctaveRef.current : rightOctaveRef.current;
-      const baseMidi = 12 * (octave + 1) + offset;
-      const soundingMidi = baseMidi + transposeRef.current;
+      const baseMidi = options.soundingMidi ?? 12 * (octave + 1) + offset;
+      const soundingMidi = options.soundingMidi ?? baseMidi + transposeRef.current;
+      if (!options.skipRecording) {
+        mmlInputSinkRef.current?.noteOn(inputId, side, soundingMidi, performance.now() / 1000);
+      }
       const rawFrequency = 440 * 2 ** ((soundingMidi - 69) / 12);
       const frequency = Number.isFinite(rawFrequency)
         ? Math.max(0.001, Math.min(graph.context.sampleRate * 8, rawFrequency))
         : rawFrequency > 0
           ? graph.context.sampleRate * 8
           : 0.001;
-      const selectedTheme = THEMES.find((item) => item.id === settingsRef.current.themeId) ?? THEMES[0];
+      const selectedTheme = THEMES.find((item) => item.id === (options.themeId ?? settingsRef.current.themeId)) ?? THEMES[0];
+      const voiceVolume = Math.max(0, Math.min(1, options.volume ?? 1));
       let sampleBuffer: AudioBuffer | null = null;
       if (selectedTheme.id === "nyang-voice") {
         try {
@@ -917,7 +934,7 @@ export default function Home() {
         source.playbackRate.setValueAtTime(samplePlaybackRate, now);
         source.connect(gain);
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.82, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.82 * voiceVolume), now + 0.012);
         source.start(now);
         sources.push(source);
         sampleSource = source;
@@ -935,8 +952,8 @@ export default function Home() {
         harmonic.connect(harmonicGain);
         harmonicGain.connect(gain);
 
-        const peak = selectedTheme.id === "soft-organ" ? 0.17 : 0.24;
-        const sustain = selectedTheme.id === "glass-bell" ? 0.035 : selectedTheme.id === "soft-organ" ? 0.105 : 0.07;
+        const peak = (selectedTheme.id === "soft-organ" ? 0.17 : 0.24) * voiceVolume;
+        const sustain = (selectedTheme.id === "glass-bell" ? 0.035 : selectedTheme.id === "soft-organ" ? 0.105 : 0.07) * voiceVolume;
         gain.gain.setValueAtTime(0.0001, now);
         gain.gain.exponentialRampToValueAtTime(peak, now + 0.012);
         gain.gain.exponentialRampToValueAtTime(sustain, now + (selectedTheme.id === "glass-bell" ? 1.2 : 0.8));
@@ -949,7 +966,7 @@ export default function Home() {
       const voice: Voice = {
         id: voiceId,
         inputId,
-        keyId: `${side}:${offset}`,
+        keyId: options.keyId ?? `${side}:${offset}`,
         baseMidi,
         pitchClass: mod(baseMidi, 12),
         gain,
@@ -1303,6 +1320,64 @@ export default function Home() {
     setTranspose(0);
   }, [allNotesOff]);
 
+  const registerMmlInputSink = useCallback((sink: MmlInputSink | null) => {
+    mmlInputSinkRef.current = sink;
+  }, []);
+
+  const playMmlMidi = useCallback((sourceId: string, midi: number, themeId: string, volume: number) => {
+    void startNote(sourceId, "left", 0, {
+      soundingMidi: midi,
+      themeId,
+      volume,
+      keyId: `mml:${midi}`,
+      skipRecording: true,
+    });
+  }, [startNote]);
+
+  const releaseMmlMidi = useCallback((sourceId: string) => {
+    releaseInput(sourceId, true);
+  }, [releaseInput]);
+
+  const stopMmlAudio = useCallback(() => {
+    [...inputVoiceRef.current.keys()].filter((inputId) => inputId.startsWith("mml:")).forEach((inputId) => releaseInput(inputId, true));
+  }, [releaseInput]);
+
+  const clickMetronome = useCallback((accented: boolean, volume: number) => {
+    const graph = initAudio();
+    const now = graph.context.currentTime;
+    const oscillator = graph.context.createOscillator();
+    const gain = graph.context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(accented ? 1320 : 880, now);
+    gain.gain.setValueAtTime(Math.max(0.0001, volume * 0.12), now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+    oscillator.connect(gain);
+    gain.connect(graph.master);
+    oscillator.start(now);
+    oscillator.stop(now + 0.055);
+  }, [initAudio]);
+
+  const openMml = useCallback(() => {
+    if (settingsRef.current.breathEnabled) {
+      if (!window.confirm("불어서 연주를 끄고 MML을 열까요?")) return;
+      void toggleBreath(false);
+    }
+    setMmlOpen(true);
+  }, [toggleBreath]);
+
+  useEffect(() => {
+    const handleMmlShortcut = (event: KeyboardEvent) => {
+      if (!event.altKey || event.code !== "KeyM") return;
+      const typing = Boolean((event.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable='true']"));
+      if (typing) return;
+      event.preventDefault();
+      if (mmlOpen) setMmlOpen(false);
+      else openMml();
+    };
+    window.addEventListener("keydown", handleMmlShortcut);
+    return () => window.removeEventListener("keydown", handleMmlShortcut);
+  }, [mmlOpen, openMml]);
+
   const segmentCount = 11 - lastCatPitchClass;
   const currentKey = noteName(transpose, settings.accidentalStyle);
   const catNote = noteName(lastCatPitchClass, settings.accidentalStyle);
@@ -1423,11 +1498,24 @@ export default function Home() {
   );
 
   return (
-    <main className={`app-viewport ${settings.mobileLandscape ? "force-mobile-landscape" : ""}`} style={appStyle} onContextMenu={(event) => event.preventDefault()}>
+    <main className={`app-viewport ${settings.mobileLandscape ? "force-mobile-landscape" : ""} ${mmlOpen ? "mml-open" : ""}`} style={appStyle} onContextMenu={(event) => event.preventDefault()}>
       <div className="app-stage">
+        {mmlOpen && (
+          <MmlStudio
+            currentThemeId={settings.themeId}
+            themes={THEMES.map(({ id, name, accent }) => ({ id, name, accent }))}
+            onClose={() => setMmlOpen(false)}
+            registerInputSink={registerMmlInputSink}
+            playMidi={playMmlMidi}
+            releaseMidi={releaseMmlMidi}
+            stopMmlAudio={stopMmlAudio}
+            clickMetronome={clickMetronome}
+          />
+        )}
+        <div className="performance-surface">
         <header className="top-bar">
           <div className="brand-block">
-            <div className="brand-mark"><img src={theme.visuals.pawPad} alt="" /></div>
+            <button type="button" className="brand-mark" onClick={() => mmlOpen ? setMmlOpen(false) : openMml()} aria-label={mmlOpen ? "MML 닫기" : "MML 열기"} title="MML 열기 · Alt+M"><img src={theme.visuals.pawPad} alt="" /></button>
             <div>
               <h1>냥냥</h1>
             </div>
@@ -1535,6 +1623,7 @@ export default function Home() {
           <span className={sustainPressed ? "sustain-on" : ""}>SPACE · SUSTAIN {sustainPressed ? "ON" : ""}</span>
           <button type="button" onClick={allNotesOff}>모든 음 끄기</button>
         </footer>
+        </div>
       </div>
 
       {settingsOpen && (
@@ -1550,7 +1639,19 @@ export default function Home() {
               <button type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기">×</button>
             </div>
 
-            <div className="settings-content">
+            <div className="settings-tabs" role="tablist" aria-label="설정 종류">
+              <button type="button" role="tab" aria-selected={settingsTab === "keyboard"} className={settingsTab === "keyboard" ? "is-selected" : ""} onClick={() => setSettingsTab("keyboard")}>건반 설정</button>
+              <button type="button" role="tab" aria-selected={settingsTab === "mml"} className={settingsTab === "mml" ? "is-selected" : ""} onClick={() => setSettingsTab("mml")}>MML 설정</button>
+            </div>
+
+            <div className={`settings-content ${settingsTab === "mml" ? "is-mml" : ""}`}>
+              {settingsTab === "mml" && (
+                <section className="settings-section mml-settings-section">
+                  <div className="settings-section-title"><span>M</span><h3>MML 스튜디오</h3></div>
+                  <p className="setting-note">녹음 방식, 트랙 연결, 박자 보정, 메트로놈과 프로젝트 설정은 MML 화면에서 곡과 함께 관리합니다.</p>
+                  <button type="button" className="connect-mic-button" onClick={() => { setSettingsOpen(false); openMml(); }}>MML 스튜디오 열기</button>
+                </section>
+              )}
               <section className="settings-section">
                 <div className="settings-section-title"><span>01</span><h3>건반과 옥타브</h3></div>
                 <Toggle

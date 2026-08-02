@@ -84,12 +84,27 @@ test("publishes a privacy policy and links it from settings", async () => {
   const html = await response.text();
   assert.match(html, /개인정보처리방침/);
   assert.match(html, /마이크 소리는 기기 안에서만 실시간으로 처리/);
-  assert.match(html, /로컬 저장소에만 보관/);
+  assert.match(html, /기기 저장 공간에만 보관/);
+  assert.match(html, /마지막 MML 프로젝트·편집 기록/);
   assert.match(html, /Cloudflare/);
   assert.match(html, /mailto:chaamu\.channel@gmail\.com/);
   assert.doesNotMatch(html, /github\.com\/chococobyeol\/nyang2\/issues/);
   assert.match(page, /href="\/privacy"/);
   assert.doesNotMatch(page, /기기 저장 설정과 마이크 처리 방식을 확인/);
+});
+
+test("includes the MML studio without changing the public route", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /MmlStudio/);
+  assert.match(page, /불어서 연주를 끄고 MML을 열까요/);
+  assert.match(page, /className="brand-mark"/);
+  assert.match(page, /건반 설정/);
+  assert.match(page, /MML 설정/);
+  assert.match(css, /\.mml-open \.app-stage/);
+  assert.match(css, /\.mml-studio/);
 });
 
 test("aligns compact octave, key, and settings controls", async () => {
