@@ -25,7 +25,7 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { quantizeInputs, recordingToTrackTexts } from "../mml/recording.js";
+import { quantizationGridTicks, quantizeInputs, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { buildTimelineGrid } from "../mml/timeline.js";
 
@@ -552,14 +552,17 @@ export default function MmlStudio({
     if (parseError || tempoConflict) return;
     clearPlayback();
     const current = clone(projectRef.current);
-    const bpm = tempoAtTick(playheadRef.current, allTempoEvents, current.tempo);
+    const startTick = snapTickToGrid(playheadRef.current, current.recording.quantize);
+    const bpm = tempoAtTick(startTick, allTempoEvents, current.tempo);
     recordingBaseProjectRef.current = current;
     recordingTempoRef.current = bpm;
     recordingInputsRef.current = [];
     activeRecordingRef.current.clear();
     explicitRestsRef.current = [];
     appendCursorRef.current = 0;
-    recordingStartTickRef.current = playheadRef.current;
+    recordingStartTickRef.current = startTick;
+    playheadRef.current = startTick;
+    setPlayhead(startTick);
     appendWallStartRef.current = null;
     recordingActiveRef.current = false;
     setDroppedCount(0);
@@ -868,6 +871,15 @@ export default function MmlStudio({
   const pianoWidth = pianoTimelineDuration * pianoPixelsPerTick;
   const timelineGrid = buildTimelineGrid(pianoTimelineDuration, project.timeSignatureMap, project.timeSignature);
   const tickToPianoX = (tick: number) => tick * pianoPixelsPerTick;
+  const quantizeGridTicks = quantizationGridTicks(project.recording.quantize);
+  const structuralTicks = new Set([
+    ...timelineGrid.measures.map((measure: any) => measure.tick),
+    ...timelineGrid.beats.map((beat: any) => beat.tick),
+  ]);
+  const quantizeLines = quantizeGridTicks
+    ? Array.from({ length: Math.floor(pianoTimelineDuration / quantizeGridTicks) + 1 }, (_, index) => index * quantizeGridTicks)
+      .filter((tick) => !structuralTicks.has(tick))
+    : [];
   const pianoHeight = 390;
   const visibleNotes = displayTracks.flatMap((track: any, trackIndex: number) => {
     if (!project.tracks[trackIndex]?.pianoRollVisible) return [];
@@ -880,7 +892,8 @@ export default function MmlStudio({
   const timelineContext = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
-    const tick = Math.max(0, Math.min(pianoTimelineDuration, Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick)));
+    const rawTick = Math.max(0, Math.min(pianoTimelineDuration, Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick)));
+    const tick = snapTickToGrid(rawTick, project.recording.quantize);
     const action = window.prompt("이 위치에 추가: tempo 숫자 또는 meter 7/8", `tempo ${project.tempo}`);
     if (!action) return;
     if (action.toLowerCase().startsWith("meter")) {
@@ -1014,7 +1027,8 @@ export default function MmlStudio({
           <div className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onContextMenu={timelineContext} onClick={(event) => {
             if ((event.target as HTMLElement).closest(".mml-note-block")) return;
             const rect = event.currentTarget.getBoundingClientRect();
-            const tick = Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick);
+            const rawTick = Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick);
+            const tick = snapTickToGrid(rawTick, project.recording.quantize);
             playheadRef.current = Math.max(0, tick);
             setPlayhead(Math.max(0, tick));
             const selectedIndex = project.tracks.findIndex((track: any) => track.id === selectedTrack.id);
@@ -1033,6 +1047,7 @@ export default function MmlStudio({
                 const pitchClass = ((midi % 12) + 12) % 12;
                 return <span className={`mml-pitch-row ${[1, 3, 6, 8, 10].includes(pitchClass) ? "is-accidental" : ""}`} style={{ top: `${index * pixelsPerPitch}px`, height: `${pixelsPerPitch}px` }} key={`pitch-${midi}`}><em>{pitchClass === 0 ? noteLabel(midi) : ""}</em></span>;
               })}
+              {quantizeLines.map((tick) => <i className="mml-quantize-line" style={{ left: `${tickToPianoX(tick)}px` }} key={`quantize-${tick}`} />)}
               {timelineGrid.beats.map((beat: any) => <i className="mml-beat-line" style={{ left: `${tickToPianoX(beat.tick)}px` }} key={`beat-${beat.tick}`} />)}
               {timelineGrid.measures.map((measure: any) => <i className="mml-measure-line" style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-line-${measure.tick}`} />)}
               {timelineGrid.measures.map((measure: any) => <span className="mml-measure-label" style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-label-${measure.tick}`}>{measure.number}</span>)}

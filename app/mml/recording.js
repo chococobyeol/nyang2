@@ -10,6 +10,18 @@ export const QUANTIZE_TICKS = {
   off: 1,
 };
 
+export function quantizationGridTicks(division) {
+  if (division === "off") return null;
+  if (division === "auto") return 12;
+  return QUANTIZE_TICKS[division] ?? QUANTIZE_TICKS["1/8"];
+}
+
+export function snapTickToGrid(tick, division = "1/8") {
+  const grid = quantizationGridTicks(division);
+  const safeTick = Math.max(0, Number(tick) || 0);
+  return grid ? Math.round(safeTick / grid) * grid : Math.round(safeTick);
+}
+
 const AUTO_GRIDS = [96, 48, 32, 24, 16, 12];
 
 function autoQuantizeTick(value) {
@@ -34,15 +46,22 @@ export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
     const rawDuration = Math.max(0, rawEnd - rawStart);
     const tick = division === "off" ? Math.round(rawStart) : division === "auto" ? autoQuantizeTick(rawStart) : Math.round(rawStart / grid) * grid;
     const minimum = division === "off" ? 1 : division === "auto" ? 12 : grid;
-    const duration = division === "off"
+    const durationByLength = division === "off"
       ? Math.round(rawDuration)
       : division === "auto"
         ? autoQuantizeTick(rawDuration)
         : Math.round(rawDuration / grid) * grid;
+    const snappedEnd = division === "off"
+      ? Math.round(rawEnd)
+      : division === "auto"
+        ? autoQuantizeTick(rawEnd)
+        : Math.round(rawEnd / grid) * grid;
+    const durationByBoundaries = Math.max(minimum, snappedEnd - tick);
+    const duration = Math.max(minimum, durationByLength, durationByBoundaries);
     return {
       ...input,
       tick,
-      duration: Math.max(minimum, duration),
+      duration,
       rawTick: rawStart,
       rawDuration,
     };

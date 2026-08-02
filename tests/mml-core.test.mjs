@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, closeShortLegatoOverlaps, quantizeInputs, recordingToTrackTexts } from "../app/mml/recording.js";
+import { allocateInputs, closeShortLegatoOverlaps, quantizationGridTicks, quantizeInputs, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { buildTimelineGrid } from "../app/mml/timeline.js";
 
@@ -65,6 +65,26 @@ test("quantizes note length independently from a slightly late onset", () => {
   assert.equal(result[0].duration, 96);
   const ninetyBpm = quantizeInputs([{ id: "quarter", side: "left", midi: 60, startedAt: 3, endedAt: 3 + 2 / 3 }], 90, "1/8", 3);
   assert.equal(ninetyBpm[0].duration, 96);
+});
+
+test("snaps a recording start and the visible grid to the selected division", () => {
+  assert.equal(quantizationGridTicks("1/4"), 96);
+  assert.equal(snapTickToGrid(104, "1/4"), 96);
+  assert.equal(snapTickToGrid(151, "1/4"), 192);
+  assert.equal(snapTickToGrid(104, "off"), 104);
+});
+
+test("keeps a near-half-note release on the half-note grid boundary", () => {
+  const [note] = quantizeInputs([
+    { id: "near-half", side: "left", midi: 60, startedAt: 0.2, endedAt: 0.9 },
+  ], 120, "1/4", 0);
+  assert.equal(note.tick, 0);
+  assert.equal(note.duration, 192);
+
+  const [quarter] = quantizeInputs([
+    { id: "quarter", side: "left", midi: 62, startedAt: 0.2, endedAt: 0.65 },
+  ], 120, "1/4", 0);
+  assert.equal(quarter.duration, 96);
 });
 
 test("serializes the recording tempo into the generated master track", () => {

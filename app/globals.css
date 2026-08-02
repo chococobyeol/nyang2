@@ -1263,6 +1263,7 @@ button {
   font-weight: 900;
 }
 
+.mml-quantize-line,
 .mml-beat-line,
 .mml-measure-line {
   position: absolute;
@@ -1271,6 +1272,10 @@ button {
   bottom: 0;
   width: 1px;
   pointer-events: none;
+}
+
+.mml-quantize-line {
+  background: rgba(31, 37, 36, 0.045);
 }
 
 .mml-beat-line {
