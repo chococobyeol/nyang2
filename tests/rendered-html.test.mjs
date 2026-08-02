@@ -148,3 +148,9 @@ test("keeps the selected left octave and opens the second keyboard on octave fiv
   assert.equal(chooseSecondKeyboardOctave([3, 4, 5, 6]), 5);
   assert.equal(chooseSecondKeyboardOctave([1, 2, 4, 6]), 1);
 });
+
+test("keeps the live recording playhead independent from quantized note previews", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(studio, /setPlayhead\(visibleTick\)/);
+  assert.match(studio, /const tick = recordingStartTickRef\.current[\s\S]*?setPlayhead\(tick\)/);
+});

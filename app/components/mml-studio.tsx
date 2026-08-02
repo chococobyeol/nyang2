@@ -468,9 +468,6 @@ export default function MmlStudio({
     });
     setProject(preview.project);
     setDroppedCount(preview.result.dropped.length);
-    const visibleTick = recordingStartTickRef.current + preview.recordedEndTick;
-    playheadRef.current = visibleTick;
-    setPlayhead(visibleTick);
     const last = preview.result.assigned.at(-1)?.input;
     if (last) {
       const length = encodeDuration(last.duration).map((value: string) => `1/${value}`).join(" + ");
