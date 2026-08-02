@@ -134,6 +134,9 @@ export default function MmlStudio({
   const [recordingMessage, setRecordingMessage] = useState("");
   const [droppedCount, setDroppedCount] = useState(0);
   const [settingsView, setSettingsView] = useState(false);
+  const [trackSettingsView, setTrackSettingsView] = useState(false);
+  const [fileMenuView, setFileMenuView] = useState(false);
+  const [importPayload, setImportPayload] = useState<string[] | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
@@ -172,6 +175,8 @@ export default function MmlStudio({
   useEffect(() => {
     if (!settingsRequested) return;
     setSettingsView(true);
+    setTrackSettingsView(false);
+    setFileMenuView(false);
     onSettingsRequestHandled?.();
   }, [onSettingsRequestHandled, settingsRequested]);
 
@@ -486,6 +491,15 @@ export default function MmlStudio({
     noteOn(inputId, side, midi, at) {
       if (recordState !== "recording" || activeRecordingRef.current.has(inputId)) return;
       const current = projectRef.current;
+      const routedTracks = new Set([
+        ...current.routing[side],
+        ...[...activeRecordingRef.current.values()].flatMap((input) => current.routing[input.side] ?? []),
+      ]);
+      if (current.routing[side].length === 0) {
+        setRecordingMessage(`${side === "left" ? "왼쪽" : "오른쪽"} 건반에 연결된 트랙이 없습니다.`);
+      } else if (activeRecordingRef.current.size + 1 > routedTracks.size) {
+        setRecordingMessage("동시에 누른 음보다 연결된 트랙이 적습니다.");
+      }
       let startedAt = at;
       if (current.recording.mode === "append") {
         if (appendWallStartRef.current === null) appendWallStartRef.current = at;
@@ -632,12 +646,16 @@ export default function MmlStudio({
     });
   };
 
+  const selectTrack = (trackId: string) => {
+    setProject((current: any) => ({
+      ...current,
+      view: { ...current.view, selectedTrackId: trackId },
+    }));
+  };
+
   const selectPianoNote = (trackIndex: number, note: any) => {
     const track = project.tracks[trackIndex];
-    commit((draft: any) => {
-      draft.view.selectedTrackId = track.id;
-      return draft;
-    });
+    selectTrack(track.id);
     window.requestAnimationFrame(() => {
       editorRef.current?.focus();
       editorRef.current?.setSelectionRange(note.sourceStart, note.sourceEnd);
@@ -648,38 +666,59 @@ export default function MmlStudio({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    if (!window.confirm("현재 작업을 불러온 내용으로 변경할까요? 필요한 경우 먼저 냥 프로젝트를 저장하세요.")) return;
     const text = await file.text();
     try {
       if (file.name.toLowerCase().endsWith(".nyangmml")) {
+        if (!window.confirm("현재 작업을 불러온 프로젝트로 바꿀까요?")) return;
         commit(sanitizeProject(JSON.parse(text), currentThemeId));
+        setFileMenuView(false);
         return;
       }
       const parsed = parseMmlDocument(text);
-      const mode = window.prompt("가져오기 방식: 1 전체 교체 · 2 곡 뒤에 추가 · 3 새 트랙 · 4 선택 트랙 교체", "1");
-      if (!mode) return;
       const ranges = parsed.tracks.map((track: any) => text.slice(track.sourceStart, track.sourceEnd));
-      commit((draft: any) => {
-        if (mode === "1") {
-          draft.tracks = ranges.map((sourceText: string, index: number) => ({ ...createTrack(index, currentThemeId), sourceText }));
-          draft.routing = { left: draft.tracks.slice(0, 2).map((track: any) => track.id), right: draft.tracks[2] ? [draft.tracks[2].id] : [] };
-          draft.view.selectedTrackId = draft.tracks[0].id;
-        } else if (mode === "2") {
-          ranges.forEach((sourceText: string, index: number) => {
-            if (!draft.tracks[index]) draft.tracks.push(createTrack(index, currentThemeId));
-            draft.tracks[index].sourceText += sourceText;
-          });
-        } else if (mode === "3") {
-          ranges.forEach((sourceText: string) => draft.tracks.push({ ...createTrack(draft.tracks.length, currentThemeId), sourceText }));
-        } else if (mode === "4") {
-          const selected = draft.tracks.find((track: any) => track.id === draft.view.selectedTrackId);
-          if (selected) selected.sourceText = ranges[0] ?? "";
-        }
-        return draft;
-      });
+      setImportPayload(ranges);
+      setFileMenuView(false);
     } catch (error) {
       window.alert(`파일을 불러오지 못했습니다.\n${(error as Error).message}`);
     }
+  };
+
+  const applyImport = (mode: "replace" | "append" | "tracks" | "selected") => {
+    const ranges = importPayload;
+    if (!ranges) return;
+    commit((draft: any) => {
+      if (mode === "replace") {
+        draft.tracks = ranges.map((sourceText: string, index: number) => ({ ...createTrack(index, currentThemeId), sourceText }));
+        draft.routing = { left: draft.tracks.slice(0, 2).map((track: any) => track.id), right: draft.tracks[2] ? [draft.tracks[2].id] : [] };
+        draft.view.selectedTrackId = draft.tracks[0].id;
+      } else if (mode === "append") {
+        ranges.forEach((sourceText: string, index: number) => {
+          if (!draft.tracks[index]) draft.tracks.push(createTrack(index, currentThemeId));
+          draft.tracks[index].sourceText += sourceText;
+        });
+      } else if (mode === "tracks") {
+        ranges.forEach((sourceText: string) => draft.tracks.push({ ...createTrack(draft.tracks.length, currentThemeId), sourceText }));
+      } else {
+        const selected = draft.tracks.find((track: any) => track.id === draft.view.selectedTrackId);
+        if (selected) selected.sourceText = ranges[0] ?? "";
+      }
+      return draft;
+    });
+    setImportPayload(null);
+  };
+
+  const resetProject = () => {
+    if (!window.confirm("현재 작업을 비우고 새 프로젝트를 만들까요?")) return;
+    clearPlayback();
+    const next = createProject(currentThemeId);
+    setProject(next);
+    setPast([]);
+    setFuture([]);
+    setPlayhead(0);
+    playheadRef.current = 0;
+    setRecordingMessage("");
+    setDroppedCount(0);
+    setFileMenuView(false);
   };
 
   const exportProject = () => saveBlob(projectFilename(project), "application/json", JSON.stringify(project, null, 2));
@@ -726,35 +765,61 @@ export default function MmlStudio({
     <section className="mml-studio" aria-label="MML 편집과 녹음">
       <header className="mml-studio-header">
         <div className="mml-project-title">
-          <span>MML STUDIO</span>
+          <span>냥 MML</span>
           <input aria-label="프로젝트 제목" placeholder="프로젝트 제목" value={project.title} onChange={(event) => commit((draft: any) => ({ ...draft, title: event.target.value }))} />
         </div>
         <div className={`mml-record-state is-${recordState}`}>
           <i />
-          <strong>{recordState === "idle" ? "준비" : recordingMessage}</strong>
+          <strong>{recordState === "idle" ? `${project.recording.mode === "realtime" ? "실시간" : "이어붙이기"} · ${project.tempo} BPM` : recordingMessage}</strong>
         </div>
         <button type="button" className="mml-close" onClick={onClose} aria-label="MML 닫기">×</button>
       </header>
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
-        <button type="button" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}>{playing ? "Ⅱ" : "▶"}<span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
-        <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}>■<span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
-        <button type="button" className={recordState !== "idle" ? "is-active" : ""} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}>●<span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
-        <button type="button" className={project.recording.metronome ? "is-active" : ""} onClick={() => commit((draft: any) => { draft.recording.metronome = !draft.recording.metronome; return draft; })}>♩<span>메트로놈</span></button>
-        <button type="button" className={project.view.loop ? "is-active" : ""} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}>↻<span>반복</span></button>
-        <button type="button" onClick={undo} disabled={!past.length}>↶<span>실행 취소</span></button>
-        <button type="button" onClick={redo} disabled={!future.length}>↷<span>다시 실행</span></button>
-        <button type="button" onClick={() => setSettingsView((value) => !value)}>⚙<span>MML 설정</span></button>
-        <button type="button" onClick={exportMml}>MML<span>내보내기</span></button>
-        <button type="button" onClick={() => navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true }))}>ALL<span>전체 복사</span></button>
-        <button type="button" onClick={exportProject}>냥<span>프로젝트</span></button>
-        <button type="button" onClick={() => fileInputRef.current?.click()}>↥<span>불러오기</span></button>
+        <div className="mml-transport-primary">
+          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}><b>{playing ? "Ⅱ" : "▶"}</b><span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
+          <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}><b>■</b><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
+          <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><b>●</b><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
+        </div>
+        <div className="mml-transport-toggles">
+          <button type="button" className={project.recording.metronome ? "is-active" : ""} aria-pressed={project.recording.metronome} onClick={() => commit((draft: any) => { draft.recording.metronome = !draft.recording.metronome; return draft; })}><b>♩</b><span>메트로놈</span></button>
+          <button type="button" className={project.view.loop ? "is-active" : ""} aria-pressed={project.view.loop} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}><b>↻</b><span>반복</span></button>
+        </div>
+        <div className="mml-transport-tools">
+          <button type="button" onClick={undo} disabled={!past.length} aria-label="실행 취소" title="실행 취소"><b>↶</b></button>
+          <button type="button" onClick={redo} disabled={!future.length} aria-label="다시 실행" title="다시 실행"><b>↷</b></button>
+          <button type="button" className={settingsView ? "is-active" : ""} onClick={() => { setSettingsView((value) => !value); setTrackSettingsView(false); setFileMenuView(false); }}><b>⚙</b><span>녹음 설정</span></button>
+          <button type="button" className={fileMenuView ? "is-active" : ""} onClick={() => { setFileMenuView((value) => !value); setSettingsView(false); setTrackSettingsView(false); }}><b>⋯</b><span>파일</span></button>
+        </div>
         <input ref={fileInputRef} type="file" accept=".mml,.nyangmml,text/plain,application/json" hidden onChange={importFile} />
       </div>
 
+      {fileMenuView && (
+        <div className="mml-action-menu" role="dialog" aria-label="MML 파일 메뉴">
+          <div className="mml-action-menu-head"><strong>파일</strong><button type="button" onClick={() => setFileMenuView(false)}>닫기</button></div>
+          <button type="button" onClick={resetProject}><b>＋</b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML 또는 냥 프로젝트</small></span></button>
+          <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
+          <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b>⧉</b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
+          <button type="button" onClick={() => { exportProject(); setFileMenuView(false); }}><b>냥</b><span><strong>프로젝트 저장</strong><small>설정과 트랙을 함께 보관</small></span></button>
+        </div>
+      )}
+
+      {importPayload && (
+        <div className="mml-import-dialog" role="dialog" aria-modal="true" aria-label="MML 불러오기 방식 선택">
+          <div className="mml-import-card">
+            <div className="mml-action-menu-head"><strong>MML을 어떻게 넣을까요?</strong><button type="button" onClick={() => setImportPayload(null)}>취소</button></div>
+            <button type="button" onClick={() => applyImport("replace")}><strong>전체 교체</strong><small>현재 트랙을 지우고 불러온 곡으로 교체</small></button>
+            <button type="button" onClick={() => applyImport("append")}><strong>곡 뒤에 이어 붙이기</strong><small>각 트랙의 마지막에 추가</small></button>
+            <button type="button" onClick={() => applyImport("tracks")}><strong>새 트랙으로 추가</strong><small>현재 곡은 유지하고 트랙만 추가</small></button>
+            <button type="button" onClick={() => applyImport("selected")}><strong>선택 트랙만 교체</strong><small>첫 번째 불러온 트랙으로 교체</small></button>
+          </div>
+        </div>
+      )}
+
       {settingsView && (
         <div className="mml-quick-settings" role="dialog" aria-label="MML 세부 설정">
-          <div className="mml-quick-settings-head"><strong>MML 설정</strong><button type="button" onClick={() => setSettingsView(false)}>닫기</button></div>
+          <div className="mml-quick-settings-head"><span><strong>녹음 설정</strong><small>입력 방식과 박자 보정</small></span><button type="button" onClick={() => setSettingsView(false)}>닫기</button></div>
           <label>녹음 방식<select value={project.recording.mode} onChange={(event) => commit((draft: any) => { draft.recording.mode = event.target.value; return draft; })}><option value="realtime">실시간</option><option value="append">이어붙이기</option></select></label>
           <label>편집 방식<select value={project.recording.editMode} onChange={(event) => commit((draft: any) => { draft.recording.editMode = event.target.value; return draft; })}><option value="overwrite">수정</option><option value="insert">삽입</option></select></label>
           {project.recording.editMode === "insert" && <label>삽입 범위<select value={project.recording.insertScope} onChange={(event) => commit((draft: any) => { draft.recording.insertScope = event.target.value; return draft; })}><option value="all">전체 트랙 밀기</option><option value="used">사용 트랙만 밀기</option></select></label>}
@@ -778,18 +843,31 @@ export default function MmlStudio({
         </div>
       )}
 
+      {trackSettingsView && (
+        <div className="mml-track-settings" role="dialog" aria-label={`${selectedTrack.name} 설정`}>
+          <div className="mml-quick-settings-head"><span><strong>트랙 설정</strong><small>선택한 트랙의 녹음·재생 속성</small></span><button type="button" onClick={() => setTrackSettingsView(false)}>닫기</button></div>
+          <label className="mml-track-name-field">이름<input value={selectedTrack.name} onChange={(event) => updateTrack(selectedTrack.id, { name: event.target.value })} /></label>
+          <label>색상<input type="color" value={selectedTrack.color} onChange={(event) => updateTrack(selectedTrack.id, { color: event.target.value })} /></label>
+          <label>음색<select value={selectedTrack.themeId} onChange={(event) => updateTrack(selectedTrack.id, { themeId: event.target.value })}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
+          <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
+          <label className="mml-track-volume-field">재생 음량<input aria-label={`${selectedTrack.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={selectedTrack.mixerVolume} onChange={(event) => updateTrack(selectedTrack.id, { mixerVolume: Number(event.target.value) })} /></label>
+          <div className="mml-track-setting-group"><span>건반 연결</span><button type="button" className={project.routing.left.includes(selectedTrack.id) ? "is-on" : ""} aria-pressed={project.routing.left.includes(selectedTrack.id)} onClick={() => toggleRoute("left", selectedTrack.id)}>왼쪽</button><button type="button" className={project.routing.right.includes(selectedTrack.id) ? "is-on" : ""} aria-pressed={project.routing.right.includes(selectedTrack.id)} onClick={() => toggleRoute("right", selectedTrack.id)}>오른쪽</button></div>
+          <div className="mml-track-setting-group"><span>재생</span><button type="button" className={selectedTrack.muted ? "is-on" : ""} aria-pressed={selectedTrack.muted} onClick={() => updateTrack(selectedTrack.id, { muted: !selectedTrack.muted })}>음소거</button><button type="button" className={selectedTrack.solo ? "is-on" : ""} aria-pressed={selectedTrack.solo} onClick={() => updateTrack(selectedTrack.id, { solo: !selectedTrack.solo })}>혼자 듣기</button><button type="button" className={!selectedTrack.pianoRollVisible ? "is-on" : ""} aria-pressed={!selectedTrack.pianoRollVisible} onClick={() => updateTrack(selectedTrack.id, { pianoRollVisible: !selectedTrack.pianoRollVisible })}>롤 숨김</button></div>
+          <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
+        </div>
+      )}
+
       <div className="mml-main-grid">
         <aside className="mml-track-list">
-          <div className="mml-track-list-title"><strong>트랙</strong><button type="button" onClick={addTrack}>＋ 추가</button></div>
+          <div className="mml-track-list-title"><strong>트랙</strong><button type="button" onClick={addTrack}>＋</button></div>
           {project.tracks.map((track: any, index: number) => (
-            <article className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id} onClick={() => commit((draft: any) => { draft.view.selectedTrackId = track.id; return draft; })}>
-              <div className="mml-track-head"><input type="color" value={track.color} onChange={(event) => updateTrack(track.id, { color: event.target.value })} aria-label={`${track.name} 색상`} /><input value={track.name} onChange={(event) => updateTrack(track.id, { name: event.target.value })} aria-label={`Track ${index + 1} 이름`} /><button type="button" aria-label={`${track.name} 삭제`} title="트랙 삭제" onClick={(event) => { event.stopPropagation(); removeTrack(track.id); }} disabled={project.tracks.length <= 1}>×</button></div>
-              <div className="mml-track-routes"><button type="button" aria-pressed={project.routing.left.includes(track.id)} className={project.routing.left.includes(track.id) ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); toggleRoute("left", track.id); }}>왼쪽</button><button type="button" aria-pressed={project.routing.right.includes(track.id)} className={project.routing.right.includes(track.id) ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); toggleRoute("right", track.id); }}>오른쪽</button></div>
-              <select value={track.themeId} onChange={(event) => updateTrack(track.id, { themeId: event.target.value })}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select>
-              <input className="mml-track-volume" aria-label={`${track.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={track.mixerVolume} onChange={(event) => updateTrack(track.id, { mixerVolume: Number(event.target.value) })} />
-              <div className="mml-track-switches"><button type="button" aria-label={`${track.name} 음소거`} title="음소거" aria-pressed={track.muted} className={track.muted ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { muted: !track.muted }); }}>M</button><button type="button" aria-label={`${track.name} 혼자 듣기`} title="혼자 듣기" aria-pressed={track.solo} className={track.solo ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { solo: !track.solo }); }}>S</button><button type="button" aria-label={`${track.name} 피아노롤 숨김`} aria-pressed={!track.pianoRollVisible} className={!track.pianoRollVisible ? "is-on" : ""} onClick={(event) => { event.stopPropagation(); updateTrack(track.id, { pianoRollVisible: !track.pianoRollVisible }); }}>숨김</button></div>
-            </article>
+            <button type="button" className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id} onClick={() => selectTrack(track.id)} aria-pressed={track.id === selectedTrack.id}>
+              <i style={{ background: track.color }} />
+              <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
+              <em>{project.routing.left.includes(track.id) ? "L" : ""}{project.routing.right.includes(track.id) ? "R" : ""}{track.muted ? " M" : ""}{track.solo ? " S" : ""}</em>
+            </button>
           ))}
+          <button type="button" className="mml-track-settings-button" onClick={() => { setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }}>선택 트랙 설정</button>
         </aside>
 
         <div className="mml-work-area">
@@ -826,7 +904,13 @@ export default function MmlStudio({
             </div>
           </div>
 
-          <div className="mml-editor-head"><strong>{selectedTrack.name}</strong><span style={{ color: selectedTrack.color }}>●</span><small>v{selectedTrack.recordVelocity}</small><button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>트랙 복사</button></div>
+          <div className="mml-editor-head">
+            <i style={{ background: selectedTrack.color }} />
+            <strong>{selectedTrack.name}</strong>
+            <small>{project.recording.mode === "realtime" ? "실시간" : "이어붙이기"} · {project.recording.editMode === "overwrite" ? "수정" : "삽입"} · {project.recording.quantize === "off" ? "보정 없음" : `${project.recording.quantize} 보정`}</small>
+            <button type="button" onClick={() => { setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }}>트랙 설정</button>
+            <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>
+          </div>
           <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onPaste={(event) => {
             const text = event.clipboardData.getData("text");
             if (!/^\s*MML@/i.test(text)) return;

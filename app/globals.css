@@ -88,7 +88,7 @@ button {
 
 .mml-open .app-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 54fr) minmax(0, 46fr);
 }
 
 .top-bar {
@@ -1378,6 +1378,619 @@ button {
   white-space: nowrap;
 }
 
+/* MML workspace: keep the composing surface large and move secondary controls into dialogs. */
+.mml-studio {
+  container-name: mml-studio;
+  container-type: inline-size;
+  grid-template-rows: 48px 48px minmax(0, 1fr);
+}
+
+.mml-studio-header {
+  grid-template-columns: minmax(0, 1fr) auto 32px;
+  gap: 8px;
+  padding: 6px 10px 6px 12px;
+}
+
+.mml-project-title {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.mml-project-title span {
+  flex: 0 0 auto;
+  font-size: 7px;
+}
+
+.mml-project-title input {
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+}
+
+.mml-record-state {
+  max-width: 180px;
+  font-size: 8px;
+}
+
+.mml-record-state strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mml-close {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+
+.mml-transport {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  gap: 7px;
+  padding: 6px 8px;
+  background: rgba(255, 253, 247, 0.9);
+}
+
+.mml-transport-primary,
+.mml-transport-toggles,
+.mml-transport-tools {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+}
+
+.mml-transport-tools {
+  justify-content: flex-end;
+}
+
+.mml-transport button {
+  display: flex;
+  flex: 0 0 auto;
+  width: auto;
+  height: 34px;
+  min-width: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.mml-transport button b {
+  font-size: 11px;
+}
+
+.mml-transport button span {
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.mml-transport button kbd {
+  padding: 1px 3px;
+  border: 1px solid #d0c8bc;
+  border-radius: 4px;
+  font-size: 5px;
+  white-space: nowrap;
+}
+
+.mml-transport button.is-primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.mml-transport button.is-record b {
+  color: #cf4d3f;
+}
+
+.mml-transport button.is-record.is-active {
+  border-color: #cf4d3f;
+  background: #cf4d3f;
+  color: #fff;
+}
+
+.mml-transport button.is-record.is-active b {
+  color: #fff;
+}
+
+.mml-quick-settings,
+.mml-track-settings {
+  position: absolute;
+  z-index: 72;
+  top: 102px;
+  right: 10px;
+  left: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(82px, 1fr));
+  max-height: calc(100% - 112px);
+  overflow: auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: #f0e8dc;
+  box-shadow: 5px 5px 0 rgba(31, 37, 36, 0.22);
+}
+
+.mml-track-settings {
+  left: auto;
+  width: min(430px, calc(100% - 20px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mml-quick-settings-head {
+  min-height: 35px;
+}
+
+.mml-quick-settings-head > span {
+  display: grid;
+  gap: 1px;
+}
+
+.mml-quick-settings-head small {
+  color: var(--muted);
+  font-size: 7px;
+}
+
+.mml-quick-settings label,
+.mml-track-settings label {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.mml-track-settings input,
+.mml-track-settings select,
+.mml-track-settings button {
+  width: 100%;
+  height: 30px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fffdf7;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.mml-track-settings input[type="color"] {
+  padding: 3px;
+}
+
+.mml-track-settings input[type="range"] {
+  padding: 0;
+  accent-color: var(--track-color, var(--accent));
+}
+
+.mml-track-name-field,
+.mml-track-volume-field,
+.mml-track-setting-group,
+.mml-delete-track {
+  grid-column: 1 / -1;
+}
+
+.mml-track-setting-group {
+  display: grid;
+  grid-template-columns: minmax(64px, 1fr) repeat(3, minmax(58px, 1fr));
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.mml-track-setting-group button.is-on {
+  border-color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.mml-track-settings .mml-delete-track {
+  border-color: #bb786f;
+  color: #9e4035;
+}
+
+.mml-action-menu {
+  position: absolute;
+  z-index: 74;
+  top: 102px;
+  right: 8px;
+  display: grid;
+  width: 230px;
+  gap: 5px;
+  padding: 8px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: #f0e8dc;
+  box-shadow: 5px 5px 0 rgba(31, 37, 36, 0.22);
+}
+
+.mml-action-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 7px;
+  border-bottom: 1px solid var(--line);
+  font-size: 10px;
+}
+
+.mml-action-menu-head button {
+  height: 25px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdf7;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.mml-action-menu > button {
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mml-action-menu > button:hover,
+.mml-action-menu > button:focus-visible {
+  border-color: var(--line);
+  background: #fffdf7;
+}
+
+.mml-action-menu > button b {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 9px;
+}
+
+.mml-action-menu > button span,
+.mml-import-card button {
+  display: grid;
+}
+
+.mml-action-menu small,
+.mml-import-card small {
+  color: var(--muted);
+  font-size: 7px;
+}
+
+.mml-import-dialog {
+  position: absolute;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(31, 37, 36, 0.42);
+}
+
+.mml-import-card {
+  display: grid;
+  width: min(390px, 100%);
+  gap: 6px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 13px;
+  background: #f7f1e8;
+  box-shadow: 6px 6px 0 rgba(31, 37, 36, 0.25);
+}
+
+.mml-import-card > button {
+  gap: 2px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf7;
+  text-align: left;
+}
+
+.mml-main-grid {
+  grid-row: 3;
+  grid-template-columns: 126px minmax(0, 1fr);
+}
+
+.mml-track-list {
+  padding: 7px;
+}
+
+.mml-track-list-title {
+  min-height: 24px;
+  margin-bottom: 4px;
+  padding: 0 2px;
+}
+
+.mml-track-list-title button {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdf7;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.mml-track-card {
+  display: grid;
+  width: 100%;
+  min-height: 48px;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 5px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 8px;
+  background: #fffdf7;
+  color: var(--ink);
+  text-align: left;
+}
+
+.mml-track-card > i {
+  width: 8px;
+  height: 28px;
+  border-radius: 4px;
+}
+
+.mml-track-card > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.mml-track-card strong,
+.mml-track-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mml-track-card strong {
+  font-size: 9px;
+}
+
+.mml-track-card small {
+  color: var(--muted);
+  font-size: 6px;
+}
+
+.mml-track-card em {
+  color: var(--track-color);
+  font-size: 6px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.mml-track-card.is-selected {
+  border-color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.mml-track-settings-button {
+  width: 100%;
+  height: 30px;
+  margin-top: 3px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #e7dfd3;
+  cursor: pointer;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.mml-work-area {
+  grid-template-rows: minmax(180px, 1.45fr) 32px minmax(118px, 0.85fr) 22px;
+}
+
+.mml-editor-head {
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.mml-editor-head > i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.mml-editor-head small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mml-editor-head button {
+  flex: 0 0 auto;
+  margin-left: 0;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fffdf7;
+}
+
+.mml-editor-head button:first-of-type {
+  margin-left: auto;
+}
+
+@container mml-studio (max-width: 560px) {
+  .mml-studio {
+    grid-template-rows: 42px 42px minmax(0, 1fr);
+  }
+
+  .mml-studio-header {
+    grid-template-columns: minmax(0, 1fr) auto 28px;
+    padding: 5px 7px 5px 9px;
+  }
+
+  .mml-project-title {
+    gap: 6px;
+  }
+
+  .mml-project-title input {
+    font-size: 11px;
+  }
+
+  .mml-record-state {
+    max-width: 90px;
+    font-size: 6px;
+  }
+
+  .mml-close {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mml-transport {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .mml-transport-primary,
+  .mml-transport-toggles,
+  .mml-transport-tools {
+    gap: 2px;
+  }
+
+  .mml-transport button {
+    width: 30px;
+    height: 32px;
+    min-width: 30px;
+    padding: 0;
+  }
+
+  .mml-transport button span,
+  .mml-transport button kbd {
+    display: none;
+  }
+
+  .mml-transport button b {
+    font-size: 10px;
+  }
+
+  .mml-transport-tools button:nth-child(-n + 2) {
+    display: none;
+  }
+
+  .mml-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 48px minmax(0, 1fr);
+  }
+
+  .mml-track-list {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 5px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
+  }
+
+  .mml-track-list-title {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  .mml-track-list-title strong {
+    display: none;
+  }
+
+  .mml-track-card {
+    flex: 0 0 92px;
+    width: 92px;
+    min-height: 36px;
+    grid-template-columns: 6px minmax(0, 1fr) auto;
+    margin: 0;
+    padding: 4px 5px;
+  }
+
+  .mml-track-card > i {
+    width: 6px;
+    height: 24px;
+  }
+
+  .mml-track-card strong {
+    font-size: 7px;
+  }
+
+  .mml-track-card small {
+    font-size: 5px;
+  }
+
+  .mml-track-settings-button {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 30px;
+    margin: 0;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .mml-track-settings-button::before {
+    content: "⚙";
+    color: var(--ink);
+    font-size: 10px;
+  }
+
+  .mml-work-area {
+    grid-template-rows: minmax(88px, 1.3fr) 24px minmax(64px, 0.8fr) 18px;
+  }
+
+  .mml-editor-head small {
+    display: none;
+  }
+
+  .mml-editor-head button {
+    font-size: 6px;
+  }
+
+  .mml-quick-settings,
+  .mml-track-settings {
+    top: 90px;
+    right: 6px;
+    left: 6px;
+    width: auto;
+    max-height: calc(100% - 96px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .mml-action-menu {
+    top: 90px;
+    right: 5px;
+    width: 210px;
+  }
+}
+
 .mml-open .performance-surface .top-bar {
   grid-template-columns: 70px minmax(158px, 1fr) 190px 38px;
   gap: 4px;
@@ -2231,6 +2844,10 @@ summary:focus-visible {
     background-size: 18px 18px;
   }
 
+  .mml-open .app-stage {
+    grid-template-columns: minmax(0, 52fr) minmax(0, 48fr);
+  }
+
   .top-bar {
     grid-template-columns: 82px minmax(200px, 1fr) 210px 42px;
     gap: 8px;
@@ -2614,6 +3231,18 @@ summary:focus-visible {
     min-width: 628px;
     height: calc(100dvw - 12px);
     min-height: 338px;
+  }
+}
+
+@media (max-height: 550px) and (max-width: 1000px), (orientation: portrait) and (max-width: 600px) {
+  .mml-studio .mml-quick-settings,
+  .mml-studio .mml-track-settings {
+    top: 90px;
+    max-height: calc(100% - 96px);
+  }
+
+  .mml-studio .mml-work-area {
+    grid-template-rows: minmax(88px, 1.3fr) 24px minmax(64px, 0.8fr) 18px;
   }
 }
 
