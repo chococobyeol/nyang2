@@ -313,6 +313,18 @@ test("highlights the active MML source token while playback advances", async () 
   assert.match(studio, /<mark ref=\{playbackTokenRef\}>/);
 });
 
+test("draws undo and redo icons without platform-dependent arrow glyphs", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /mml-history-icon is-undo/);
+  assert.match(studio, /mml-history-icon is-redo/);
+  assert.doesNotMatch(studio, /<b>↶<\/b>|<b>↷<\/b>/);
+  assert.match(css, /\.mml-history-icon::before/);
+  assert.match(css, /\.mml-history-icon\.is-redo \{[^}]*scaleX\(-1\)/s);
+});
+
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
