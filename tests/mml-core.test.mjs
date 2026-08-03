@@ -140,10 +140,14 @@ test("starts append immediately while real-time recording can arm for the next m
   assert.equal(recordingInputEndAt("realtime", 21.25, 3, 20.5), 21.25);
 });
 
-test("starts playback on the next active metronome beat", () => {
+test("starts playback when the running metronome reaches the matching song beat", () => {
   const clock = { startAt: 10, beatSeconds: 0.5 };
-  assert.equal(syncedPlaybackStartAt(true, clock, 10.2), 10.5);
-  assert.equal(syncedPlaybackStartAt(true, clock, 10.49), 11);
+  const meter = { numerator: 4, denominator: 4 };
+  assert.equal(syncedPlaybackStartAt(true, clock, 10.2, { startTick: 0, timeSignature: meter }), 12);
+  assert.equal(syncedPlaybackStartAt(true, clock, 10.2, { startTick: 96, timeSignature: meter }), 10.5);
+  assert.equal(syncedPlaybackStartAt(true, clock, 10.2, { startTick: 48, timeSignature: meter }), 10.25);
+  assert.equal(syncedPlaybackStartAt(true, clock, 10.49, { startTick: 96, timeSignature: meter }), 12.5);
+  assert.equal(syncedPlaybackStartAt(true, clock, 10.2, { startTick: 480, meterStartTick: 384, timeSignature: meter }), 10.5);
   assert.equal(syncedPlaybackStartAt(false, clock, 10.2), 10.2);
   assert.equal(syncedPlaybackStartAt(true, null, 10.2), 10.2);
 });

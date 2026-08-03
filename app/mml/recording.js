@@ -70,9 +70,21 @@ export function nextMetronomeBeatAt(clock, now) {
   return clock.startAt + Math.ceil((now - clock.startAt) / clock.beatSeconds) * clock.beatSeconds;
 }
 
-export function syncedPlaybackStartAt(metronomeEnabled, clock, now, safetySeconds = 0.02) {
+export function syncedPlaybackStartAt(metronomeEnabled, clock, now, options = {}) {
   if (!metronomeEnabled || !clock) return now;
-  return nextMetronomeBeatAt(clock, now + Math.max(0, safetySeconds));
+  const numerator = Math.max(1, Number(options.timeSignature?.numerator) || 4);
+  const denominator = Math.max(1, Number(options.timeSignature?.denominator) || 4);
+  const startTick = Math.max(0, Number(options.startTick) || 0);
+  const meterStartTick = Math.max(0, Number(options.meterStartTick) || 0);
+  const safetySeconds = Math.max(0, Number(options.safetySeconds) || 0.02);
+  const ticksPerBeat = (TICKS_PER_QUARTER * 4) / denominator;
+  const beatPosition = Math.max(0, startTick - meterStartTick) / ticksPerBeat;
+  const phase = ((beatPosition % numerator) + numerator) % numerator;
+  const phaseStartAt = clock.startAt + phase * clock.beatSeconds;
+  const target = now + safetySeconds;
+  if (target <= phaseStartAt) return phaseStartAt;
+  const measureSeconds = clock.beatSeconds * numerator;
+  return phaseStartAt + Math.ceil((target - phaseStartAt) / measureSeconds) * measureSeconds;
 }
 
 export function recordingStartPlan({ mode, countIn, now, bpm, timeSignature, metronomeClock = null }) {

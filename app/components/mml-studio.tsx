@@ -508,7 +508,15 @@ export default function MmlStudio({
     const endSeconds = tickToSeconds(endTick, allTempoEvents, project.tempo);
     const soloed = project.tracks.some((track: any) => track.solo);
     const now = performance.now() / 1000;
-    const audioStartedAt = syncedPlaybackStartAt(project.recording.metronome, metronomeClockRef.current, now);
+    const currentMeter = [...project.timeSignatureMap]
+      .filter((marker: any) => marker.tick <= startTick)
+      .sort((a: any, b: any) => a.tick - b.tick)
+      .at(-1) ?? { tick: 0, ...project.timeSignature };
+    const audioStartedAt = syncedPlaybackStartAt(project.recording.metronome, metronomeClockRef.current, now, {
+      startTick,
+      meterStartTick: currentMeter.tick,
+      timeSignature: currentMeter,
+    });
     const playbackWait = Math.max(0, audioStartedAt - now);
     playStartedRef.current = { audioStartedAt, tick: startTick };
     setPlaying(true);
