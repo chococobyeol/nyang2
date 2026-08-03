@@ -203,6 +203,9 @@ test("pre-schedules playback notes on the same audio clock as the metronome", as
   assert.match(page, /audioDelaySeconds\?: number/);
   assert.match(page, /scheduledStartAt = graph\.context\.currentTime \+ Math\.max\(0, options\.audioDelaySeconds \?\? 0\)/);
   assert.match(page, /const now = Math\.max\(graph\.context\.currentTime, scheduledStartAt\)/);
+  assert.match(page, /pendingNoteRef\.current\.keys\(\)[\s\S]*?inputId\.startsWith\("mml:"\)[\s\S]*?pendingNoteRef\.current\.delete/);
+  assert.match(page, /voicesRef\.current\.values\(\)[\s\S]*?voice\.inputId\.startsWith\("mml:"\)[\s\S]*?stopVoice\(voice, true\)/);
+  assert.match(page, /Math\.max\(graph\.context\.currentTime, scheduledStartAt\) \+ 0\.001/);
   assert.match(studio, /buildMetronomeEvents\(endTick, project\.timeSignatureMap, project\.timeSignature\)/);
   assert.match(studio, /tickToSeconds\(beat\.tick, allTempoEvents, project\.tempo\) - startSeconds - elapsed/);
   assert.match(studio, /project\.recording\.metronome \|\| playing/);

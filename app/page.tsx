@@ -107,6 +107,7 @@ type Voice = {
     synth: WorkletSynthesizer;
     channel: number;
     midi: number;
+    scheduledStartAt: number;
   };
   released: boolean;
   stopped: boolean;
@@ -966,8 +967,9 @@ export default function Home() {
       voice.stopped = true;
       const graph = audioRef.current;
       if (voice.soundPackState) {
-        const { synth, channel, midi } = voice.soundPackState;
-        synth.noteOff(channel, midi, graph ? { time: graph.context.currentTime } : undefined);
+        const { synth, channel, midi, scheduledStartAt } = voice.soundPackState;
+        const releaseAt = graph ? Math.max(graph.context.currentTime, scheduledStartAt) + 0.001 : undefined;
+        synth.noteOff(channel, midi, releaseAt === undefined ? undefined : { time: releaseAt });
         voicesRef.current.delete(voice.id);
         refreshVoiceUI();
         return;
@@ -1087,7 +1089,7 @@ export default function Home() {
             baseMidi,
             pitchClass: mod(baseMidi, 12),
             sources: [],
-            soundPackState: { synth: loaded.synth, channel, midi },
+            soundPackState: { synth: loaded.synth, channel, midi, scheduledStartAt: now },
             released: false,
             stopped: false,
           };
@@ -1593,8 +1595,17 @@ export default function Home() {
   }, [releaseInput]);
 
   const stopMmlAudio = useCallback(() => {
-    [...inputVoiceRef.current.keys()].filter((inputId) => inputId.startsWith("mml:")).forEach((inputId) => releaseInput(inputId, true));
-  }, [releaseInput]);
+    [...pendingNoteRef.current.keys()]
+      .filter((inputId) => inputId.startsWith("mml:"))
+      .forEach((inputId) => pendingNoteRef.current.delete(inputId));
+    [...voicesRef.current.values()]
+      .filter((voice) => voice.inputId.startsWith("mml:"))
+      .forEach((voice) => {
+        inputVoiceRef.current.delete(voice.inputId);
+        voice.released = true;
+        stopVoice(voice, true);
+      });
+  }, [stopVoice]);
 
   const clickMetronome = useCallback((accented: boolean, volume: number, delaySeconds = 0, preparing = false) => {
     const graph = initAudio();
