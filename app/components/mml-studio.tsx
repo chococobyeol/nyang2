@@ -248,6 +248,7 @@ export default function MmlStudio({
   const [droppedCount, setDroppedCount] = useState(0);
   const [settingsView, setSettingsView] = useState(false);
   const [trackSettingsView, setTrackSettingsView] = useState(false);
+  const [batchTrackIds, setBatchTrackIds] = useState<string[]>([]);
   const [fileMenuView, setFileMenuView] = useState(false);
   const [importPayload, setImportPayload] = useState<string[] | null>(null);
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
@@ -296,6 +297,14 @@ export default function MmlStudio({
   const restStartedRef = useRef<number | null>(null);
 
   const selectedTrack = project.tracks.find((track: any) => track.id === project.view.selectedTrackId) ?? project.tracks[0];
+  const batchSelectedTracks = useMemo(
+    () => project.tracks.filter((track: any) => batchTrackIds.includes(track.id)),
+    [batchTrackIds, project.tracks],
+  );
+  const batchThemeId = batchSelectedTracks.length > 0
+    && batchSelectedTracks.every((track: any) => track.themeId === batchSelectedTracks[0].themeId)
+    ? batchSelectedTracks[0].themeId
+    : "";
   const recordingShortcuts = Object.assign({
     play: "Space",
     record: "Alt+KeyR",
@@ -305,6 +314,13 @@ export default function MmlStudio({
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
+
+  useEffect(() => {
+    setBatchTrackIds((current) => {
+      const existing = current.filter((id) => project.tracks.some((track: any) => track.id === id));
+      return existing.length === current.length ? current : existing;
+    });
+  }, [project.tracks]);
 
   useEffect(() => {
     onRestShortcutChange?.(project.recording.restKey);
@@ -1149,6 +1165,23 @@ export default function MmlStudio({
     return draft;
   });
 
+  const toggleBatchTrack = (trackId: string) => {
+    setBatchTrackIds((current) => current.includes(trackId)
+      ? current.filter((id) => id !== trackId)
+      : [...current, trackId]);
+  };
+
+  const updateBatchTheme = (themeId: string) => {
+    if (!themeId || batchTrackIds.length === 0) return;
+    const selectedIds = new Set(batchTrackIds);
+    commit((draft: any) => {
+      draft.tracks.forEach((track: any) => {
+        if (selectedIds.has(track.id)) track.themeId = themeId;
+      });
+      return draft;
+    });
+  };
+
   const updateMasterTempo = (value: number) => {
     const bpm = Math.max(1, Math.round(value || 1));
     commit((draft: any) => {
@@ -1611,11 +1644,23 @@ export default function MmlStudio({
 
       <div className="mml-main-grid">
         <aside className="mml-track-list">
-          <div className="mml-track-list-title"><strong>트랙</strong></div>
+          <div className="mml-track-list-title"><strong>트랙</strong><small>색상 표시를 눌러 여러 개 선택</small></div>
+          {batchSelectedTracks.length > 0 && (
+            <div className="mml-track-batch-panel">
+              <div><strong>{batchSelectedTracks.length}개 트랙 선택</strong><button type="button" onClick={() => setBatchTrackIds([])}>해제</button></div>
+              <label>
+                <span>음색 한 번에 변경</span>
+                <select aria-label="선택한 트랙 음색" value={batchThemeId} onChange={(event) => updateBatchTheme(event.target.value)}>
+                  <option value="">{batchThemeId ? "음색 선택" : "서로 다른 음색"}</option>
+                  {themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}
+                </select>
+              </label>
+            </div>
+          )}
           {project.tracks.map((track: any, index: number) => (
-            <div className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id}>
+            <div className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""} ${batchTrackIds.includes(track.id) ? "is-batch-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id}>
+              <button type="button" className={`mml-track-batch-toggle ${batchTrackIds.includes(track.id) ? "is-on" : ""}`} aria-pressed={batchTrackIds.includes(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 ${batchTrackIds.includes(track.id) ? "선택 해제" : "선택"}`} title="여러 트랙을 함께 바꿀 때 선택" onClick={() => toggleBatchTrack(track.id)}><span style={{ background: track.color }} aria-hidden="true">{batchTrackIds.includes(track.id) ? "✓" : ""}</span></button>
               <button type="button" className="mml-track-select" onClick={() => selectTrack(track.id)} onDoubleClick={() => { selectTrack(track.id); setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }} aria-pressed={track.id === selectedTrack.id} aria-label={`${track.name || `Track ${index + 1}`} 선택, 두 번 누르면 트랙 설정`} title="두 번 누르면 트랙 설정">
-                <i style={{ background: track.color }} />
                 <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
               </button>
               <div className="mml-track-actions" aria-label={`${track.name || `Track ${index + 1}`} 빠른 설정`}>

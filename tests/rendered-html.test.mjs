@@ -259,6 +259,20 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(css, /\.mml-track-visibility\.is-hidden::after/);
 });
 
+test("changes the instrument for several selected tracks at once", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /const \[batchTrackIds, setBatchTrackIds\] = useState<string\[\]>\(\[\]\)/);
+  assert.match(studio, /const updateBatchTheme = \(themeId: string\) =>/);
+  assert.match(studio, /if \(selectedIds\.has\(track\.id\)\) track\.themeId = themeId/);
+  assert.match(studio, /aria-label="선택한 트랙 음색"/);
+  assert.match(studio, /className=\{`mml-track-batch-toggle/);
+  assert.match(css, /\.mml-track-batch-panel/);
+  assert.match(css, /\.mml-track-card\.is-batch-selected/);
+});
+
 test("defaults repeat to the whole song and presents repeat positions as measures", async () => {
   const [studio, project] = await Promise.all([
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),

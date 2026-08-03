@@ -1989,6 +1989,14 @@ button {
   font-size: 12px;
 }
 
+.mml-track-list-title small {
+  max-width: 82px;
+  color: var(--muted);
+  font-size: 7px;
+  line-height: 1.25;
+  text-align: right;
+}
+
 .mml-track-list-title button {
   display: grid;
   width: 22px;
@@ -2005,7 +2013,7 @@ button {
   display: grid;
   width: 100%;
   min-height: 68px;
-  grid-template-columns: minmax(0, 1fr) 58px;
+  grid-template-columns: 18px minmax(0, 1fr) 58px;
   align-items: center;
   gap: 4px;
   margin: 0 0 5px;
@@ -2017,25 +2025,46 @@ button {
   text-align: left;
 }
 
-.mml-track-select {
+.mml-track-batch-toggle {
   display: grid;
+  width: 18px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.mml-track-batch-toggle span {
+  display: grid;
+  width: 8px;
+  height: 28px;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.mml-track-batch-toggle.is-on span {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--ink);
+  border-radius: 5px;
+}
+
+.mml-track-select {
+  display: block;
   min-width: 0;
   height: 100%;
-  grid-template-columns: 8px minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
   cursor: pointer;
   text-align: left;
-}
-
-.mml-track-select > i {
-  width: 8px;
-  height: 28px;
-  border-radius: 4px;
 }
 
 .mml-track-select > span {
@@ -2148,6 +2177,60 @@ button {
 .mml-track-card.is-selected {
   border-color: var(--ink);
   box-shadow: 2px 2px 0 var(--ink);
+}
+
+.mml-track-card.is-batch-selected {
+  background: #f7f0e5;
+}
+
+.mml-track-batch-panel {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 7px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+.mml-track-batch-panel > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.mml-track-batch-panel strong,
+.mml-track-batch-panel label > span {
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.mml-track-batch-panel button {
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.mml-track-batch-panel label {
+  display: grid;
+  gap: 4px;
+}
+
+.mml-track-batch-panel select {
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 900;
 }
 
 .mml-track-add-button {
@@ -2369,13 +2452,29 @@ button {
     display: none;
   }
 
+  .mml-track-list-title small {
+    display: none;
+  }
+
+  .mml-track-batch-panel {
+    flex: 0 0 150px;
+    width: 150px;
+    margin: 0;
+    padding: 4px;
+  }
+
   .mml-track-card {
     flex: 0 0 142px;
     width: 142px;
     min-height: 42px;
-    grid-template-columns: minmax(0, 1fr) 58px;
+    grid-template-columns: 16px minmax(0, 1fr) 58px;
     margin: 0;
     padding: 3px 4px;
+  }
+
+  .mml-track-batch-toggle {
+    width: 16px;
+    height: 28px;
   }
 
   .mml-track-select {
@@ -2943,11 +3042,9 @@ button {
 }
 
 .sound-pack-setting {
-  margin: 12px 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .sound-pack-heading {

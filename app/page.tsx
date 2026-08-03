@@ -2027,6 +2027,14 @@ export default function Home() {
                   <label htmlFor="master-volume">전체 음량 <strong>{Math.round(settings.masterVolume * 100)}%</strong></label>
                   <input id="master-volume" type="range" min="0" max="1" step="0.01" value={settings.masterVolume} onChange={(event) => updateSettings({ masterVolume: Number(event.target.value) })} />
                 </div>
+                <div className="theme-grid">
+                  {THEMES.map((item) => (
+                    <button type="button" className={settings.themeId === item.id ? "is-selected" : ""} key={item.id} onClick={() => selectTheme(item.id)}>
+                      <i style={{ background: item.accent }} />
+                      <span><strong>{item.name}</strong><small>{item.description}</small></span>
+                    </button>
+                  ))}
+                </div>
                 <div className="sound-pack-setting">
                   <div className="sound-pack-heading">
                     <div>
@@ -2072,14 +2080,6 @@ export default function Home() {
                   )}
                   {soundPackStatus && <p className="sound-pack-status" role="status">{soundPackStatus}</p>}
                   <p className="setting-note">선택한 파일은 서버로 전송하지 않습니다. 사운드팩의 이용 조건은 파일 제공처에서 확인해 주세요.</p>
-                </div>
-                <div className="theme-grid">
-                  {THEMES.map((item) => (
-                    <button type="button" className={settings.themeId === item.id ? "is-selected" : ""} key={item.id} onClick={() => selectTheme(item.id)}>
-                      <i style={{ background: item.accent }} />
-                      <span><strong>{item.name}</strong><small>{item.description}</small></span>
-                    </button>
-                  ))}
                 </div>
               </section>
 
