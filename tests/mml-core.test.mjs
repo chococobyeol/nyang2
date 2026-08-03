@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, liveInputTicks, nextMetronomeBeatAt, quantizationGridTicks, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
+import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, liveInputTicks, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
 
@@ -115,6 +115,17 @@ test("chooses the closest fixed note value without inflating a near eighth note"
   assert.equal(nearEighth.duration, 48);
   assert.equal(nearQuarter.duration, 96);
   assert.equal(exactMiddle.duration, 48);
+});
+
+test("settles the append cursor at each quantized note end", () => {
+  const shortC = { id: "c", side: "left", midi: 60, startedAt: 0, endedAt: 0.1 };
+  assert.equal(quantizedInputsEndTick([shortC], 120, "1/8", 0), 48);
+
+  const shortE = { id: "e", side: "left", midi: 64, startedAt: 0.25, endedAt: 0.35 };
+  assert.equal(quantizedInputsEndTick([shortC, shortE], 120, "1/8", 0), 96);
+
+  const overheldC = { id: "long-c", side: "left", midi: 60, startedAt: 0, endedAt: 0.34 };
+  assert.equal(quantizedInputsEndTick([overheldC], 120, "1/8", 0), 48);
 });
 
 test("snaps a recording start and the visible grid to the selected division", () => {

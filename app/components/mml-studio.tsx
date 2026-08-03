@@ -25,7 +25,7 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { armedInputStartAt, liveInputTicks, quantizationGridTicks, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
+import { armedInputStartAt, liveInputTicks, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
 
@@ -177,6 +177,10 @@ function noteLabel(midi: number) {
 
 function shortcutLabel(value: string) {
   return value.replace(/Key|Digit/g, "").replace(/\+/g, " ");
+}
+
+function ticksToRecordingSeconds(ticks: number, bpm: number) {
+  return ticks / (TICKS_PER_QUARTER * bpm / 60);
 }
 
 function shortcutFromEvent(event: ReactKeyboardEvent<HTMLInputElement> | KeyboardEvent) {
@@ -711,8 +715,17 @@ export default function MmlStudio({
       recordingInputsRef.current.push({ ...active, endedAt: Math.max(active.startedAt, endedAt) });
       activeRecordingRef.current.delete(inputId);
       if (current.recording.mode === "append" && activeRecordingRef.current.size === 0 && restStartedRef.current === null) {
-        appendCursorRef.current = endedAt;
+        const settledTick = quantizedInputsEndTick(
+          recordingInputsRef.current,
+          recordingTempoRef.current,
+          current.recording.quantize,
+          0,
+        );
+        appendCursorRef.current = ticksToRecordingSeconds(settledTick, recordingTempoRef.current);
         appendWallStartRef.current = null;
+        const absoluteTick = recordingStartTickRef.current + settledTick;
+        playheadRef.current = absoluteTick;
+        setPlayhead(absoluteTick);
       }
       setLiveRecordingNotes((notes) => notes.filter((note) => note.id !== active.id));
       updateRecordingPreview();
@@ -769,11 +782,22 @@ export default function MmlStudio({
       event.preventDefault();
       const at = performance.now() / 1000;
       const end = appendCursorRef.current + (at - (appendWallStartRef.current ?? at));
-      explicitRestsRef.current.push({ start: restStartedRef.current, end });
+      const restEndTick = quantizedInputsEndTick([{
+        id: "append-rest",
+        side: "left",
+        midi: 60,
+        startedAt: restStartedRef.current,
+        endedAt: end,
+      }], recordingTempoRef.current, current.recording.quantize, 0);
+      const settledEnd = ticksToRecordingSeconds(restEndTick, recordingTempoRef.current);
+      explicitRestsRef.current.push({ start: restStartedRef.current, end: settledEnd });
       restStartedRef.current = null;
       if (activeRecordingRef.current.size === 0) {
-        appendCursorRef.current = end;
+        appendCursorRef.current = settledEnd;
         appendWallStartRef.current = null;
+        const absoluteTick = recordingStartTickRef.current + restEndTick;
+        playheadRef.current = absoluteTick;
+        setPlayhead(absoluteTick);
       }
       updateRecordingPreview();
     };

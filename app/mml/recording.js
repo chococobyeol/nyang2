@@ -100,6 +100,10 @@ export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
   });
 }
 
+export function quantizedInputsEndTick(inputs, bpm, division = "1/8", origin = null) {
+  return Math.max(0, ...quantizeInputs(inputs, bpm, division, origin).map((input) => input.tick + input.duration));
+}
+
 function overlapTolerances(division) {
   const snapped = division === "off"
     ? 12
