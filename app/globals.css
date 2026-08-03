@@ -2078,6 +2078,36 @@ button {
   padding: 8px 8px 4px;
 }
 
+.mml-open .performance-surface .top-bar.has-double-keyboard {
+  grid-template-columns: 70px minmax(0, 1fr) 38px;
+  grid-template-rows: 56px 42px;
+  column-gap: 5px;
+  row-gap: 4px;
+}
+
+.mml-open .performance-surface .top-bar.has-double-keyboard .brand-block {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.mml-open .performance-surface .top-bar.has-double-keyboard .octave-area {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.mml-open .performance-surface .top-bar.has-double-keyboard .transpose-panel {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  justify-self: end;
+  width: 190px;
+  margin-top: 0;
+}
+
+.mml-open .performance-surface .top-bar.has-double-keyboard .header-actions {
+  grid-column: 3;
+  grid-row: 1;
+}
+
 .mml-open .performance-surface .brand-block {
   gap: 6px;
   min-height: 42px;
@@ -2101,6 +2131,14 @@ button {
 
 .mml-open .performance-surface .octave-area.is-double {
   gap: 3px;
+}
+
+.mml-open .performance-surface .octave-area {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mml-open .performance-surface .octave-area.is-double {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .mml-open .performance-surface .octave-panel {
@@ -2137,6 +2175,8 @@ button {
 }
 
 .mml-open .performance-surface .header-actions {
+  min-height: 42px;
+  height: 42px;
   margin-top: 11px;
 }
 
@@ -2152,50 +2192,70 @@ button {
   z-index: 12;
   right: auto;
   left: 50%;
-  top: -68px;
+  top: -72px;
   display: flex;
-  width: 86px;
-  height: 52px;
+  width: 64px;
+  height: 64px;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 1px;
   padding: 0;
-  border: 2px solid var(--ink);
-  border-radius: 17px;
-  background: #fffdf7;
-  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+  border: 0;
+  border-radius: 50%;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
   color: var(--ink);
   cursor: pointer;
   font-family: inherit;
   font-weight: 900;
   transform: translateX(-50%);
   touch-action: none;
+  transition: transform 90ms ease, filter 90ms ease;
+}
+
+.mml-open .performance-surface .mml-rest-button::before {
+  position: absolute;
+  inset: 7%;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: #f4ead9;
+  box-shadow: 0 4px 0 rgba(31, 37, 36, 0.1);
+  content: "";
+  transition: background 90ms ease, box-shadow 90ms ease;
 }
 
 .mml-open .performance-surface .mml-rest-symbol {
+  position: relative;
+  z-index: 1;
   display: block;
-  height: 27px;
+  height: 31px;
   font-family: "Noto Music", serif;
-  font-size: 29px;
+  font-size: 33px;
   font-weight: 400;
   line-height: 1;
 }
 
-.mml-open .performance-surface .mml-rest-button > small {
-  color: var(--muted);
-  font-size: 7px;
-  line-height: 1;
+.mml-open .performance-surface .mml-rest-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .mml-open .performance-surface .mml-rest-button:active {
-  background: var(--accent-soft);
-  box-shadow: 1px 1px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+  transform: translateX(-50%) translateY(5px) scale(0.9);
+}
+
+.mml-open .performance-surface .mml-rest-button:active::before {
+  background: var(--accent);
+  box-shadow: 0 1px 0 rgba(31, 37, 36, 0.12);
 }
 
 .mml-open .performance-surface .keyboard-deck.is-double .mml-rest-button {
   top: 50%;
   transform: translate(-50%, -50%);
+}
+
+.mml-open .performance-surface .keyboard-deck.is-double .mml-rest-button:active {
+  transform: translate(-50%, calc(-50% + 5px)) scale(0.9);
 }
 
 .mml-open .performance-surface .cat-zone {
@@ -2207,6 +2267,10 @@ button {
   bottom: 31px;
   left: 12px;
   height: 300px;
+}
+
+.mml-open .performance-surface .keyboard-deck:not(.is-double) {
+  height: 190px;
 }
 
 .mml-open .performance-surface .keyboard-deck.is-double {
@@ -3331,24 +3395,35 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .mml-rest-button {
-    width: 54px;
-    height: 32px;
-    border-radius: 11px;
+    top: -50px;
+    width: 44px;
+    height: 44px;
   }
 
   .mml-open .performance-surface .mml-rest-symbol {
-    height: 18px;
-    font-size: 20px;
+    height: 22px;
+    font-size: 24px;
   }
 
-  .mml-open .performance-surface .mml-rest-button > small {
-    font-size: 5px;
+  .mml-open .performance-surface .keyboard-deck:not(.is-double) {
+    height: 112px;
   }
 
   .mml-open .performance-surface .keyboard-deck.is-double {
-    top: 82px;
+    top: 100px;
     bottom: 24px;
     height: auto;
+  }
+
+  .mml-open .performance-surface .top-bar.has-double-keyboard {
+    grid-template-columns: 40px minmax(0, 1fr) 31px;
+    grid-template-rows: 42px 36px;
+    column-gap: 3px;
+    row-gap: 3px;
+  }
+
+  .mml-open .performance-surface .top-bar.has-double-keyboard .transpose-panel {
+    width: 132px;
   }
 
   .settings-header {

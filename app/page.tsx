@@ -1528,7 +1528,7 @@ export default function Home() {
           />
         )}
         <div className="performance-surface">
-        <header className="top-bar">
+        <header className={`top-bar ${settings.keyboardCount === 2 ? "has-double-keyboard" : ""}`}>
           <div className="brand-block">
             <button type="button" className="brand-mark" onClick={() => mmlOpen ? setMmlOpen(false) : openMml()} aria-label={mmlOpen ? "MML 닫기" : "MML 열기"} title="MML 열기 · Alt+M"><img src={theme.visuals.pawPad} alt="" /></button>
             <div>
@@ -1652,7 +1652,6 @@ export default function Home() {
               }}
             >
               <span className="mml-rest-symbol" aria-hidden="true">𝄽</span>
-              <small>쉼표</small>
             </button>
           )}
         </section>

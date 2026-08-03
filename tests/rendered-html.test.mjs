@@ -177,6 +177,7 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(page, /className=\{`keyboard-deck[\s\S]*className="mml-rest-button"/);
   assert.doesNotMatch(page, /<span aria-hidden="true">R<\/span>/);
   assert.match(page, /className="mml-rest-symbol"[^>]*>𝄽<\/span>/);
+  assert.doesNotMatch(page, /<small>쉼표<\/small>/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOn/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOff/);
   assert.match(studio, /restOn: \(at: number\) => void/);
@@ -188,5 +189,9 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
   assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Noto Music", serif;/s);
   assert.match(css, /\.keyboard-deck\.is-double \.mml-rest-button \{[^}]*top: 50%;/s);
+  assert.match(css, /\.keyboard-deck\.is-double \.mml-rest-button:active \{[^}]*calc\(-50% \+ 5px\)/s);
+  assert.match(css, /\.top-bar\.has-double-keyboard \{[^}]*grid-template-rows: 56px 42px;/s);
+  assert.match(css, /\.keyboard-deck:not\(\.is-double\) \{[^}]*height: 190px;/s);
+  assert.match(css, /\.mml-rest-button::before \{[^}]*background: #f4ead9;/s);
   assert.match(css, /\.mml-beat-visual\.is-preparing/);
 });
