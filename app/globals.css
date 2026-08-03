@@ -2732,7 +2732,7 @@ button {
 }
 
 .mml-open .performance-surface .cat-zone {
-  --cat-height: clamp(112px, 15vh, 158px);
+  --cat-height: clamp(120px, 16vh, 158px);
   z-index: 3;
   top: 166px;
   right: 24px;
@@ -2744,13 +2744,13 @@ button {
 }
 
 .mml-open .performance-surface .cat-zone.is-double {
-  --cat-height: clamp(76px, 9vh, 92px);
-  top: 64%;
+  --cat-height: clamp(120px, 16vh, 158px);
+  top: clamp(170px, 22vh, 250px);
   right: 12%;
   bottom: auto;
   left: 12%;
-  height: 108px;
-  transform: translateY(-50%);
+  height: 160px;
+  transform: none;
 }
 
 .mml-open .performance-surface .cat-zone.has-breath {
@@ -2773,7 +2773,7 @@ button {
 }
 
 .mml-open .performance-surface .keyboard-deck.is-double {
-  top: 224px;
+  top: clamp(300px, 30vh, 390px);
   bottom: 31px;
   height: auto;
   display: grid;
