@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, liveInputTicks, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
+import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
 
@@ -45,6 +45,15 @@ test("starts append immediately while real-time recording can arm for the next m
   assert.equal(armedInputStartAt("realtime", 10.5, 10.55), 10.55);
   assert.equal(recordingInputEndAt("append", 21.25, 3, 20.5), 3.75);
   assert.equal(recordingInputEndAt("realtime", 21.25, 3, 20.5), 21.25);
+});
+
+test("builds a full count-in measure with a distinct downbeat", () => {
+  assert.deepEqual(countInBeats(12, 120, { numerator: 4, denominator: 4 }, 1), [
+    { at: 10, beat: 0, count: 4, accent: true },
+    { at: 10.5, beat: 1, count: 4, accent: false },
+    { at: 11, beat: 2, count: 4, accent: false },
+    { at: 11.5, beat: 3, count: 4, accent: false },
+  ]);
 });
 
 test("parses Mabinogi-style notes, commands, dotted lengths, ties and absolute notes", () => {

@@ -44,6 +44,20 @@ export function recordingStartPlan({ mode, countIn, now, bpm, timeSignature, met
   return { plannedStart, waitsForStart: plannedStart > now + 0.01 };
 }
 
+export function countInBeats(plannedStart, bpm, timeSignature, countIn) {
+  const numerator = Math.max(1, Number(timeSignature?.numerator) || 4);
+  const denominator = Math.max(1, Number(timeSignature?.denominator) || 4);
+  const beatSeconds = (60 / Math.max(1, bpm)) * (4 / denominator);
+  const count = Math.max(0, Number(countIn) || 0) * numerator;
+  const firstAt = plannedStart - count * beatSeconds;
+  return Array.from({ length: count }, (_, index) => ({
+    at: firstAt + index * beatSeconds,
+    beat: index % numerator,
+    count: numerator,
+    accent: index % numerator === 0,
+  }));
+}
+
 export function armedInputStartAt(mode, plannedStart, pressedAt) {
   return mode === "append" ? 0 : Math.max(plannedStart, pressedAt);
 }

@@ -1355,19 +1355,19 @@ export default function Home() {
     [...inputVoiceRef.current.keys()].filter((inputId) => inputId.startsWith("mml:")).forEach((inputId) => releaseInput(inputId, true));
   }, [releaseInput]);
 
-  const clickMetronome = useCallback((accented: boolean, volume: number, delaySeconds = 0) => {
+  const clickMetronome = useCallback((accented: boolean, volume: number, delaySeconds = 0, preparing = false) => {
     const graph = initAudio();
     const now = graph.context.currentTime + Math.max(0, delaySeconds);
     const oscillator = graph.context.createOscillator();
     const gain = graph.context.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(accented ? 1320 : 880, now);
-    gain.gain.setValueAtTime(Math.max(0.0001, volume * 0.12), now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+    oscillator.type = preparing ? "triangle" : "sine";
+    oscillator.frequency.setValueAtTime(preparing ? (accented ? 1760 : 1480) : (accented ? 1320 : 880), now);
+    gain.gain.setValueAtTime(Math.max(0.0001, volume * (preparing ? 0.17 : 0.12)), now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + (preparing ? 0.075 : 0.045));
     oscillator.connect(gain);
     gain.connect(graph.master);
     oscillator.start(now);
-    oscillator.stop(now + 0.055);
+    oscillator.stop(now + (preparing ? 0.09 : 0.055));
   }, [initAudio]);
 
   const openMml = useCallback(() => {
@@ -1581,6 +1581,30 @@ export default function Home() {
               >
                 <span className="mic-dot" />
                 {micActive ? "바람 연결됨" : "마이크 연결"}
+              </button>
+            )}
+            {mmlOpen && (
+              <button
+                type="button"
+                className="mml-rest-button"
+                aria-label="쉼표 입력, 누르는 동안 길이 지정"
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  mmlInputSinkRef.current?.restOn(inputEventSeconds(event));
+                }}
+                onPointerUp={(event) => {
+                  event.preventDefault();
+                  mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+                }}
+                onPointerCancel={(event) => {
+                  mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
+                }}
+              >
+                <span aria-hidden="true">R</span>
+                <strong>쉼표</strong>
+                <small>길게</small>
               </button>
             )}
             <button type="button" className="settings-button" onClick={() => setSettingsOpen(true)} aria-label="설정 열기">

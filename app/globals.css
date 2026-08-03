@@ -1448,6 +1448,57 @@ button {
   white-space: nowrap;
 }
 
+.mml-record-feedback {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.mml-beat-visual {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: #aeb6b2;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.mml-beat-visual > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mml-beat-visual i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border: 1px solid #89908d;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.mml-beat-visual i.is-active {
+  border-color: #fff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16);
+  transform: scale(1.18);
+}
+
+.mml-beat-visual.is-preparing {
+  color: #ffd58b;
+}
+
+.mml-beat-visual.is-preparing i.is-active {
+  border-color: #ffd58b;
+  background: #ffd58b;
+  box-shadow: 0 0 0 3px rgba(255, 213, 139, 0.22);
+}
+
 .mml-close {
   width: 34px;
   height: 34px;
@@ -2022,78 +2073,128 @@ button {
 }
 
 .mml-open .performance-surface .top-bar {
-  grid-template-columns: 70px minmax(158px, 1fr) 190px 38px;
-  gap: 4px;
-  padding: 8px 8px 4px;
+  grid-template-columns: 96px minmax(0, 1fr) 66px 66px;
+  grid-template-rows: 88px 76px;
+  gap: 10px;
+  padding: 15px 16px 8px;
 }
 
 .mml-open .performance-surface .brand-block {
-  gap: 6px;
-  min-height: 42px;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  gap: 8px;
+  min-height: 58px;
 }
 
 .mml-open .performance-surface .brand-mark {
-  flex-basis: 34px;
-  width: 34px;
-  height: 34px;
-  box-shadow: 2px 2px 0 var(--ink);
+  flex-basis: 50px;
+  width: 50px;
+  height: 50px;
+  box-shadow: 4px 4px 0 var(--ink);
 }
 
 .mml-open .performance-surface .brand-mark img {
-  width: 23px;
-  height: 23px;
+  width: 35px;
+  height: 35px;
 }
 
 .mml-open .performance-surface .brand-block h1 {
-  font-size: 16px;
+  font-size: 20px;
+}
+
+.mml-open .performance-surface .octave-area {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  align-self: start;
 }
 
 .mml-open .performance-surface .octave-area.is-double {
-  gap: 3px;
+  gap: 8px;
 }
 
 .mml-open .performance-surface .octave-panel {
-  grid-template-rows: auto 42px;
-  gap: 3px;
+  grid-template-rows: auto 54px;
+  gap: 4px;
 }
 
 .mml-open .performance-surface .octave-buttons {
-  grid-template-columns: repeat(4, minmax(0, 42px));
-  gap: 3px;
+  grid-template-columns: repeat(4, minmax(0, 54px));
+  gap: 4px;
 }
 
 .mml-open .performance-surface .octave-button {
-  border-radius: 12px;
-  background-size: 28px;
-  font-size: 13px;
+  border-radius: 15px;
+  background-size: 36px;
+  font-size: 16px;
 }
 
 .mml-open .performance-surface .transpose-panel {
-  grid-template-columns: 42px minmax(104px, 1fr) 38px;
-  gap: 4px;
-  height: 42px;
-  margin-top: 11px;
+  grid-column: 1 / 3;
+  grid-row: 2;
+  grid-template-columns: 70px minmax(0, 1fr) 58px;
+  gap: 8px;
+  height: 70px;
+  margin-top: 0;
 }
 
 .mml-open .performance-surface .transpose-grid {
-  height: 42px;
-  gap: 3px;
+  height: 70px;
+  gap: 6px;
 }
 
 .mml-open .performance-surface .transpose-grid button {
-  padding: 1px;
-  font-size: 8px;
+  padding: 3px;
+  border-radius: 12px;
+  font-size: 11px;
 }
 
 .mml-open .performance-surface .header-actions {
-  margin-top: 11px;
+  grid-column: 3 / 5;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 70px;
+  margin-top: 0;
 }
 
-.mml-open .performance-surface .settings-button {
-  min-height: 42px;
-  height: 42px;
-  border-radius: 10px;
-  font-size: 8px;
+.mml-open .performance-surface .settings-button,
+.mml-open .performance-surface .mml-rest-button {
+  width: 100%;
+  min-height: 70px;
+  height: 70px;
+  border: 2px solid var(--ink);
+  border-radius: 15px;
+  background: #fffdf7;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.mml-open .performance-surface .mml-rest-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0;
+  touch-action: none;
+}
+
+.mml-open .performance-surface .mml-rest-button > span {
+  font-size: 23px;
+  line-height: 0.9;
+}
+
+.mml-open .performance-surface .mml-rest-button > strong {
+  font-size: 11px;
+}
+
+.mml-open .performance-surface .mml-rest-button > small {
+  color: var(--muted);
+  font-size: 7px;
 }
 
 .mml-open .performance-surface .cat-zone {
@@ -2101,19 +2202,21 @@ button {
 }
 
 .mml-open .performance-surface .keyboard-deck {
-  right: 10px;
+  right: 12px;
   bottom: 31px;
-  left: 10px;
-  height: 230px;
+  left: 12px;
+  height: 300px;
 }
 
 .mml-open .performance-surface .keyboard-deck.is-double {
-  top: 128px;
-  bottom: 30px;
+  top: 224px;
+  bottom: 31px;
+  height: auto;
   display: grid;
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  align-content: space-around;
-  gap: 16px;
+  align-items: center;
+  align-content: stretch;
+  gap: 20px;
 }
 
 .mml-open .performance-surface .keyboard-deck.is-double .paw-keyboard-group,
@@ -2128,11 +2231,11 @@ button {
 }
 
 .mml-open .performance-surface .paw-row-natural {
-  height: 145px;
+  height: 126px;
 }
 
 .mml-open .performance-surface .paw-row-accidental {
-  height: 102px;
+  height: 92px;
 }
 
 .mml-open .performance-surface .performance-footer {
@@ -3164,12 +3267,15 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .top-bar {
-    grid-template-columns: 40px minmax(154px, 1fr) 132px 31px;
+    grid-template-columns: 40px minmax(154px, 1fr) 132px 64px;
+    grid-template-rows: 36px;
     gap: 3px;
     padding: 7px 5px 3px;
   }
 
   .mml-open .performance-surface .brand-block {
+    grid-column: 1;
+    grid-row: 1;
     min-width: 0;
   }
 
@@ -3180,6 +3286,11 @@ summary:focus-visible {
   .mml-open .performance-surface .octave-area.is-double,
   .mml-open .performance-surface .octave-buttons {
     gap: 2px;
+  }
+
+  .mml-open .performance-surface .octave-area {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .mml-open .performance-surface .octave-panel {
@@ -3193,6 +3304,8 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .transpose-panel {
+    grid-column: 3;
+    grid-row: 1;
     grid-template-columns: 32px minmax(62px, 1fr) 28px;
     height: 36px;
     margin-top: 0;
@@ -3208,20 +3321,41 @@ summary:focus-visible {
     font-size: 6px;
   }
 
-  .mml-open .performance-surface .header-actions,
-  .mml-open .performance-surface .settings-button {
-    width: 31px;
+  .mml-open .performance-surface .header-actions {
+    grid-column: 4;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 31px);
+    gap: 2px;
+    width: 64px;
     height: 36px;
     min-height: 36px;
     margin-top: 0;
   }
 
-  .mml-open .performance-surface .settings-button {
+  .mml-open .performance-surface .settings-button,
+  .mml-open .performance-surface .mml-rest-button {
+    width: 31px;
+    height: 36px;
+    min-height: 36px;
+    border-radius: 9px;
     font-size: 0;
   }
 
-  .mml-open .performance-surface .settings-button span {
+  .mml-open .performance-surface .settings-button span,
+  .mml-open .performance-surface .mml-rest-button > span {
     font-size: 12px;
+  }
+
+  .mml-open .performance-surface .mml-rest-button > strong,
+  .mml-open .performance-surface .mml-rest-button > small {
+    display: none;
+  }
+
+  .mml-open .performance-surface .keyboard-deck.is-double {
+    top: 82px;
+    bottom: 24px;
+    height: auto;
   }
 
   .settings-header {

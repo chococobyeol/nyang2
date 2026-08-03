@@ -167,3 +167,21 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.doesNotMatch(studio, /startRecordingMetronome/);
   assert.match(studio, /is-live-recording/);
 });
+
+test("gives the MML performance side a full-height keyboard layout and touch rest input", async () => {
+  const [page, studio, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /mmlOpen && \([\s\S]*className="mml-rest-button"/);
+  assert.match(page, /mmlInputSinkRef\.current\?\.restOn/);
+  assert.match(page, /mmlInputSinkRef\.current\?\.restOff/);
+  assert.match(studio, /restOn: \(at: number\) => void/);
+  assert.match(studio, /className=\{`mml-beat-visual/);
+  assert.match(page, /preparing \? \(accented \? 1760 : 1480\)/);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-rows: 88px 76px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 224px;[^}]*height: auto/s);
+  assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
+  assert.match(css, /\.mml-beat-visual\.is-preparing/);
+});
