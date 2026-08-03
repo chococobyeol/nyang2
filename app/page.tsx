@@ -1588,6 +1588,24 @@ export default function Home() {
     });
   }, [startNote]);
 
+  const prepareMmlThemes = useCallback(async (themeIds: string[]) => {
+    const graph = initAudio();
+    const uniqueThemeIds = [...new Set(themeIds)];
+    const soundPackThemeIds = uniqueThemeIds.filter((themeId) => parseSoundPackThemeId(themeId));
+    const tasks: Promise<unknown>[] = [];
+
+    if (uniqueThemeIds.includes("nyang-voice")) {
+      tasks.push(loadSampleBuffer(graph.context, NYANG_SAMPLE.url));
+    }
+    if (soundPackThemeIds.length > 0) {
+      tasks.push(ensureSoundPackSynth(graph).then((loaded) => {
+        const at = graph.context.currentTime;
+        soundPackThemeIds.forEach((themeId) => soundPackChannel(loaded, themeId, at));
+      }));
+    }
+    await Promise.all(tasks);
+  }, [ensureSoundPackSynth, initAudio, loadSampleBuffer, soundPackChannel]);
+
   const releaseMmlMidi = useCallback((sourceId: string) => {
     releaseInput(sourceId, true);
   }, [releaseInput]);
@@ -1792,6 +1810,7 @@ export default function Home() {
           onExpandedChange={setMmlExpanded}
           onClose={() => { setMmlExpanded(false); setMmlOpen(false); }}
           registerInputSink={registerMmlInputSink}
+          prepareThemes={prepareMmlThemes}
           playMidi={playMmlMidi}
           releaseMidi={releaseMmlMidi}
           stopMmlAudio={stopMmlAudio}

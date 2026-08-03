@@ -281,10 +281,13 @@ test("changes the instrument for several selected tracks at once", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(studio, /const \[batchTrackIds, setBatchTrackIds\] = useState<string\[\]>\(\[\]\)/);
+  assert.match(studio, /const changeTrackThemes = \(trackIds: string\[\], themeId: string\) =>/);
   assert.match(studio, /const updateBatchTheme = \(themeId: string\) =>/);
-  assert.match(studio, /const updateBatchTheme = \(themeId: string\) => \{[\s\S]*?clearPlayback\(\);[\s\S]*?track\.themeId = themeId/);
-  assert.match(studio, /<label>음색<select[^>]*onChange=\{\(event\) => \{ clearPlayback\(\); updateTrack\(selectedTrack\.id, \{ themeId: event\.target\.value \}\); \}\}/);
+  assert.match(studio, /resumeAfterThemeChangeRef\.current = playheadRef\.current;[\s\S]*?clearPlayback\(\);[\s\S]*?track\.themeId = themeId/);
+  assert.match(studio, /<label>음색<select[^>]*onChange=\{\(event\) => changeTrackThemes\(\[selectedTrack\.id\], event\.target\.value\)\}/);
   assert.match(studio, /const replayFromTick = fromTick >= songDuration \? 0 : fromTick;/);
+  assert.match(studio, /prepareThemes\(themeIds\)[\s\S]*?schedulePlayback\(fromTick\)/);
+  assert.match(studio, /startPlaybackRef\.current\(resumeTick\)/);
   assert.match(studio, /if \(selectedIds\.has\(track\.id\)\) track\.themeId = themeId/);
   assert.match(studio, /aria-label="선택한 트랙 음색"/);
   assert.match(studio, /className="mml-track-batch-checkbox"/);

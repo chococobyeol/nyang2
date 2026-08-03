@@ -59,6 +59,7 @@ type Props = {
   onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
   registerInputSink: (sink: MmlInputSink | null) => void;
+  prepareThemes: (themeIds: string[]) => Promise<void>;
   playMidi: (sourceId: string, midi: number, themeId: string, volume: number, delaySeconds?: number) => void;
   releaseMidi: (sourceId: string) => void;
   stopMmlAudio: () => void;
@@ -220,6 +221,7 @@ export default function MmlStudio({
   onExpandedChange,
   onClose,
   registerInputSink,
+  prepareThemes,
   playMidi,
   releaseMidi,
   stopMmlAudio,
@@ -265,6 +267,8 @@ export default function MmlStudio({
   const playRafRef = useRef(0);
   const playSchedulerRef = useRef<number | null>(null);
   const startPlaybackRef = useRef<(fromTick?: number) => void>(() => undefined);
+  const playbackGenerationRef = useRef(0);
+  const resumeAfterThemeChangeRef = useRef<number | null>(null);
   const playStartedRef = useRef({ audioStartedAt: 0, tick: 0 });
   const countInTimerRef = useRef<number | null>(null);
   const countInClickTimersRef = useRef(new Set<number>());
@@ -523,6 +527,7 @@ export default function MmlStudio({
   );
 
   const clearPlayback = useCallback(() => {
+    playbackGenerationRef.current += 1;
     playTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     playTimersRef.current = [];
     if (playSchedulerRef.current !== null) window.clearInterval(playSchedulerRef.current);
@@ -535,10 +540,9 @@ export default function MmlStudio({
     setPlaying(false);
   }, [stopMmlAudio]);
 
-  const startPlayback = useCallback((fromTick = playhead) => {
+  const schedulePlayback = useCallback((fromTick = playhead) => {
     if (parseError || tempoConflict || !displayTracks.length) return;
     const runningMetronomeClock = metronomeClockRef.current;
-    clearPlayback();
     const replayFromTick = fromTick >= songDuration ? 0 : fromTick;
     const requestedStartTick = Math.max(0, Math.min(replayFromTick, songDuration));
     const loopStartTick = Math.max(0, Math.min(project.view.loopStart, songDuration));
@@ -631,9 +635,38 @@ export default function MmlStudio({
     playRafRef.current = window.requestAnimationFrame(follow);
   }, [allTempoEvents, clearPlayback, clickMetronome, displayTracks, parseError, playMidi, playhead, project, releaseMidi, songDuration, tempoConflict]);
 
+  const startPlayback = useCallback((fromTick = playhead) => {
+    if (parseError || tempoConflict || !displayTracks.length) return;
+    const soloed = project.tracks.some((track: any) => track.solo);
+    const themeIds = project.tracks
+      .filter((track: any) => !track.muted && (!soloed || track.solo))
+      .map((track: any) => track.themeId);
+    clearPlayback();
+    const generation = playbackGenerationRef.current;
+    setPlaying(true);
+    void prepareThemes(themeIds)
+      .then(() => {
+        if (playbackGenerationRef.current !== generation) return;
+        schedulePlayback(fromTick);
+      })
+      .catch((error) => {
+        if (playbackGenerationRef.current !== generation) return;
+        clearPlayback();
+        setRecordingMessage(error instanceof Error ? error.message : "음색을 준비하지 못했습니다.");
+      });
+  }, [clearPlayback, displayTracks.length, parseError, playhead, prepareThemes, project.tracks, schedulePlayback, tempoConflict]);
+
   useEffect(() => {
     startPlaybackRef.current = startPlayback;
   }, [startPlayback]);
+
+  useEffect(() => {
+    const resumeTick = resumeAfterThemeChangeRef.current;
+    if (resumeTick === null) return;
+    resumeAfterThemeChangeRef.current = null;
+    const frame = window.requestAnimationFrame(() => startPlaybackRef.current(resumeTick));
+    return () => window.cancelAnimationFrame(frame);
+  }, [project]);
 
   const updateRecordingPreview = useCallback(() => {
     const base = recordingBaseProjectRef.current;
@@ -1154,10 +1187,13 @@ export default function MmlStudio({
       : project.tracks.map((track: any) => track.id));
   };
 
-  const updateBatchTheme = (themeId: string) => {
-    if (!themeId || batchTrackIds.length === 0) return;
-    clearPlayback();
-    const selectedIds = new Set(batchTrackIds);
+  const changeTrackThemes = (trackIds: string[], themeId: string) => {
+    if (!themeId || trackIds.length === 0) return;
+    if (playing) {
+      resumeAfterThemeChangeRef.current = playheadRef.current;
+      clearPlayback();
+    }
+    const selectedIds = new Set(trackIds);
     commit((draft: any) => {
       draft.tracks.forEach((track: any) => {
         if (selectedIds.has(track.id)) track.themeId = themeId;
@@ -1165,6 +1201,8 @@ export default function MmlStudio({
       return draft;
     });
   };
+
+  const updateBatchTheme = (themeId: string) => changeTrackThemes(batchTrackIds, themeId);
 
   const updateMasterTempo = (value: number) => {
     const bpm = Math.max(1, Math.round(value || 1));
@@ -1615,7 +1653,7 @@ export default function MmlStudio({
           <div className="mml-quick-settings-head"><span><strong>트랙 설정</strong><small>선택한 트랙의 녹음·재생 속성</small></span><button type="button" onClick={() => setTrackSettingsView(false)}>닫기</button></div>
           <label className="mml-track-name-field">이름<input value={selectedTrack.name} onChange={(event) => updateTrack(selectedTrack.id, { name: event.target.value })} /></label>
           <label>색상<input type="color" value={selectedTrack.color} onChange={(event) => updateTrack(selectedTrack.id, { color: event.target.value })} /></label>
-          <label>음색<select value={selectedTrack.themeId} onChange={(event) => { clearPlayback(); updateTrack(selectedTrack.id, { themeId: event.target.value }); }}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
+          <label>음색<select value={selectedTrack.themeId} onChange={(event) => changeTrackThemes([selectedTrack.id], event.target.value)}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
           <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
           <label className="mml-track-volume-field">재생 음량<input aria-label={`${selectedTrack.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={selectedTrack.mixerVolume} onChange={(event) => updateTrack(selectedTrack.id, { mixerVolume: Number(event.target.value) })} /></label>
           <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
