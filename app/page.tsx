@@ -4,6 +4,7 @@
 
 import {
   CSSProperties,
+  ChangeEvent,
   PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
@@ -11,8 +12,18 @@ import {
   useRef,
   useState,
 } from "react";
+import type { WorkletSynthesizer } from "spessasynth_lib";
+import spessaProcessorUrl from "spessasynth_lib/dist/spessasynth_processor.min.js?url";
 import { chooseSecondKeyboardOctave } from "./octave-selection";
 import MmlStudio, { type MmlInputSink } from "./components/mml-studio";
+import {
+  deleteStoredSoundPack,
+  loadStoredSoundPack,
+  parseSoundPackFile,
+  parseSoundPackThemeId,
+  saveStoredSoundPack,
+  type StoredSoundPack,
+} from "./sound-pack";
 
 type NoteLabelMode = "hidden" | "base" | "transposed";
 type AccidentalStyle = "sharp" | "flat";
@@ -89,9 +100,14 @@ type Voice = {
   keyId: string;
   baseMidi: number;
   pitchClass: number;
-  gain: GainNode;
+  gain?: GainNode;
   sources: AudioScheduledSourceNode[];
   sampleState?: SampleVoiceState;
+  soundPackState?: {
+    synth: WorkletSynthesizer;
+    channel: number;
+    midi: number;
+  };
   released: boolean;
   stopped: boolean;
 };
@@ -383,7 +399,7 @@ function sanitizeSettings(raw: unknown): Settings {
     transposeShortcuts,
     themeId: value.themeId === "warm-cat"
       ? "nyang-voice"
-      : THEMES.some((theme) => theme.id === value.themeId)
+      : THEMES.some((theme) => theme.id === value.themeId) || (typeof value.themeId === "string" && parseSoundPackThemeId(value.themeId))
         ? value.themeId as string
         : DEFAULT_SETTINGS.themeId,
     masterVolume: Math.max(0, Math.min(1, Number(value.masterVolume ?? DEFAULT_SETTINGS.masterVolume))),
@@ -628,6 +644,9 @@ export default function Home() {
   const [captureTarget, setCaptureTarget] = useState<CaptureTarget>(null);
   const [mappingError, setMappingError] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [soundPack, setSoundPack] = useState<StoredSoundPack | null>(null);
+  const [soundPackStatus, setSoundPackStatus] = useState("");
+  const [soundPackBusy, setSoundPackBusy] = useState(false);
 
   const settingsRef = useRef(settings);
   const leftOctaveRef = useRef(leftOctave);
@@ -652,11 +671,28 @@ export default function Home() {
     frame: number;
   } | null>(null);
   const mmlInputSinkRef = useRef<MmlInputSink | null>(null);
+  const soundPackInputRef = useRef<HTMLInputElement | null>(null);
+  const soundPackRef = useRef<StoredSoundPack | null>(null);
+  const soundPackSynthRef = useRef<{
+    importedAt: number;
+    synth: WorkletSynthesizer;
+    channelByTheme: Map<string, number>;
+    nextChannel: number;
+  } | null>(null);
+  const soundPackWorkletContextRef = useRef<AudioContext | null>(null);
 
   const theme = useMemo(
     () => THEMES.find((candidate) => candidate.id === settings.themeId) ?? THEMES[0],
     [settings.themeId],
   );
+  const availableThemes = useMemo(() => [
+    ...THEMES.map(({ id, name, accent }) => ({ id, name, accent })),
+    ...(soundPack?.presets ?? []).map((preset) => ({
+      id: preset.id,
+      name: preset.name,
+      accent: "#d49128",
+    })),
+  ], [soundPack]);
 
   const fetchSampleData = useCallback((url: string) => {
     const cached = sampleDataRef.current.get(url);
@@ -722,6 +758,26 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    void loadStoredSoundPack()
+      .then((stored) => {
+        if (!active || !stored) return;
+        soundPackRef.current = stored;
+        setSoundPack(stored);
+      })
+      .catch(() => {
+        if (active) setSoundPackStatus("저장된 사운드팩을 불러오지 못했습니다.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    soundPackRef.current = soundPack;
+  }, [soundPack]);
+
+  useEffect(() => {
     if (!hydrated) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [hydrated, settings]);
@@ -774,6 +830,59 @@ export default function Home() {
     setAudioReady(true);
     return audioRef.current;
   }, [loadSampleBuffer]);
+
+  const disposeSoundPackSynth = useCallback(() => {
+    const current = soundPackSynthRef.current;
+    if (!current) return;
+    current.synth.stopAll(true);
+    current.synth.disconnect();
+    current.synth.destroy();
+    soundPackSynthRef.current = null;
+  }, []);
+
+  const ensureSoundPackSynth = useCallback(async (graph: AudioGraph) => {
+    const pack = soundPackRef.current;
+    if (!pack) throw new Error("먼저 설정에서 사운드팩을 추가해 주세요.");
+    const current = soundPackSynthRef.current;
+    if (current?.importedAt === pack.importedAt) return current;
+    disposeSoundPackSynth();
+
+    if (soundPackWorkletContextRef.current !== graph.context) {
+      await graph.context.audioWorklet.addModule(spessaProcessorUrl);
+      soundPackWorkletContextRef.current = graph.context;
+    }
+
+    const { WorkletSynthesizer: WorkletSynthesizerConstructor } = await import("spessasynth_lib");
+    // Chromium limits a single AudioWorklet output to 32 channels. SpessaSynth's
+    // one-output mode requests 34, so keep its regular stereo-output layout.
+    const synth = new WorkletSynthesizerConstructor(graph.context, { oneOutput: false });
+    synth.connect(graph.breath);
+    await synth.soundBankManager.addSoundBank(pack.dls.slice(0), `user-${pack.importedAt}`);
+    await synth.isReady;
+    const next = {
+      importedAt: pack.importedAt,
+      synth,
+      channelByTheme: new Map<string, number>(),
+      nextChannel: 0,
+    };
+    soundPackSynthRef.current = next;
+    return next;
+  }, [disposeSoundPackSynth]);
+
+  const soundPackChannel = useCallback((loaded: NonNullable<typeof soundPackSynthRef.current>, themeId: string, at: number) => {
+    const existing = loaded.channelByTheme.get(themeId);
+    if (existing !== undefined) return existing;
+    const patch = parseSoundPackThemeId(themeId);
+    if (!patch) throw new Error("사운드팩 악기 정보를 읽지 못했습니다.");
+    const channel = loaded.nextChannel % 16;
+    loaded.nextChannel += 1;
+    loaded.channelByTheme.set(themeId, channel);
+    loaded.synth.midiChannels[channel].setDrums(patch.isDrum);
+    loaded.synth.controllerChange(channel, 0, patch.bankMSB, { time: at });
+    loaded.synth.controllerChange(channel, 32, patch.bankLSB, { time: at });
+    loaded.synth.programChange(channel, patch.program, { time: at });
+    return channel;
+  }, []);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -856,7 +965,14 @@ export default function Home() {
       if (voice.stopped) return;
       voice.stopped = true;
       const graph = audioRef.current;
-      if (!graph) return;
+      if (voice.soundPackState) {
+        const { synth, channel, midi } = voice.soundPackState;
+        synth.noteOff(channel, midi, graph ? { time: graph.context.currentTime } : undefined);
+        voicesRef.current.delete(voice.id);
+        refreshVoiceUI();
+        return;
+      }
+      if (!graph || !voice.gain) return;
       const now = graph.context.currentTime;
       const sampleState = voice.sampleState;
       if (sampleState?.holdTimer !== null && sampleState?.holdTimer !== undefined) {
@@ -951,13 +1067,48 @@ export default function Home() {
       if (!options.skipRecording) {
         mmlInputSinkRef.current?.noteOn(inputId, side, soundingMidi, inputStartedAt);
       }
+      const selectedThemeId = options.themeId ?? settingsRef.current.themeId;
+      const soundPackPatch = parseSoundPackThemeId(selectedThemeId);
+      if (soundPackPatch) {
+        try {
+          const loaded = await ensureSoundPackSynth(graph);
+          if (pendingNoteRef.current.get(inputId) !== requestId) return;
+          pendingNoteRef.current.delete(inputId);
+          const now = Math.max(graph.context.currentTime, scheduledStartAt);
+          const channel = soundPackChannel(loaded, selectedThemeId, now);
+          const midi = Math.max(0, Math.min(127, Math.round(soundingMidi)));
+          const velocity = Math.max(1, Math.min(127, Math.round(127 * Math.max(0, Math.min(1, options.volume ?? 1)))));
+          loaded.synth.noteOn(channel, midi, velocity, { time: now });
+          const voiceId = `voice-${++voiceCounterRef.current}`;
+          const voice: Voice = {
+            id: voiceId,
+            inputId,
+            keyId: options.keyId ?? `${side}:${offset}`,
+            baseMidi,
+            pitchClass: mod(baseMidi, 12),
+            sources: [],
+            soundPackState: { synth: loaded.synth, channel, midi },
+            released: false,
+            stopped: false,
+          };
+          voicesRef.current.set(voiceId, voice);
+          inputVoiceRef.current.set(inputId, voiceId);
+          setSoundPackStatus("");
+          refreshVoiceUI();
+          return;
+        } catch (error) {
+          pendingNoteRef.current.delete(inputId);
+          setSoundPackStatus(error instanceof Error ? error.message : "사운드팩을 재생하지 못했습니다.");
+          return;
+        }
+      }
       const rawFrequency = 440 * 2 ** ((soundingMidi - 69) / 12);
       const frequency = Number.isFinite(rawFrequency)
         ? Math.max(0.001, Math.min(graph.context.sampleRate * 8, rawFrequency))
         : rawFrequency > 0
           ? graph.context.sampleRate * 8
           : 0.001;
-      const selectedTheme = THEMES.find((item) => item.id === (options.themeId ?? settingsRef.current.themeId)) ?? THEMES[0];
+      const selectedTheme = THEMES.find((item) => item.id === selectedThemeId) ?? THEMES[0];
       const voiceVolume = Math.max(0, Math.min(1, options.volume ?? 1));
       let sampleBuffer: AudioBuffer | null = null;
       if (selectedTheme.id === "nyang-voice") {
@@ -1055,7 +1206,7 @@ export default function Home() {
       }
       refreshVoiceUI();
     },
-    [finishSampleVoice, initAudio, loadSampleBuffer, refreshVoiceUI, releaseInput, triggerSampleTail],
+    [ensureSoundPackSynth, finishSampleVoice, initAudio, loadSampleBuffer, refreshVoiceUI, releaseInput, soundPackChannel, triggerSampleTail],
   );
 
   const allNotesOff = useCallback(() => {
@@ -1340,6 +1491,52 @@ export default function Home() {
     [allNotesOff, updateSettings],
   );
 
+  const importSoundPack = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setSoundPackBusy(true);
+    setSoundPackStatus("사운드팩을 확인하는 중입니다…");
+    try {
+      const pack = await parseSoundPackFile(file);
+      allNotesOff();
+      disposeSoundPackSynth();
+      soundPackRef.current = pack;
+      setSoundPack(pack);
+      updateSettings({ themeId: pack.presets[0].id });
+      try {
+        await saveStoredSoundPack(pack);
+        setSoundPackStatus("이 기기에 저장했습니다.");
+      } catch {
+        setSoundPackStatus("사운드팩을 열었지만 기기 저장 공간이 부족해 이번 접속에서만 사용할 수 있습니다.");
+      }
+      try {
+        await ensureSoundPackSynth(initAudio());
+      } catch (error) {
+        setSoundPackStatus(error instanceof Error ? error.message : "사운드팩을 재생할 준비를 하지 못했습니다.");
+      }
+    } catch (error) {
+      setSoundPackStatus(error instanceof Error ? error.message : "사운드팩을 추가하지 못했습니다.");
+    } finally {
+      setSoundPackBusy(false);
+    }
+  }, [allNotesOff, disposeSoundPackSynth, ensureSoundPackSynth, initAudio, updateSettings]);
+
+  const removeSoundPack = useCallback(async () => {
+    if (!window.confirm("이 기기에 저장된 사운드팩을 삭제할까요?")) return;
+    allNotesOff();
+    disposeSoundPackSynth();
+    soundPackRef.current = null;
+    setSoundPack(null);
+    if (parseSoundPackThemeId(settingsRef.current.themeId)) updateSettings({ themeId: DEFAULT_SETTINGS.themeId });
+    try {
+      await deleteStoredSoundPack();
+      setSoundPackStatus("기기에서 사운드팩을 삭제했습니다.");
+    } catch {
+      setSoundPackStatus("사운드팩 저장 정보를 삭제하지 못했습니다.");
+    }
+  }, [allNotesOff, disposeSoundPackSynth, updateSettings]);
+
   const updatePreset = useCallback(
     (side: KeyboardSide, index: number, value: number) => {
       const nextValue = Math.max(0, Math.min(8, Math.round(value)));
@@ -1581,7 +1778,7 @@ export default function Home() {
         {mmlOpen && (
           <MmlStudio
             currentThemeId={settings.themeId}
-            themes={THEMES.map(({ id, name, accent }) => ({ id, name, accent }))}
+            themes={availableThemes}
             settingsRequested={mmlSettingsRequested}
             onSettingsRequestHandled={() => setMmlSettingsRequested(false)}
             expanded={mmlExpanded}
@@ -1837,6 +2034,52 @@ export default function Home() {
                       <span><strong>{item.name}</strong><small>{item.description}</small></span>
                     </button>
                   ))}
+                </div>
+                <div className="sound-pack-setting">
+                  <div className="sound-pack-heading">
+                    <div>
+                      <strong>내 사운드팩</strong>
+                      <small>ZIP 또는 DLS · 기기 안에서만 처리</small>
+                    </div>
+                    <button
+                      type="button"
+                      className="sound-pack-add-button"
+                      disabled={soundPackBusy}
+                      onClick={() => soundPackInputRef.current?.click()}
+                    >
+                      {soundPack ? "교체" : "추가"}
+                    </button>
+                  </div>
+                  <input
+                    ref={soundPackInputRef}
+                    className="sound-pack-file-input"
+                    type="file"
+                    accept=".zip,.dls,application/zip,application/octet-stream"
+                    onChange={(event) => void importSoundPack(event)}
+                  />
+                  {soundPack && (
+                    <div className="sound-pack-card">
+                      <div className="sound-pack-info">
+                        <strong>{soundPack.name}</strong>
+                        <small>{soundPack.fileName} · 악기 {soundPack.presets.length}개</small>
+                      </div>
+                      <label className="setting-field sound-pack-instrument-field">
+                        <span>사용할 악기</span>
+                        <select
+                          value={parseSoundPackThemeId(settings.themeId) ? settings.themeId : ""}
+                          onChange={(event) => event.target.value && selectTheme(event.target.value)}
+                        >
+                          <option value="">악기를 선택하세요</option>
+                          {soundPack.presets.map((preset) => (
+                            <option key={preset.id} value={preset.id}>{preset.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <button type="button" className="sound-pack-remove-button" onClick={() => void removeSoundPack()}>기기에서 삭제</button>
+                    </div>
+                  )}
+                  {soundPackStatus && <p className="sound-pack-status" role="status">{soundPackStatus}</p>}
+                  <p className="setting-note">선택한 파일은 서버로 전송하지 않습니다. 사운드팩의 이용 조건은 파일 제공처에서 확인해 주세요.</p>
                 </div>
               </section>
 
