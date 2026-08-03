@@ -347,7 +347,8 @@ test("highlights the active MML source token while playback advances", async () 
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /sourceRangeAtTick\(displayTracks\[selectedTrackIndex\], playhead\)/);
   assert.match(studio, /className="mml-playback-source"/);
-  assert.match(studio, /<mark ref=\{playbackTokenRef\}>/);
+  assert.match(studio, /<mark>\{selectedTrack\.sourceText\.slice\(playbackSourceRange\.start, playbackSourceRange\.end\)\}<\/mark>/);
+  assert.doesNotMatch(studio, /playbackSourceRef|playbackTokenRef|container\.scrollTop/);
 });
 
 test("uses standard undo and redo icons without platform-dependent arrow glyphs", async () => {
