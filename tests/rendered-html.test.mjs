@@ -327,6 +327,17 @@ test("uses standard undo and redo icons without platform-dependent arrow glyphs"
   assert.match(css, /\.mml-tool-icon \{[^}]*width: 14px;[^}]*height: 14px;[^}]*stroke-width: 2\.2;/s);
 });
 
+test("uses one line-icon family for playback, recording, metronome, and loop controls", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  assert.match(studio, /<Play className="mml-tool-icon"/);
+  assert.match(studio, /<Pause className="mml-tool-icon"/);
+  assert.match(studio, /<Square className="mml-tool-icon"/);
+  assert.match(studio, /<Circle className="mml-tool-icon mml-record-icon"/);
+  assert.match(studio, /<Music2 className="mml-tool-icon"/);
+  assert.match(studio, /<Repeat2 className="mml-tool-icon"/);
+  assert.doesNotMatch(studio, /<b>(?:■|●|♩|↻)<\/b>/);
+});
+
 test("places timeline navigation beside playback controls instead of the text editor", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   const transportStart = studio.indexOf('<div className="mml-transport"');

@@ -15,7 +15,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { ChevronLeft, ChevronRight, Ellipsis, Redo2, Settings, SkipBack, SkipForward, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Circle, Ellipsis, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2 } from "lucide-react";
 import {
   combineTracks,
   encodeDuration,
@@ -1503,9 +1503,9 @@ export default function MmlStudio({
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
         <div className="mml-transport-primary">
-          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}><b>{playing ? "Ⅱ" : "▶"}</b><span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
-          <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}><b>■</b><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
-          <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><b>●</b><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
+          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}>{playing ? <Pause className="mml-tool-icon" aria-hidden="true" /> : <Play className="mml-tool-icon" aria-hidden="true" />}<span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
+          <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}><Square className="mml-tool-icon" aria-hidden="true" /><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
+          <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><Circle className="mml-tool-icon mml-record-icon" aria-hidden="true" /><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         </div>
         <nav className="mml-transport-navigation" aria-label="재생 위치 이동">
           <button type="button" aria-label="맨앞으로 이동" title="맨앞으로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(0)}><SkipBack className="mml-tool-icon" aria-hidden="true" /></button>
@@ -1514,8 +1514,8 @@ export default function MmlStudio({
           <button type="button" aria-label="맨뒤로 이동" title="맨뒤로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(songDuration)}><SkipForward className="mml-tool-icon" aria-hidden="true" /></button>
         </nav>
         <div className="mml-transport-toggles">
-          <button type="button" className={project.recording.metronome ? "is-active" : ""} aria-pressed={project.recording.metronome} onClick={toggleMetronome}><b>♩</b><span>메트로놈</span></button>
-          <button type="button" className={project.view.loop ? "is-active" : ""} aria-pressed={project.view.loop} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}><b>↻</b><span>반복</span></button>
+          <button type="button" className={project.recording.metronome ? "is-active" : ""} aria-pressed={project.recording.metronome} onClick={toggleMetronome}><Music2 className="mml-tool-icon" aria-hidden="true" /><span>메트로놈</span></button>
+          <button type="button" className={project.view.loop ? "is-active" : ""} aria-pressed={project.view.loop} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}><Repeat2 className="mml-tool-icon" aria-hidden="true" /><span>반복</span></button>
         </div>
         <div className="mml-transport-tools">
           <button type="button" onClick={undo} disabled={!past.length || recordState !== "idle"} aria-label="실행 취소" title="실행 취소"><Undo2 className="mml-tool-icon" aria-hidden="true" /></button>

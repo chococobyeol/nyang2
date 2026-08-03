@@ -1671,7 +1671,7 @@ button {
   color: #fff;
 }
 
-.mml-transport button.is-record b {
+.mml-transport button.is-record .mml-record-icon {
   color: #cf4d3f;
 }
 
@@ -1681,7 +1681,7 @@ button {
   color: #fff;
 }
 
-.mml-transport button.is-record.is-active b {
+.mml-transport button.is-record.is-active .mml-record-icon {
   color: #fff;
 }
 
