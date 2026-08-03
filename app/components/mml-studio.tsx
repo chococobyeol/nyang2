@@ -1057,7 +1057,7 @@ export default function MmlStudio({
     commit((draft: any) => {
       if (mode === "replace") {
         draft.tracks = ranges.map((sourceText: string, index: number) => ({ ...createTrack(index, currentThemeId), sourceText }));
-        draft.routing = { left: draft.tracks.slice(0, 2).map((track: any) => track.id), right: draft.tracks[2] ? [draft.tracks[2].id] : [] };
+        draft.routing = { left: draft.tracks[0] ? [draft.tracks[0].id] : [], right: draft.tracks[1] ? [draft.tracks[1].id] : [] };
         draft.view.selectedTrackId = draft.tracks[0].id;
       } else if (mode === "append") {
         ranges.forEach((sourceText: string, index: number) => {
@@ -1304,11 +1304,15 @@ export default function MmlStudio({
                 <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
               </button>
               <div className="mml-track-actions" aria-label={`${track.name || `Track ${index + 1}`} 빠른 설정`}>
-                <button type="button" className={project.routing.left.includes(track.id) ? "is-on" : ""} aria-pressed={project.routing.left.includes(track.id)} aria-label="왼쪽 건반 연결" title="왼쪽 건반 연결" onClick={() => toggleRoute("left", track.id)}>L</button>
-                <button type="button" className={project.routing.right.includes(track.id) ? "is-on" : ""} aria-pressed={project.routing.right.includes(track.id)} aria-label="오른쪽 건반 연결" title="오른쪽 건반 연결" onClick={() => toggleRoute("right", track.id)}>R</button>
-                <button type="button" className={track.muted ? "is-on" : ""} aria-pressed={track.muted} aria-label="음소거" title="음소거" onClick={() => updateTrack(track.id, { muted: !track.muted })}>M</button>
-                <button type="button" className={track.solo ? "is-on" : ""} aria-pressed={track.solo} aria-label="솔로" title="솔로" onClick={() => updateTrack(track.id, { solo: !track.solo })}>S</button>
-                <button type="button" className={!track.pianoRollVisible ? "is-on" : ""} aria-pressed={!track.pianoRollVisible} aria-label={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} title={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} onClick={() => updateTrack(track.id, { pianoRollVisible: !track.pianoRollVisible })}>{track.pianoRollVisible ? "◉" : "◌"}</button>
+                <div className="mml-track-route-actions">
+                  <button type="button" className={project.routing.left.includes(track.id) ? "is-on" : ""} aria-pressed={project.routing.left.includes(track.id)} aria-label="왼쪽 건반 연결" title="왼쪽 건반 연결" onClick={() => toggleRoute("left", track.id)}>L</button>
+                  <button type="button" className={project.routing.right.includes(track.id) ? "is-on" : ""} aria-pressed={project.routing.right.includes(track.id)} aria-label="오른쪽 건반 연결" title="오른쪽 건반 연결" onClick={() => toggleRoute("right", track.id)}>R</button>
+                </div>
+                <div className="mml-track-play-actions">
+                  <button type="button" className={track.muted ? "is-on" : ""} aria-pressed={track.muted} aria-label="음소거" title="음소거" onClick={() => updateTrack(track.id, { muted: !track.muted })}>M</button>
+                  <button type="button" className={track.solo ? "is-on" : ""} aria-pressed={track.solo} aria-label="솔로" title="솔로" onClick={() => updateTrack(track.id, { solo: !track.solo })}>S</button>
+                  <button type="button" className={`mml-track-visibility ${!track.pianoRollVisible ? "is-on is-hidden" : ""}`} aria-pressed={!track.pianoRollVisible} aria-label={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} title={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} onClick={() => updateTrack(track.id, { pianoRollVisible: !track.pianoRollVisible })}><span aria-hidden="true" /></button>
+                </div>
               </div>
             </div>
           ))}
@@ -1380,7 +1384,7 @@ export default function MmlStudio({
               const ranges = parsed.tracks.map((track: any) => text.slice(track.sourceStart, track.sourceEnd));
               commit((draft: any) => {
                 draft.tracks = ranges.map((sourceText: string, index: number) => ({ ...createTrack(index, currentThemeId), sourceText }));
-                draft.routing = { left: draft.tracks.slice(0, 2).map((track: any) => track.id), right: draft.tracks[2] ? [draft.tracks[2].id] : [] };
+                draft.routing = { left: draft.tracks[0] ? [draft.tracks[0].id] : [], right: draft.tracks[1] ? [draft.tracks[1].id] : [] };
                 draft.view.selectedTrackId = draft.tracks[0].id;
                 return draft;
               });

@@ -21,13 +21,13 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 3,
+    version: 4,
     title: "",
     tracks,
     tempo: 120,
     timeSignature: { numerator: 4, denominator: 4 },
     timeSignatureMap: [{ tick: 0, numerator: 4, denominator: 4 }],
-    routing: { left: [tracks[0].id, tracks[1].id], right: [tracks[2].id] },
+    routing: { left: [tracks[0].id], right: [tracks[1].id] },
     recording: {
       mode: "append",
       editMode: "overwrite",
@@ -62,6 +62,18 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
   }));
   const ids = new Set(tracks.map((track) => track.id));
   const route = (side) => Array.isArray(value.routing?.[side]) ? value.routing[side].filter((id) => ids.has(id)) : [];
+  let leftRouting = route("left");
+  let rightRouting = route("right");
+  const usedPreviousDefaultRouting = tracks.length >= 3
+    && leftRouting.length === 2
+    && leftRouting[0] === tracks[0].id
+    && leftRouting[1] === tracks[1].id
+    && rightRouting.length === 1
+    && rightRouting[0] === tracks[2].id;
+  if (Number(value.version) < 4 && usedPreviousDefaultRouting) {
+    leftRouting = [tracks[0].id];
+    rightRouting = [tracks[1].id];
+  }
   const recording = {
     ...fallback.recording,
     ...value.recording,
@@ -73,9 +85,9 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     ...fallback,
     ...value,
     format: "nyangmml",
-    version: 3,
+    version: 4,
     tracks,
-    routing: { left: route("left"), right: route("right") },
+    routing: { left: leftRouting, right: rightRouting },
     recording,
     timeSignature: {
       numerator: Math.max(1, Number(value.timeSignature?.numerator) || 4),

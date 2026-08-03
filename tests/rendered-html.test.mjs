@@ -189,6 +189,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /aria-label=\{expanded \? "작곡창 축소" : "작곡창 전체화면"\}/);
   assert.match(studio, /onDoubleClick=\{\(\) => \{ selectTrack\(track\.id\); setTrackSettingsView\(true\)/);
   assert.match(studio, /className="mml-track-actions"/);
+  assert.match(studio, /className="mml-track-route-actions"/);
+  assert.match(studio, /className="mml-track-play-actions"/);
+  assert.match(studio, /className=\{`mml-track-visibility/);
   assert.match(studio, /aria-label="왼쪽 건반 연결"/);
   assert.match(studio, /aria-label="오른쪽 건반 연결"/);
   assert.match(studio, /aria-label="음소거"/);
@@ -201,6 +204,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(page, /expanded=\{mmlExpanded\}/);
   assert.match(css, /\.mml-expanded \.performance-surface \{[^}]*visibility: hidden;[^}]*pointer-events: none;/s);
   assert.match(css, /\.mml-zoom-controls/);
+  assert.match(css, /\.mml-track-route-actions \{\s*grid-template-columns: repeat\(2, 22px\);/s);
+  assert.match(css, /\.mml-track-play-actions \{\s*grid-template-columns: repeat\(3, 14px\);/s);
+  assert.match(css, /\.mml-track-visibility\.is-hidden::after/);
 });
 
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {

@@ -12,14 +12,32 @@ test("clamps timeline zoom to a useful range", () => {
 });
 
 test("uses append recording by default and migrates the previous default", () => {
-  assert.equal(createProject().recording.mode, "append");
-  assert.equal(createProject().recording.metronome, false);
+  const project = createProject();
+  assert.equal(project.recording.mode, "append");
+  assert.equal(project.recording.metronome, false);
+  assert.deepEqual(project.routing, { left: [project.tracks[0].id], right: [project.tracks[1].id] });
   const legacy = createProject();
   legacy.version = 1;
   legacy.recording.mode = "realtime";
   legacy.recording.metronome = true;
   assert.equal(sanitizeProject(legacy).recording.mode, "append");
   assert.equal(sanitizeProject(legacy).recording.metronome, false);
+});
+
+test("migrates only the previous untouched default track routing", () => {
+  const previous = createProject();
+  previous.version = 3;
+  previous.routing = {
+    left: [previous.tracks[0].id, previous.tracks[1].id],
+    right: [previous.tracks[2].id],
+  };
+  const migrated = sanitizeProject(previous);
+  assert.deepEqual(migrated.routing, { left: [migrated.tracks[0].id], right: [migrated.tracks[1].id] });
+
+  const custom = createProject();
+  custom.version = 3;
+  custom.routing = { left: [custom.tracks[2].id], right: [] };
+  assert.deepEqual(sanitizeProject(custom).routing, custom.routing);
 });
 
 test("grows an active note graphic continuously before note-off", () => {
