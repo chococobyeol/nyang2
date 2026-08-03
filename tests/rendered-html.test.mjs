@@ -314,11 +314,17 @@ test("highlights the active MML source token while playback advances", async () 
 });
 
 test("uses standard undo and redo icons without platform-dependent arrow glyphs", async () => {
-  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
-  assert.match(studio, /import \{ Redo2, Undo2 \} from "lucide-react"/);
-  assert.match(studio, /<Undo2 className="mml-history-icon"/);
-  assert.match(studio, /<Redo2 className="mml-history-icon"/);
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /import \{ Ellipsis, Redo2, Settings, Undo2 \} from "lucide-react"/);
+  assert.match(studio, /<Undo2 className="mml-tool-icon"/);
+  assert.match(studio, /<Redo2 className="mml-tool-icon"/);
+  assert.match(studio, /<Settings className="mml-tool-icon"/);
+  assert.match(studio, /<Ellipsis className="mml-tool-icon"/);
   assert.doesNotMatch(studio, /<b>↶<\/b>|<b>↷<\/b>/);
+  assert.match(css, /\.mml-tool-icon \{[^}]*width: 14px;[^}]*height: 14px;[^}]*stroke-width: 2\.2;/s);
 });
 
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {

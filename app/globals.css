@@ -1633,9 +1633,12 @@ button {
   font-size: 14px;
 }
 
-.mml-history-icon {
+.mml-tool-icon {
   display: block;
   flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2;
 }
 
 .mml-transport button span {
