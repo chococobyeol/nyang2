@@ -1144,8 +1144,8 @@ export default function MmlStudio({
     return track.notes.map((note: any) => ({ ...note, trackIndex }));
   });
   const visibleMidi = [...visibleNotes.map((note: any) => note.midi), ...liveRecordingNotes.map((note) => note.midi)];
-  const minMidi = Math.min(36, ...visibleMidi);
-  const maxMidi = Math.max(84, ...visibleMidi);
+  const minMidi = Math.min(12, ...visibleMidi);
+  const maxMidi = Math.max(108, ...visibleMidi);
   const pixelsPerPitch = pianoHeight / (maxMidi - minMidi + 1);
 
   useEffect(() => {

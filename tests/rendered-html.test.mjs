@@ -186,6 +186,8 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /if \(!event\.altKey\) return/);
   assert.doesNotMatch(studio, /event\.ctrlKey && !event\.metaKey/);
   assert.match(studio, /title="Alt\+휠로 확대·축소"/);
+  assert.match(studio, /const minMidi = Math\.min\(12, \.\.\.visibleMidi\)/);
+  assert.match(studio, /const maxMidi = Math\.max\(108, \.\.\.visibleMidi\)/);
   assert.match(studio, /aria-label="타임라인 축소"/);
   assert.match(studio, /aria-label="타임라인 확대"/);
   assert.match(studio, /aria-label=\{expanded \? "작곡창 축소" : "작곡창 전체화면"\}/);
