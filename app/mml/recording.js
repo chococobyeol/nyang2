@@ -66,6 +66,13 @@ function autoQuantizeTick(value) {
   return best.value;
 }
 
+function nearestFixedDuration(rawDuration, grid) {
+  const safeDuration = Math.max(0, rawDuration);
+  const shorter = Math.max(grid, Math.floor(safeDuration / grid) * grid);
+  const longer = shorter + grid;
+  return safeDuration - shorter <= longer - safeDuration ? shorter : longer;
+}
+
 export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
   if (!inputs.length) return [];
   const start = origin ?? Math.min(...inputs.map((input) => input.startedAt));
@@ -81,7 +88,7 @@ export function quantizeInputs(inputs, bpm, division = "1/8", origin = null) {
       ? Math.round(rawDuration)
       : division === "auto"
         ? autoQuantizeTick(rawDuration)
-        : Math.round(rawDuration / grid) * grid;
+        : nearestFixedDuration(rawDuration, grid);
     const duration = Math.max(minimum, durationByLength);
     return {
       ...input,

@@ -101,6 +101,22 @@ test("quantizes note length independently from a slightly late onset", () => {
   assert.equal(ninetyBpm[0].duration, 96);
 });
 
+test("chooses the closest fixed note value without inflating a near eighth note", () => {
+  const [nearEighth] = quantizeInputs([
+    { id: "near-eighth", side: "left", midi: 60, startedAt: 0, endedAt: 0.27 },
+  ], 120, "1/8", 0);
+  const [nearQuarter] = quantizeInputs([
+    { id: "near-quarter", side: "left", midi: 62, startedAt: 0, endedAt: 0.46 },
+  ], 120, "1/8", 0);
+  const [exactMiddle] = quantizeInputs([
+    { id: "middle", side: "left", midi: 64, startedAt: 0, endedAt: 0.375 },
+  ], 120, "1/8", 0);
+
+  assert.equal(nearEighth.duration, 48);
+  assert.equal(nearQuarter.duration, 96);
+  assert.equal(exactMiddle.duration, 48);
+});
+
 test("snaps a recording start and the visible grid to the selected division", () => {
   assert.equal(quantizationGridTicks("1/4"), 96);
   assert.equal(snapTickToGrid(104, "1/4"), 96);

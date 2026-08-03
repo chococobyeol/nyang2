@@ -108,7 +108,18 @@ type NoteStartOptions = {
   volume?: number;
   keyId?: string;
   skipRecording?: boolean;
+  recordingAt?: number;
 };
+
+function inputEventSeconds(event: { timeStamp: number }) {
+  const now = performance.now();
+  const timestamp = Number(event.timeStamp);
+  if (!Number.isFinite(timestamp) || timestamp < 0) return now / 1000;
+  const relativeTimestamp = timestamp > 1_000_000_000_000
+    ? timestamp - performance.timeOrigin
+    : timestamp;
+  return Math.abs(relativeTimestamp - now) < 60_000 ? relativeTimestamp / 1000 : now / 1000;
+}
 
 const STORAGE_KEY = "nyangnyang-settings-v1";
 const NOTE_OFFSETS = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -846,8 +857,8 @@ export default function Home() {
   );
 
   const releaseInput = useCallback(
-    (inputId: string, force = false) => {
-      mmlInputSinkRef.current?.noteOff(inputId, performance.now() / 1000);
+    (inputId: string, force = false, recordingAt = performance.now() / 1000) => {
+      mmlInputSinkRef.current?.noteOff(inputId, recordingAt);
       pendingNoteRef.current.delete(inputId);
       const voiceId = inputVoiceRef.current.get(inputId);
       if (!voiceId) return;
@@ -883,8 +894,8 @@ export default function Home() {
 
   const startNote = useCallback(
     async (inputId: string, side: KeyboardSide, offset: number, options: NoteStartOptions = {}) => {
-      const inputStartedAt = performance.now() / 1000;
-      releaseInput(inputId, true);
+      const inputStartedAt = options.recordingAt ?? performance.now() / 1000;
+      releaseInput(inputId, true, inputStartedAt);
       const requestId = ++noteRequestCounterRef.current;
       pendingNoteRef.current.set(inputId, requestId);
       let graph: AudioGraph;
@@ -1130,7 +1141,7 @@ export default function Home() {
       const mapped = sideAndOffsetForCode(event.code);
       if (!mapped) return;
       event.preventDefault();
-      void startNote(`keyboard:${event.code}`, mapped.side, mapped.offset);
+      void startNote(`keyboard:${event.code}`, mapped.side, mapped.offset, { recordingAt: inputEventSeconds(event) });
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -1139,7 +1150,7 @@ export default function Home() {
         setSustain(false);
         return;
       }
-      releaseInput(`keyboard:${event.code}`);
+      releaseInput(`keyboard:${event.code}`, false, inputEventSeconds(event));
     };
 
     const handleBlur = () => allNotesOff();
@@ -1164,7 +1175,7 @@ export default function Home() {
       const inputId = `pointer:${event.pointerId}`;
       const keyId = `${side}:${offset}`;
       activePointersRef.current.set(event.pointerId, keyId);
-      void startNote(inputId, side, offset);
+      void startNote(inputId, side, offset, { recordingAt: inputEventSeconds(event) });
     },
     [startNote],
   );
@@ -1176,7 +1187,7 @@ export default function Home() {
       const element = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-piano-key]");
       const inputId = `pointer:${event.pointerId}`;
       if (!element) {
-        releaseInput(inputId);
+        releaseInput(inputId, false, inputEventSeconds(event));
         activePointersRef.current.set(event.pointerId, "");
         return;
       }
@@ -1185,11 +1196,11 @@ export default function Home() {
       const side = element.dataset.side as KeyboardSide;
       const offset = Number(element.dataset.offset);
       activePointersRef.current.set(event.pointerId, keyId);
-      void startNote(inputId, side, offset);
+      void startNote(inputId, side, offset, { recordingAt: inputEventSeconds(event) });
     };
     const handlePointerEnd = (event: PointerEvent) => {
       if (!activePointersRef.current.has(event.pointerId)) return;
-      releaseInput(`pointer:${event.pointerId}`);
+      releaseInput(`pointer:${event.pointerId}`, false, inputEventSeconds(event));
       activePointersRef.current.delete(event.pointerId);
     };
     window.addEventListener("pointermove", handlePointerMove, { passive: false });
