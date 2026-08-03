@@ -2744,11 +2744,12 @@ button {
 }
 
 .mml-open .performance-surface .cat-zone.is-double {
-  top: 50%;
+  --cat-height: clamp(76px, 9vh, 92px);
+  top: 64%;
   right: 12%;
   bottom: auto;
   left: 12%;
-  height: 150px;
+  height: 108px;
   transform: translateY(-50%);
 }
 
