@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
+import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
@@ -73,6 +73,13 @@ test("resolves recording start from the playhead, beginning, or routed tracks' e
   assert.equal(resolveRecordingStartTick("beginning", 432, durations, [0, 1]), 0);
   assert.equal(resolveRecordingStartTick("empty", 432, durations, [0, 2]), 384);
   assert.equal(resolveRecordingStartTick("empty", 432, durations, [0, 1]), 960);
+});
+
+test("converts append recording time through tempo changes at the recording position", () => {
+  const tempos = [{ tick: 0, bpm: 120 }, { tick: 96, bpm: 60 }];
+  assert.ok(Math.abs(elapsedSecondsToTicks(48, 0.5, tempos, 120) - 72) < 0.001);
+  assert.ok(Math.abs(elapsedSecondsToTicks(96, 1, tempos, 120) - 96) < 0.001);
+  assert.ok(Math.abs(elapsedSecondsToTicks(0, 0.5, tempos, 120) - 96) < 0.001);
 });
 
 test("uses the whole song as the default repeat range and migrates the old one-measure default", () => {

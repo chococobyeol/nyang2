@@ -1,4 +1,4 @@
-import { serializeTrackEvents, TICKS_PER_QUARTER } from "./core.js";
+import { serializeTrackEvents, tickToSeconds, TICKS_PER_QUARTER } from "./core.js";
 
 export function resolveRecordingStartTick(mode, currentTick, trackDurations = [], routedTrackIndexes = []) {
   if (mode === "beginning") return 0;
@@ -9,6 +9,22 @@ export function resolveRecordingStartTick(mode, currentTick, trackDurations = []
     return Math.max(0, ...indexes.map((index) => Number(trackDurations[index]) || 0));
   }
   return Math.max(0, Number(currentTick) || 0);
+}
+
+export function elapsedSecondsToTicks(startTick, elapsedSeconds, tempoEvents = [], defaultTempo = 120) {
+  const safeStartTick = Math.max(0, Number(startTick) || 0);
+  const safeElapsed = Math.max(0, Number(elapsedSeconds) || 0);
+  if (safeElapsed === 0) return 0;
+  const targetSeconds = tickToSeconds(safeStartTick, tempoEvents, defaultTempo) + safeElapsed;
+  let low = safeStartTick;
+  let high = safeStartTick + TICKS_PER_QUARTER * 4;
+  while (tickToSeconds(high, tempoEvents, defaultTempo) < targetSeconds) high += Math.max(TICKS_PER_QUARTER * 4, high - safeStartTick);
+  for (let index = 0; index < 36; index += 1) {
+    const middle = (low + high) / 2;
+    if (tickToSeconds(middle, tempoEvents, defaultTempo) < targetSeconds) low = middle;
+    else high = middle;
+  }
+  return Math.max(0, (low + high) / 2 - safeStartTick);
 }
 
 export const QUANTIZE_TICKS = {

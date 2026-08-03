@@ -27,7 +27,7 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
+import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
@@ -114,11 +114,12 @@ function renderRecordingProject(
   baseProject: any,
   inputs: RecordingInput[],
   rests: Array<{ start: number; end: number }>,
-  options: { bpm: number; origin: number; startTick: number; sessionEndedAt?: number },
+  options: { bpm: number; quantizeBpm?: number; origin: number; startTick: number; sessionEndedAt?: number },
 ) {
   const draft = clone(baseProject);
+  const quantizeBpm = options.quantizeBpm ?? options.bpm;
   const result = recordingToTrackTexts(inputs, baseProject.tracks, baseProject.routing, {
-    bpm: options.bpm,
+    bpm: quantizeBpm,
     quantize: baseProject.recording.quantize,
     pitchPriority: baseProject.recording.pitchPriority,
     origin: options.origin,
@@ -131,7 +132,7 @@ function renderRecordingProject(
       midi: 60,
       startedAt: 0,
       endedAt: rest.end,
-    }], options.bpm, baseProject.recording.quantize, 0)[0];
+    }], quantizeBpm, baseProject.recording.quantize, 0)[0];
     recordedEndTick = Math.max(recordedEndTick, quantizedRest.duration);
   }
   if (baseProject.recording.mode === "realtime" && options.sessionEndedAt !== undefined) {
@@ -141,7 +142,7 @@ function renderRecordingProject(
       midi: 60,
       startedAt: options.origin,
       endedAt: Math.max(options.origin, options.sessionEndedAt),
-    }], options.bpm, baseProject.recording.quantize, options.origin)[0];
+    }], quantizeBpm, baseProject.recording.quantize, options.origin)[0];
     recordedEndTick = Math.max(recordedEndTick, session.duration);
   }
 
@@ -275,6 +276,8 @@ export default function MmlStudio({
   const recordingStartRef = useRef(0);
   const recordingStartTickRef = useRef(0);
   const recordingTempoRef = useRef(120);
+  const recordingDefaultTempoRef = useRef(120);
+  const recordingTempoEventsRef = useRef<Array<{ tick: number; bpm: number }>>([]);
   const recordingBaseProjectRef = useRef<any | null>(null);
   const recordingArmedRef = useRef(false);
   const recordingActiveRef = useRef(false);
@@ -314,6 +317,20 @@ export default function MmlStudio({
   useEffect(() => {
     playheadRef.current = playhead;
   }, [playhead]);
+
+  const appendTimelineSecondsAt = useCallback((wallAt: number) => {
+    const cursorTick = appendCursorRef.current * TICKS_PER_QUARTER;
+    const wallStart = appendWallStartRef.current;
+    if (wallStart === null) return appendCursorRef.current;
+    const absoluteStartTick = recordingStartTickRef.current + cursorTick;
+    const elapsedTicks = elapsedSecondsToTicks(
+      absoluteStartTick,
+      Math.max(0, wallAt - wallStart),
+      recordingTempoEventsRef.current,
+      recordingDefaultTempoRef.current,
+    );
+    return (cursorTick + elapsedTicks) / TICKS_PER_QUARTER;
+  }, []);
 
   useEffect(() => {
     if (!settingsRequested) return;
@@ -607,6 +624,7 @@ export default function MmlStudio({
     const origin = base.recording.mode === "realtime" ? recordingStartRef.current : 0;
     const preview = renderRecordingProject(base, recordingInputsRef.current, explicitRestsRef.current, {
       bpm: recordingTempoRef.current,
+      quantizeBpm: base.recording.mode === "append" ? 60 : recordingTempoRef.current,
       origin,
       startTick: recordingStartTickRef.current,
     });
@@ -732,7 +750,9 @@ export default function MmlStudio({
     }
     const wallEndedAt = performance.now() / 1000;
     activeRecordingRef.current.forEach((input) => {
-      const endedAt = recordingInputEndAt(base.recording.mode, wallEndedAt, appendCursorRef.current, appendWallStartRef.current);
+      const endedAt = base.recording.mode === "append"
+        ? appendTimelineSecondsAt(wallEndedAt)
+        : recordingInputEndAt(base.recording.mode, wallEndedAt, appendCursorRef.current, appendWallStartRef.current);
       recordingInputsRef.current.push({ ...input, endedAt });
     });
     activeRecordingRef.current.clear();
@@ -741,6 +761,7 @@ export default function MmlStudio({
     const origin = base.recording.mode === "realtime" ? recordingStartRef.current : 0;
     const preview = renderRecordingProject(base, recordingInputsRef.current, explicitRestsRef.current, {
       bpm: recordingTempoRef.current,
+      quantizeBpm: base.recording.mode === "append" ? 60 : recordingTempoRef.current,
       origin,
       startTick: recordingStartTickRef.current,
       sessionEndedAt: wallEndedAt,
@@ -768,13 +789,21 @@ export default function MmlStudio({
     explicitRestsRef.current = [];
     restStartedRef.current = null;
     appendWallStartRef.current = null;
-  }, [clearBeatVisualTimers, clearCountInClicks, recordTempo, startMetronomeClock]);
+  }, [appendTimelineSecondsAt, clearBeatVisualTimers, clearCountInClicks, recordTempo, startMetronomeClock]);
 
   const beginRecording = useCallback(() => {
     setRestInputActive(false);
     if (parseError || tempoConflict) return;
     clearPlayback();
     const current = clone(projectRef.current);
+    const currentParsedTracks = current.tracks.map((track: any, index: number) => {
+      try {
+        return parseTrack(track.sourceText);
+      } catch {
+        return displayTracks[index] ?? { duration: 0, tempos: [] };
+      }
+    });
+    const currentTempoEvents = currentParsedTracks.flatMap((track: any) => track.tempos).sort((a: any, b: any) => a.tick - b.tick);
     const routedIds = new Set([...current.routing.left, ...current.routing.right]);
     const routedTrackIndexes = current.tracks
       .map((track: any, index: number) => routedIds.has(track.id) ? index : -1)
@@ -786,13 +815,15 @@ export default function MmlStudio({
     const requestedStartTick = resolveRecordingStartTick(
       current.recording.startPosition,
       playheadRef.current,
-      displayTracks.map((track: any) => track.duration),
+      currentParsedTracks.map((track: any) => track.duration),
       routedTrackIndexes,
     );
     const startTick = snapTickToGrid(requestedStartTick, current.recording.quantize);
-    const bpm = tempoAtTick(startTick, allTempoEvents, current.tempo);
+    const bpm = tempoAtTick(startTick, currentTempoEvents, current.tempo);
     recordingBaseProjectRef.current = current;
     recordingTempoRef.current = bpm;
+    recordingDefaultTempoRef.current = current.tempo;
+    recordingTempoEventsRef.current = currentTempoEvents;
     recordingInputsRef.current = [];
     activeRecordingRef.current.clear();
     explicitRestsRef.current = [];
@@ -827,15 +858,16 @@ export default function MmlStudio({
       const follow = () => {
         if (!recordingActiveRef.current) return;
         const now = performance.now() / 1000;
-        let elapsed = appendCursorRef.current;
-        if (current.recording.mode === "realtime") elapsed = Math.max(0, now - recordingStartRef.current);
-        else if (appendWallStartRef.current !== null) elapsed += Math.max(0, now - appendWallStartRef.current);
-        const elapsedTick = recordingStartTickRef.current + Math.round(elapsed * TICKS_PER_QUARTER * bpm / 60);
+        const elapsed = current.recording.mode === "realtime"
+          ? Math.max(0, now - recordingStartRef.current)
+          : appendTimelineSecondsAt(now);
+        const elapsedTick = recordingStartTickRef.current + Math.round(elapsed * TICKS_PER_QUARTER * (current.recording.mode === "append" ? 1 : bpm / 60));
         const timelineNow = current.recording.mode === "realtime" ? now : elapsed;
         const origin = current.recording.mode === "realtime" ? recordingStartRef.current : 0;
+        const inputTempo = current.recording.mode === "append" ? 60 : bpm;
         const activeInputs = [...activeRecordingRef.current.values()];
         const nextLiveNotes = activeInputs.map((input) => {
-          const range = liveInputTicks(input, timelineNow, bpm, origin, recordingStartTickRef.current);
+          const range = liveInputTicks(input, timelineNow, inputTempo, origin, recordingStartTickRef.current);
           const trackId = current.routing[input.side]?.[0];
           const track = current.tracks.find((item: any) => item.id === trackId) ?? current.tracks[0];
           return { id: input.id, midi: input.midi, tick: range.tick, duration: range.duration, color: track?.color ?? "#ef6b5a" };
@@ -880,7 +912,7 @@ export default function MmlStudio({
     } else {
       begin(plan.plannedStart);
     }
-  }, [allTempoEvents, clearBeatVisualTimers, clearPlayback, clickMetronome, displayTracks, parseError, scheduleBeatVisual, startMetronomeClock, stopMetronomeClock, tempoConflict]);
+  }, [appendTimelineSecondsAt, clearBeatVisualTimers, clearPlayback, clickMetronome, displayTracks, parseError, scheduleBeatVisual, startMetronomeClock, stopMetronomeClock, tempoConflict]);
 
   const beginRestInput = useCallback((at: number) => {
     const current = projectRef.current;
@@ -894,24 +926,24 @@ export default function MmlStudio({
       return;
     }
     if (appendWallStartRef.current === null) appendWallStartRef.current = at;
-    restStartedRef.current = appendCursorRef.current + (at - appendWallStartRef.current);
+    restStartedRef.current = appendTimelineSecondsAt(at);
     setRestInputActive(true);
     setRecordingMessage("쉼표 입력 중");
-  }, []);
+  }, [appendTimelineSecondsAt]);
 
   const finishRestInput = useCallback((at: number) => {
     setRestInputActive(false);
     const current = projectRef.current;
     if (!recordingActiveRef.current || current.recording.mode !== "append" || restStartedRef.current === null) return;
-    const end = appendCursorRef.current + (at - (appendWallStartRef.current ?? at));
+    const end = appendTimelineSecondsAt(at);
     const restEndTick = quantizedInputsEndTick([{
       id: "append-rest",
       side: "left",
       midi: 60,
       startedAt: restStartedRef.current,
       endedAt: end,
-    }], recordingTempoRef.current, current.recording.quantize, 0);
-    const settledEnd = ticksToRecordingSeconds(restEndTick, recordingTempoRef.current);
+    }], 60, current.recording.quantize, 0);
+    const settledEnd = ticksToRecordingSeconds(restEndTick, 60);
     explicitRestsRef.current.push({ start: restStartedRef.current, end: settledEnd });
     restStartedRef.current = null;
     if (activeRecordingRef.current.size === 0) {
@@ -923,7 +955,7 @@ export default function MmlStudio({
     }
     setRecordingMessage(`이어붙이기 녹음 · ${recordingTempoRef.current} BPM`);
     updateRecordingPreview();
-  }, [updateRecordingPreview]);
+  }, [appendTimelineSecondsAt, updateRecordingPreview]);
 
   const sink = useMemo<MmlInputSink>(() => ({
     noteOn(inputId, side, midi, at) {
@@ -941,7 +973,7 @@ export default function MmlStudio({
       let startedAt = at;
       if (recordingActiveRef.current && current.recording.mode === "append") {
         if (appendWallStartRef.current === null) appendWallStartRef.current = at;
-        startedAt = appendCursorRef.current + (at - appendWallStartRef.current);
+        startedAt = appendTimelineSecondsAt(at);
       }
       activeRecordingRef.current.set(inputId, {
         id: `${inputId}:${at}`,
@@ -961,7 +993,7 @@ export default function MmlStudio({
       const current = projectRef.current;
       let endedAt = at;
       if (current.recording.mode === "append") {
-        endedAt = appendCursorRef.current + (at - (appendWallStartRef.current ?? at));
+        endedAt = appendTimelineSecondsAt(at);
       }
       recordingInputsRef.current.push({ ...active, endedAt: Math.max(active.startedAt, endedAt) });
       activeRecordingRef.current.delete(inputId);
@@ -969,12 +1001,12 @@ export default function MmlStudio({
         ? appendLegatoContinuation(
           recordingInputsRef.current,
           [...activeRecordingRef.current.values()],
-          recordingTempoRef.current,
+          60,
           current.recording.quantize,
         )
         : null;
       if (continuation) {
-        const settledAt = ticksToRecordingSeconds(continuation.settledTick, recordingTempoRef.current);
+        const settledAt = ticksToRecordingSeconds(continuation.settledTick, 60);
         const next = activeRecordingRef.current.get(continuation.inputId);
         if (next) activeRecordingRef.current.set(continuation.inputId, { ...next, startedAt: settledAt });
         appendCursorRef.current = settledAt;
@@ -985,11 +1017,11 @@ export default function MmlStudio({
       } else if (current.recording.mode === "append" && activeRecordingRef.current.size === 0 && restStartedRef.current === null) {
         const settledTick = quantizedInputsEndTick(
           recordingInputsRef.current,
-          recordingTempoRef.current,
+          60,
           current.recording.quantize,
           0,
         );
-        appendCursorRef.current = ticksToRecordingSeconds(settledTick, recordingTempoRef.current);
+        appendCursorRef.current = ticksToRecordingSeconds(settledTick, 60);
         appendWallStartRef.current = null;
         const absoluteTick = recordingStartTickRef.current + settledTick;
         playheadRef.current = absoluteTick;
@@ -1004,7 +1036,7 @@ export default function MmlStudio({
     restOff(at) {
       finishRestInput(at);
     },
-  }), [beginRestInput, finishRestInput, updateRecordingPreview]);
+  }), [appendTimelineSecondsAt, beginRestInput, finishRestInput, updateRecordingPreview]);
 
   useEffect(() => {
     registerInputSink(sink);

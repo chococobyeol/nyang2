@@ -299,6 +299,11 @@ test("offers MML paste choices and configurable recording start positions", asyn
   assert.match(studio, /현재 재생 위치/);
   assert.match(studio, /연결 트랙의 빈 끝부분/);
   assert.match(studio, /resolveRecordingStartTick/);
+  assert.match(studio, /currentParsedTracks = current\.tracks\.map/);
+  assert.match(studio, /tempoAtTick\(startTick, currentTempoEvents, current\.tempo\)/);
+  assert.match(studio, /elapsedSecondsToTicks\(/);
+  assert.match(studio, /quantizeBpm: base\.recording\.mode === "append" \? 60/);
+  assert.match(studio, /appendTimelineSecondsAt\(at\)/);
 });
 
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
