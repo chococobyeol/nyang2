@@ -94,17 +94,22 @@ test("publishes a privacy policy and links it from settings", async () => {
 });
 
 test("includes the MML studio without changing the public route", async () => {
-  const [page, css] = await Promise.all([
+  const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /MmlStudio/);
+  assert.match(page, /visible=\{mmlOpen\}/);
+  assert.doesNotMatch(page, /\{mmlOpen && \(\s*<MmlStudio/);
   assert.match(page, /불어서 연주를 끄고 MML을 열까요/);
   assert.match(page, /className="brand-mark"/);
   assert.doesNotMatch(page, /className="settings-tabs"/);
   assert.doesNotMatch(page, />MML 설정</);
   assert.match(css, /\.mml-open \.app-stage/);
   assert.match(css, /\.mml-studio/);
+  assert.match(css, /\.mml-studio\.is-hidden \{\s*display: none;/s);
+  assert.match(studio, /if \(!visible\) return;[\s\S]*?window\.addEventListener\("keydown", down\)/);
 });
 
 test("keeps the MML workspace text readable in the split layout", async () => {

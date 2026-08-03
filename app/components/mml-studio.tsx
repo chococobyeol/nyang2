@@ -53,6 +53,7 @@ export type MmlInputSink = {
 type Props = {
   currentThemeId: string;
   themes: ThemeOption[];
+  visible: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
@@ -213,6 +214,7 @@ function matchesShortcut(event: KeyboardEvent, shortcut: string) {
 export default function MmlStudio({
   currentThemeId,
   themes,
+  visible,
   expanded,
   onExpandedChange,
   onClose,
@@ -1073,6 +1075,7 @@ export default function MmlStudio({
   }, [registerInputSink, sink]);
 
   useEffect(() => {
+    if (!visible) return;
     const down = (event: KeyboardEvent) => {
       const typing = Boolean((event.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable='true']"));
       if ((event.ctrlKey || event.metaKey) && event.code === "KeyZ") {
@@ -1129,7 +1132,7 @@ export default function MmlStudio({
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [beginRecording, beginRestInput, clearPlayback, finishRecording, finishRestInput, playing, recordState, redo, shiftEditorSelectionDuration, startPlayback, undo]);
+  }, [beginRecording, beginRestInput, clearPlayback, finishRecording, finishRestInput, playing, recordState, redo, shiftEditorSelectionDuration, startPlayback, undo, visible]);
 
   useEffect(() => () => {
     clearPlayback();
@@ -1508,7 +1511,7 @@ export default function MmlStudio({
   };
 
   return (
-    <section className="mml-studio" aria-label="MML 편집과 녹음">
+    <section className={`mml-studio ${visible ? "" : "is-hidden"}`} aria-label="MML 편집과 녹음" aria-hidden={!visible}>
       <header className="mml-studio-header">
         <div className="mml-project-title">
           <span>냥 MML</span>

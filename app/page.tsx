@@ -1784,23 +1784,22 @@ export default function Home() {
   return (
     <main className={`app-viewport ${settings.mobileLandscape ? "force-mobile-landscape" : ""} ${mmlOpen ? "mml-open" : ""} ${mmlExpanded ? "mml-expanded" : ""}`} style={appStyle} onContextMenu={(event) => event.preventDefault()}>
       <div className="app-stage">
-        {mmlOpen && (
-          <MmlStudio
-            currentThemeId={settings.themeId}
-            themes={availableThemes}
-            expanded={mmlExpanded}
-            onExpandedChange={setMmlExpanded}
-            onClose={() => { setMmlExpanded(false); setMmlOpen(false); }}
-            registerInputSink={registerMmlInputSink}
-            playMidi={playMmlMidi}
-            releaseMidi={releaseMmlMidi}
-            stopMmlAudio={stopMmlAudio}
-            clickMetronome={clickMetronome}
-            onPlayShortcutChange={setMmlPlayShortcut}
-            onRestShortcutChange={setMmlRestShortcut}
-            onRestPressedChange={setMmlRestPressed}
-          />
-        )}
+        <MmlStudio
+          currentThemeId={settings.themeId}
+          themes={availableThemes}
+          visible={mmlOpen}
+          expanded={mmlExpanded}
+          onExpandedChange={setMmlExpanded}
+          onClose={() => { setMmlExpanded(false); setMmlOpen(false); }}
+          registerInputSink={registerMmlInputSink}
+          playMidi={playMmlMidi}
+          releaseMidi={releaseMmlMidi}
+          stopMmlAudio={stopMmlAudio}
+          clickMetronome={clickMetronome}
+          onPlayShortcutChange={setMmlPlayShortcut}
+          onRestShortcutChange={setMmlRestShortcut}
+          onRestPressedChange={setMmlRestPressed}
+        />
         <div className="performance-surface">
         <header className={`top-bar ${settings.keyboardCount === 2 ? "has-double-keyboard" : ""}`}>
           <div className="brand-block">

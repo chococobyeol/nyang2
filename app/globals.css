@@ -879,6 +879,10 @@ button {
   background: rgba(251, 247, 239, 0.96);
 }
 
+.mml-studio.is-hidden {
+  display: none;
+}
+
 .mml-studio-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 36px;
