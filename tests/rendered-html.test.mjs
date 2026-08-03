@@ -168,20 +168,25 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.match(studio, /is-live-recording/);
 });
 
-test("gives the MML performance side a full-height keyboard layout and touch rest input", async () => {
+test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /mmlOpen && \([\s\S]*className="mml-rest-button"/);
+  assert.match(page, /className=\{`keyboard-deck[\s\S]*className="mml-rest-button"/);
+  assert.doesNotMatch(page, /<span aria-hidden="true">R<\/span>/);
+  assert.match(page, /className="mml-rest-symbol"[^>]*>𝄽<\/span>/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOn/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOff/);
   assert.match(studio, /restOn: \(at: number\) => void/);
   assert.match(studio, /className=\{`mml-beat-visual/);
   assert.match(page, /preparing \? \(accented \? 1760 : 1480\)/);
-  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-rows: 88px 76px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 70px minmax\(158px, 1fr\) 190px 38px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 42px;[^}]*height: 42px/s);
   assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 224px;[^}]*height: auto/s);
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
+  assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Noto Music", serif;/s);
+  assert.match(css, /\.keyboard-deck\.is-double \.mml-rest-button \{[^}]*top: 50%;/s);
   assert.match(css, /\.mml-beat-visual\.is-preparing/);
 });

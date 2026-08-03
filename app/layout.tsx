@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "@fontsource/noto-music/music-400.css";
 import "./globals.css";
 
 const geistSans = Geist({

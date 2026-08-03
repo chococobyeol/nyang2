@@ -1583,30 +1583,6 @@ export default function Home() {
                 {micActive ? "바람 연결됨" : "마이크 연결"}
               </button>
             )}
-            {mmlOpen && (
-              <button
-                type="button"
-                className="mml-rest-button"
-                aria-label="쉼표 입력, 누르는 동안 길이 지정"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  mmlInputSinkRef.current?.restOn(inputEventSeconds(event));
-                }}
-                onPointerUp={(event) => {
-                  event.preventDefault();
-                  mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
-                  if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-                }}
-                onPointerCancel={(event) => {
-                  mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
-                }}
-              >
-                <span aria-hidden="true">R</span>
-                <strong>쉼표</strong>
-                <small>길게</small>
-              </button>
-            )}
             <button type="button" className="settings-button" onClick={() => setSettingsOpen(true)} aria-label="설정 열기">
               <span aria-hidden="true">⚙</span>
               설정
@@ -1654,6 +1630,30 @@ export default function Home() {
               pawPad={theme.visuals.pawPad}
               onPointerDown={handlePointerDown}
             />
+          )}
+          {mmlOpen && (
+            <button
+              type="button"
+              className="mml-rest-button"
+              aria-label="쉼표 입력, 누르는 동안 길이 지정"
+              title="누르는 동안 쉼표 입력"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                mmlInputSinkRef.current?.restOn(inputEventSeconds(event));
+              }}
+              onPointerUp={(event) => {
+                event.preventDefault();
+                mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+              }}
+              onPointerCancel={(event) => {
+                mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
+              }}
+            >
+              <span className="mml-rest-symbol" aria-hidden="true">𝄽</span>
+              <small>쉼표</small>
+            </button>
           )}
         </section>
 
