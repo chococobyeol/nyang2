@@ -1121,6 +1121,16 @@ export default function MmlStudio({
     const nextTick = Math.max(0, Math.min(songDuration, tick));
     playheadRef.current = nextTick;
     setPlayhead(nextTick);
+    window.requestAnimationFrame(() => {
+      const roll = pianoRollRef.current;
+      if (!roll) return;
+      roll.scrollLeft = followTimelineScroll(
+        roll.scrollLeft,
+        roll.clientWidth,
+        roll.scrollWidth,
+        nextTick * pianoPixelsPerTick,
+      );
+    });
   };
   const changeTimelineZoom = (factor: number, anchorOffset?: number) => {
     const roll = pianoRollRef.current;

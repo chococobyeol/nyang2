@@ -170,6 +170,7 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.match(studio, /syncedPlaybackStartAt\(project\.recording\.metronome, metronomeClockRef\.current, now\)/);
   assert.match(studio, /playbackWait \+ endSeconds - startSeconds/);
   assert.match(studio, /aria-label="맨앞으로 이동"/);
+  assert.match(studio, /const seekPlayhead = \(tick: number\)[\s\S]*?nextTick \* pianoPixelsPerTick/);
   assert.match(studio, /adjacentMeasureTick\(timelineGrid\.measures, playheadRef\.current, -1, songDuration\)/);
   assert.match(studio, /adjacentMeasureTick\(timelineGrid\.measures, playheadRef\.current, 1, songDuration\)/);
   assert.match(studio, /aria-label="맨뒤로 이동"/);
