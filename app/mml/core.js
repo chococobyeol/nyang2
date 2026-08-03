@@ -69,6 +69,7 @@ export function parseTrack(source, options = {}) {
     tick: 0,
     octave: options.octave ?? 4,
     defaultLength: options.defaultLength ?? 4,
+    defaultDots: options.defaultDots ?? 0,
     tempo: options.tempo ?? 120,
     velocity: options.velocity ?? 15,
   };
@@ -106,6 +107,10 @@ export function parseTrack(source, options = {}) {
       if (character === "l") {
         if (number.value <= 0) throw new MmlSyntaxError("기본 음 길이는 1 이상이어야 합니다.", commandStart, number.end - commandStart);
         state.defaultLength = number.value;
+        let dots = 0;
+        while (clean[number.end + dots] === ".") dots += 1;
+        state.defaultDots = dots;
+        index = number.end + dots;
       } else if (character === "o") {
         state.octave = number.value;
       } else if (character === "v") {
@@ -115,7 +120,7 @@ export function parseTrack(source, options = {}) {
         state.tempo = number.value;
         tempos.push({ tick: state.tick, bpm: state.tempo, sourceStart: commandStart, sourceEnd: number.end });
       }
-      index = number.end;
+      if (character !== "l") index = number.end;
       continue;
     }
 
@@ -151,6 +156,7 @@ export function parseTrack(source, options = {}) {
       dots += 1;
       index += 1;
     }
+    if (number.value === null && dots === 0) dots = state.defaultDots;
     const duration = durationTicks(denominator, dots, tokenStart);
     const sourceEnd = index;
 

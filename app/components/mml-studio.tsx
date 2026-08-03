@@ -1585,7 +1585,7 @@ export default function MmlStudio({
               end: editor.selectionEnd,
             });
           }} onPaste={(event) => {
-            const text = event.clipboardData.getData("text");
+            const text = event.clipboardData.getData("text").replace(/^\uFEFF/, "");
             if (!/^\s*MML@/i.test(text)) return;
             event.preventDefault();
             try {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
@@ -144,6 +145,19 @@ test("parses Mabinogi-style notes, commands, dotted lengths, ties and absolute n
   assert.equal(parsed.notes[1].duration, 96);
   assert.equal(parsed.notes[2].midi, 61);
   assert.equal(parsed.duration, 384);
+});
+
+test("applies a dotted default length declared by the l command", () => {
+  const parsed = parseTrack("l2.cde4f");
+  assert.deepEqual(parsed.notes.map((note) => note.duration), [288, 288, 96, 288]);
+});
+
+test("parses a long three-track Mabinogi MML document with dotted default lengths", () => {
+  const source = readFileSync(new URL("./fixtures/complex-three-track.mml", import.meta.url), "utf8").trim();
+  const parsed = parseMmlDocument(source);
+  assert.equal(parsed.tracks.length, 3);
+  assert.deepEqual(parsed.tracks.map((track) => track.notes.length), [240, 218, 65]);
+  assert.equal(parsed.duration, 18720);
 });
 
 test("preserves source positions and splits combined MML tracks", () => {
