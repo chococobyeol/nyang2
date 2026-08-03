@@ -15,6 +15,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import { Redo2, Undo2 } from "lucide-react";
 import {
   combineTracks,
   encodeDuration,
@@ -1511,8 +1512,8 @@ export default function MmlStudio({
           <button type="button" className={project.view.loop ? "is-active" : ""} aria-pressed={project.view.loop} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}><b>↻</b><span>반복</span></button>
         </div>
         <div className="mml-transport-tools">
-          <button type="button" onClick={undo} disabled={!past.length || recordState !== "idle"} aria-label="실행 취소" title="실행 취소"><i className="mml-history-icon is-undo" aria-hidden="true" /></button>
-          <button type="button" onClick={redo} disabled={!future.length || recordState !== "idle"} aria-label="다시 실행" title="다시 실행"><i className="mml-history-icon is-redo" aria-hidden="true" /></button>
+          <button type="button" onClick={undo} disabled={!past.length || recordState !== "idle"} aria-label="실행 취소" title="실행 취소"><Undo2 className="mml-history-icon" size={18} strokeWidth={2.25} aria-hidden="true" /></button>
+          <button type="button" onClick={redo} disabled={!future.length || recordState !== "idle"} aria-label="다시 실행" title="다시 실행"><Redo2 className="mml-history-icon" size={18} strokeWidth={2.25} aria-hidden="true" /></button>
           <button type="button" className={settingsView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setSettingsView((value) => !value); setTrackSettingsView(false); setFileMenuView(false); }}><b>⚙</b><span>녹음 설정</span></button>
           <button type="button" className={fileMenuView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setFileMenuView((value) => !value); setSettingsView(false); setTrackSettingsView(false); }}><b>⋯</b><span>파일</span></button>
         </div>
