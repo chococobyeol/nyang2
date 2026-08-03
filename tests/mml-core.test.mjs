@@ -6,6 +6,7 @@ import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShort
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
+import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
 
 test("clamps timeline zoom to a useful range", () => {
   assert.equal(clampTimelineZoom(0.1), 0.5);
@@ -210,6 +211,64 @@ test("preserves source positions and splits combined MML tracks", () => {
 
 test("combines tracks and removes comments only for raw MML export", () => {
   assert.equal(combineTracks(["o4c4 // memo", "o3e4"], { removeComments: true }), "MML@o4c4,o3e4;");
+});
+
+test("imports MabiIcco MMI score metadata and expands populated parts into nyangnyang tracks", () => {
+  const source = `[mml-score]
+version=1
+title=고양이 합주
+author=냥
+time=3/4
+tempo=0T113,384T126
+mml-track=MML@t113o4c4,o3e4,,;
+name=Lead
+program=12
+songProgram=-1
+panpot=48
+volume=80
+visible=true
+mml-track=MML@o2g2,,,o5c2;
+name=Voice
+program=0
+songProgram=110
+panpot=64
+visible=false
+[time-signature]
+576=6/8`;
+  const parsed = parseMmiDocument(source);
+  assert.equal(parsed.title, "고양이 합주");
+  assert.equal(parsed.author, "냥");
+  assert.equal(parsed.tempo, 113);
+  assert.deepEqual(parsed.timeSignature, { numerator: 3, denominator: 4 });
+  assert.deepEqual(parsed.timeSignatureMap, [
+    { tick: 0, numerator: 3, denominator: 4 },
+    { tick: 576, numerator: 6, denominator: 8 },
+  ]);
+  assert.deepEqual(parsed.tracks.map((track) => track.name), ["Lead", "Lead · 화음 1", "Voice", "Voice · 노래"]);
+  assert.equal(parsed.tracks[3].visible, false);
+  assert.equal(parsed.tracks[0].mmi.program, 12);
+
+  const project = createProjectFromMmi(source, "nyang-voice", "fallback");
+  assert.equal(project.title, "고양이 합주");
+  assert.equal(project.tracks.length, 4);
+  assert.equal(project.tracks[0].mixerVolume, 0.8);
+  assert.equal(project.tracks[3].pianoRollVisible, false);
+  assert.deepEqual(project.routing.left, [project.tracks[0].id]);
+  assert.deepEqual(project.routing.right, [project.tracks[1].id]);
+});
+
+test("applies MMI track offsets as leading rests", () => {
+  const parsed = parseMmiDocument(`[mml-score]
+version=1
+time=4/4
+tempo=0T120
+startOffset=192
+startDelta=-96
+startSongDelta=0
+mml-track=MML@c4,,,g4;
+name=Offset`);
+  assert.equal(parsed.tracks[0].sourceText, "r4c4");
+  assert.equal(parsed.tracks[1].sourceText, "r2g4");
 });
 
 test("serializes events with rests and exact note lengths", () => {

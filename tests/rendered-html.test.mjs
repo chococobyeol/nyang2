@@ -306,6 +306,14 @@ test("offers MML paste choices and configurable recording start positions", asyn
   assert.match(studio, /appendTimelineSecondsAt\(at\)/);
 });
 
+test("accepts MabiIcco MMI files from the project file menu", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  assert.match(studio, /createProjectFromMmi/);
+  assert.match(studio, /endsWith\("\.mmi"\)/);
+  assert.match(studio, /accept="\.mml,\.mmi,\.nyangmml/);
+  assert.match(studio, /MML·마비꼬 MMI·냥 프로젝트/);
+});
+
 test("highlights the active MML source token while playback advances", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /sourceRangeAtTick\(displayTracks\[selectedTrackIndex\], playhead\)/);

@@ -33,6 +33,7 @@ import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecon
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
+import { createProjectFromMmi } from "../mml/mmi.js";
 
 type KeyboardSide = "left" | "right";
 
@@ -1236,6 +1237,13 @@ export default function MmlStudio({
         setFileMenuView(false);
         return;
       }
+      if (file.name.toLowerCase().endsWith(".mmi")) {
+        if (!window.confirm("현재 작업을 마비꼬 파일의 곡으로 바꿀까요?")) return;
+        const fallbackTitle = file.name.replace(/\.mmi$/i, "");
+        commit(sanitizeProject(createProjectFromMmi(text, currentThemeId, fallbackTitle), currentThemeId));
+        setFileMenuView(false);
+        return;
+      }
       const parsed = parseMmlDocument(text);
       const ranges = parsed.tracks.map((track: any) => text.slice(track.sourceStart, track.sourceEnd));
       setImportPayload(ranges);
@@ -1523,14 +1531,14 @@ export default function MmlStudio({
           <button type="button" className={settingsView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setSettingsView((value) => !value); setTrackSettingsView(false); setFileMenuView(false); }}><Settings className="mml-tool-icon" aria-hidden="true" /><span>녹음 설정</span></button>
           <button type="button" className={fileMenuView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setFileMenuView((value) => !value); setSettingsView(false); setTrackSettingsView(false); }}><Ellipsis className="mml-tool-icon" aria-hidden="true" /><span>파일</span></button>
         </div>
-        <input ref={fileInputRef} type="file" accept=".mml,.nyangmml,text/plain,application/json" hidden onChange={importFile} />
+        <input ref={fileInputRef} type="file" accept=".mml,.mmi,.nyangmml,text/plain,application/json" hidden onChange={importFile} />
       </div>
 
       {fileMenuView && (
         <div className="mml-action-menu" role="dialog" aria-label="MML 파일 메뉴">
           <div className="mml-action-menu-head"><strong>파일</strong><button type="button" onClick={() => setFileMenuView(false)}>닫기</button></div>
           <button type="button" onClick={resetProject}><b>＋</b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML 또는 냥 프로젝트</small></span></button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML·마비꼬 MMI·냥 프로젝트</small></span></button>
           <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
           <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b>⧉</b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
           <button type="button" onClick={() => { exportProject(); setFileMenuView(false); }}><b>냥</b><span><strong>프로젝트 저장</strong><small>설정과 트랙을 함께 보관</small></span></button>
