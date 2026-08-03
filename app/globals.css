@@ -1108,6 +1108,43 @@ button {
   width: 54px;
 }
 
+.mml-quick-settings .mml-meter-setting {
+  min-width: 0;
+}
+
+.mml-meter-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.mml-quick-settings .mml-meter-controls > select {
+  min-width: 0;
+}
+
+.mml-meter-fraction {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mml-quick-settings .mml-meter-fraction input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 4px;
+  text-align: center;
+}
+
+.mml-meter-fraction i {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 900;
+}
+
 .mml-main-grid {
   grid-row: 3;
   display: grid;

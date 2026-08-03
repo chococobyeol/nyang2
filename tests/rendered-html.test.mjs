@@ -117,6 +117,19 @@ test("keeps the MML workspace text readable in the split layout", async () => {
   assert.match(css, /\.mml-quick-settings input,[^}]*font-size: 12px;/s);
 });
 
+test("keeps the time-signature preset and direct inputs in one settings cell", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /className="mml-meter-setting"/);
+  assert.match(studio, /className="mml-meter-controls"/);
+  assert.match(studio, /aria-label="박자표 선택"/);
+  assert.match(studio, /aria-label="박자 분자"/);
+  assert.match(studio, /aria-label="박자 분모"/);
+  assert.match(css, /\.mml-meter-controls \{[^}]*grid-template-columns: minmax\(0, 1fr\) 116px;/s);
+});
+
 test("aligns compact octave, key, and settings controls", async () => {
   const [css, page] = await Promise.all([
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
