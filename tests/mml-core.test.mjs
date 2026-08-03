@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
+import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
 
@@ -282,4 +282,15 @@ test("follows a recording playhead after it reaches the visible timeline anchor"
   assert.equal(followTimelineScroll(0, 1000, 3000, 700), 50);
   assert.equal(followTimelineScroll(50, 1000, 3000, 800), 150);
   assert.equal(followTimelineScroll(1800, 1000, 2500, 2500), 1500);
+  assert.equal(followTimelineScroll(1000, 1000, 3000, 900), 700);
+  assert.equal(followTimelineScroll(1000, 1000, 3000, 1150), 950);
+});
+
+test("keeps the append playhead on the live note's right edge", () => {
+  assert.equal(liveNotesEndTick([{ tick: 384, duration: 71.6 }], 999), 456);
+  assert.equal(liveNotesEndTick([
+    { tick: 384, duration: 48 },
+    { tick: 408, duration: 72 },
+  ], 999), 480);
+  assert.equal(liveNotesEndTick([], 432.4), 432);
 });

@@ -29,6 +29,11 @@ export function liveInputTicks(input, endedAt, bpm, origin = 0, startTick = 0) {
   return { tick, duration };
 }
 
+export function liveNotesEndTick(notes, fallbackTick = 0) {
+  if (!notes.length) return Math.max(0, Math.round(fallbackTick));
+  return Math.max(0, Math.round(Math.max(...notes.map((note) => note.tick + note.duration))));
+}
+
 export function nextMetronomeBeatAt(clock, now) {
   if (!clock || !(clock.beatSeconds > 0)) return now;
   if (now <= clock.startAt) return clock.startAt;

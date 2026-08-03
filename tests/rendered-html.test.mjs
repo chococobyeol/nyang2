@@ -162,7 +162,8 @@ test("keeps the selected left octave and opens the second keyboard on octave fiv
 test("keeps the live recording playhead independent from quantized note previews", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(studio, /setPlayhead\(visibleTick\)/);
-  assert.match(studio, /const tick = recordingStartTickRef\.current[\s\S]*?setPlayhead\(tick\)/);
+  assert.match(studio, /const elapsedTick = recordingStartTickRef\.current[\s\S]*?setPlayhead\(tick\)/);
+  assert.match(studio, /liveNotesEndTick\(nextLiveNotes, elapsedTick\)/);
   assert.match(studio, /onClick=\{toggleMetronome\}/);
   assert.doesNotMatch(studio, /startRecordingMetronome/);
   assert.match(studio, /is-live-recording/);

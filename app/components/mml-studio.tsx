@@ -25,7 +25,7 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { armedInputStartAt, countInBeats, liveInputTicks, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
+import { armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
 
@@ -697,9 +697,7 @@ export default function MmlStudio({
         let elapsed = appendCursorRef.current;
         if (current.recording.mode === "realtime") elapsed = Math.max(0, now - recordingStartRef.current);
         else if (appendWallStartRef.current !== null) elapsed += Math.max(0, now - appendWallStartRef.current);
-        const tick = recordingStartTickRef.current + Math.round(elapsed * TICKS_PER_QUARTER * bpm / 60);
-        playheadRef.current = tick;
-        setPlayhead(tick);
+        const elapsedTick = recordingStartTickRef.current + Math.round(elapsed * TICKS_PER_QUARTER * bpm / 60);
         const timelineNow = current.recording.mode === "realtime" ? now : elapsed;
         const origin = current.recording.mode === "realtime" ? recordingStartRef.current : 0;
         const activeInputs = [...activeRecordingRef.current.values()];
@@ -709,6 +707,11 @@ export default function MmlStudio({
           const track = current.tracks.find((item: any) => item.id === trackId) ?? current.tracks[0];
           return { id: input.id, midi: input.midi, tick: range.tick, duration: range.duration, color: track?.color ?? "#ef6b5a" };
         });
+        const tick = current.recording.mode === "append"
+          ? liveNotesEndTick(nextLiveNotes, elapsedTick)
+          : elapsedTick;
+        playheadRef.current = tick;
+        setPlayhead(tick);
         setLiveRecordingNotes((notes) => nextLiveNotes.length || notes.length ? nextLiveNotes : notes);
         recordingRafRef.current = window.requestAnimationFrame(follow);
       };
