@@ -34,6 +34,25 @@ export function liveNotesEndTick(notes, fallbackTick = 0) {
   return Math.max(0, Math.round(Math.max(...notes.map((note) => note.tick + note.duration))));
 }
 
+export function appendLegatoContinuation(completedInputs, activeInputs, bpm, division = "1/8") {
+  if (!completedInputs.length || activeInputs.length !== 1) return null;
+  const previous = completedInputs.at(-1);
+  const next = activeInputs[0];
+  const ticksPerSecond = (TICKS_PER_QUARTER * bpm) / 60;
+  const attackGapTicks = (next.startedAt - previous.startedAt) * ticksPerSecond;
+  const overlapTicks = (previous.endedAt - next.startedAt) * ticksPerSecond;
+  const toleranceTicks = division === "off"
+    ? 12
+    : division === "auto"
+      ? 48
+      : quantizationGridTicks(division) ?? 48;
+  if (attackGapTicks <= 6 || overlapTicks <= 0 || overlapTicks >= toleranceTicks) return null;
+  return {
+    inputId: next.inputId,
+    settledTick: quantizedInputsEndTick(completedInputs, bpm, division, 0),
+  };
+}
+
 export function nextMetronomeBeatAt(clock, now) {
   if (!clock || !(clock.beatSeconds > 0)) return now;
   if (now <= clock.startAt) return clock.startAt;

@@ -25,7 +25,7 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
+import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
 
@@ -832,7 +832,24 @@ export default function MmlStudio({
       }
       recordingInputsRef.current.push({ ...active, endedAt: Math.max(active.startedAt, endedAt) });
       activeRecordingRef.current.delete(inputId);
-      if (current.recording.mode === "append" && activeRecordingRef.current.size === 0 && restStartedRef.current === null) {
+      const continuation = current.recording.mode === "append" && restStartedRef.current === null
+        ? appendLegatoContinuation(
+          recordingInputsRef.current,
+          [...activeRecordingRef.current.values()],
+          recordingTempoRef.current,
+          current.recording.quantize,
+        )
+        : null;
+      if (continuation) {
+        const settledAt = ticksToRecordingSeconds(continuation.settledTick, recordingTempoRef.current);
+        const next = activeRecordingRef.current.get(continuation.inputId);
+        if (next) activeRecordingRef.current.set(continuation.inputId, { ...next, startedAt: settledAt });
+        appendCursorRef.current = settledAt;
+        appendWallStartRef.current = at;
+        const absoluteTick = recordingStartTickRef.current + continuation.settledTick;
+        playheadRef.current = absoluteTick;
+        setPlayhead(absoluteTick);
+      } else if (current.recording.mode === "append" && activeRecordingRef.current.size === 0 && restStartedRef.current === null) {
         const settledTick = quantizedInputsEndTick(
           recordingInputsRef.current,
           recordingTempoRef.current,

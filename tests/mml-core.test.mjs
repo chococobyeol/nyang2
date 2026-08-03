@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
+import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
 
@@ -293,4 +293,16 @@ test("keeps the append playhead on the live note's right edge", () => {
     { tick: 408, duration: 72 },
   ], 999), 480);
   assert.equal(liveNotesEndTick([], 432.4), 432);
+});
+
+test("settles a short legato release while the next append note remains held", () => {
+  const completed = [{ id: "c", inputId: "c", side: "left", midi: 60, startedAt: 0, endedAt: 0.51 }];
+  const next = [{ id: "e", inputId: "e", side: "left", midi: 64, startedAt: 0.49 }];
+  assert.deepEqual(appendLegatoContinuation(completed, next, 120, "1/8"), {
+    inputId: "e",
+    settledTick: 96,
+  });
+  assert.equal(appendLegatoContinuation(completed, [{ ...next[0], startedAt: 0.2 }], 120, "1/8"), null);
+  assert.equal(appendLegatoContinuation(completed, [{ ...next[0], startedAt: 0.01 }], 120, "1/8"), null);
+  assert.equal(appendLegatoContinuation(completed, [], 120, "1/8"), null);
 });
