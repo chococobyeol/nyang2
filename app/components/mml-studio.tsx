@@ -27,7 +27,7 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
+import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
@@ -732,7 +732,21 @@ export default function MmlStudio({
     if (parseError || tempoConflict) return;
     clearPlayback();
     const current = clone(projectRef.current);
-    const startTick = snapTickToGrid(playheadRef.current, current.recording.quantize);
+    const routedIds = new Set([...current.routing.left, ...current.routing.right]);
+    const routedTrackIndexes = current.tracks
+      .map((track: any, index: number) => routedIds.has(track.id) ? index : -1)
+      .filter((index: number) => index >= 0);
+    if (!routedTrackIndexes.length) {
+      const selectedIndex = current.tracks.findIndex((track: any) => track.id === current.view.selectedTrackId);
+      if (selectedIndex >= 0) routedTrackIndexes.push(selectedIndex);
+    }
+    const requestedStartTick = resolveRecordingStartTick(
+      current.recording.startPosition,
+      playheadRef.current,
+      displayTracks.map((track: any) => track.duration),
+      routedTrackIndexes,
+    );
+    const startTick = snapTickToGrid(requestedStartTick, current.recording.quantize);
     const bpm = tempoAtTick(startTick, allTempoEvents, current.tempo);
     recordingBaseProjectRef.current = current;
     recordingTempoRef.current = bpm;
@@ -823,7 +837,7 @@ export default function MmlStudio({
     } else {
       begin(plan.plannedStart);
     }
-  }, [allTempoEvents, clearBeatVisualTimers, clearPlayback, clickMetronome, parseError, scheduleBeatVisual, startMetronomeClock, stopMetronomeClock, tempoConflict]);
+  }, [allTempoEvents, clearBeatVisualTimers, clearPlayback, clickMetronome, displayTracks, parseError, scheduleBeatVisual, startMetronomeClock, stopMetronomeClock, tempoConflict]);
 
   const beginRestInput = useCallback((at: number) => {
     const current = projectRef.current;
@@ -1434,6 +1448,7 @@ export default function MmlStudio({
         <div className="mml-quick-settings" role="dialog" aria-label="MML 세부 설정">
           <div className="mml-quick-settings-head"><span><strong>녹음 설정</strong><small>입력 방식과 박자 보정</small></span><button type="button" onClick={() => setSettingsView(false)}>닫기</button></div>
           <label>녹음 방식<select value={project.recording.mode} onChange={(event) => commit((draft: any) => { draft.recording.mode = event.target.value; return draft; })}><option value="realtime">실시간</option><option value="append">이어붙이기</option></select></label>
+          <label>녹음 시작 위치<select value={project.recording.startPosition} onChange={(event) => commit((draft: any) => { draft.recording.startPosition = event.target.value; return draft; })}><option value="playhead">현재 재생 위치</option><option value="beginning">처음부터</option><option value="empty">연결 트랙의 빈 끝부분</option></select></label>
           <label>편집 방식<select value={project.recording.editMode} onChange={(event) => commit((draft: any) => { draft.recording.editMode = event.target.value; return draft; })}><option value="overwrite">수정</option><option value="insert">삽입</option></select></label>
           {project.recording.editMode === "insert" && <label>삽입 범위<select value={project.recording.insertScope} onChange={(event) => commit((draft: any) => { draft.recording.insertScope = event.target.value; return draft; })}><option value="all">전체 트랙 밀기</option><option value="used">사용 트랙만 밀기</option></select></label>}
           <label>박자 보정<select value={project.recording.quantize} onChange={(event) => commit((draft: any) => { draft.recording.quantize = event.target.value; return draft; })}>{["1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "auto", "off"].map((value) => <option value={value} key={value}>{value === "off" ? "보정 안 함" : value === "auto" ? "자동 리듬 인식" : value}</option>)}</select></label>
@@ -1593,12 +1608,7 @@ export default function MmlStudio({
             try {
               const parsed = parseMmlDocument(text);
               const ranges = parsed.tracks.map((track: any) => text.slice(track.sourceStart, track.sourceEnd));
-              commit((draft: any) => {
-                draft.tracks = ranges.map((sourceText: string, index: number) => ({ ...createTrack(index, currentThemeId), sourceText }));
-                draft.routing = { left: draft.tracks[0] ? [draft.tracks[0].id] : [], right: draft.tracks[1] ? [draft.tracks[1].id] : [] };
-                draft.view.selectedTrackId = draft.tracks[0].id;
-                return draft;
-              });
+              setImportPayload(ranges);
             } catch (error) {
               window.alert(`붙여넣은 MML을 나누지 못했습니다.\n${(error as Error).message}`);
             }

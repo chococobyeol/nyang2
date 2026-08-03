@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
+import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
@@ -45,6 +45,7 @@ test("steps mixed selected MML lengths while preserving dots", () => {
 test("uses append recording by default and migrates the previous default", () => {
   const project = createProject();
   assert.equal(project.recording.mode, "append");
+  assert.equal(project.recording.startPosition, "playhead");
   assert.equal(project.recording.metronome, false);
   assert.equal(project.recording.shortcuts.play, "Space");
   assert.deepEqual(project.routing, { left: [project.tracks[0].id], right: [project.tracks[1].id] });
@@ -64,6 +65,14 @@ test("uses append recording by default and migrates the previous default", () =>
   customShortcut.version = 5;
   customShortcut.recording.shortcuts.play = "Alt+Enter";
   assert.equal(sanitizeProject(customShortcut).recording.shortcuts.play, "Alt+Enter");
+});
+
+test("resolves recording start from the playhead, beginning, or routed tracks' empty end", () => {
+  const durations = [384, 960, 192];
+  assert.equal(resolveRecordingStartTick("playhead", 432, durations, [0, 1]), 432);
+  assert.equal(resolveRecordingStartTick("beginning", 432, durations, [0, 1]), 0);
+  assert.equal(resolveRecordingStartTick("empty", 432, durations, [0, 2]), 384);
+  assert.equal(resolveRecordingStartTick("empty", 432, durations, [0, 1]), 960);
 });
 
 test("uses the whole song as the default repeat range and migrates the old one-measure default", () => {

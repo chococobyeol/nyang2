@@ -21,7 +21,7 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 6,
+    version: 7,
     title: "",
     tracks,
     tempo: 120,
@@ -30,6 +30,7 @@ export function createProject(themeId = "nyang-voice") {
     routing: { left: [tracks[0].id], right: [tracks[1].id] },
     recording: {
       mode: "append",
+      startPosition: "playhead",
       editMode: "overwrite",
       pitchPriority: "high",
       quantize: "1/8",
@@ -92,7 +93,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     ...fallback,
     ...value,
     format: "nyangmml",
-    version: 6,
+    version: 7,
     tracks,
     routing: { left: leftRouting, right: rightRouting },
     recording,

@@ -259,6 +259,18 @@ test("supports selection-based MML duration editing and Space playback", async (
   assert.match(page, /mmlOpen && event\.code === "Space"/);
 });
 
+test("offers MML paste choices and configurable recording start positions", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  assert.match(studio, /onPaste=\{\(event\) => \{/);
+  assert.match(studio, /const ranges = parsed\.tracks\.map[\s\S]*?setImportPayload\(ranges\)/);
+  assert.match(studio, /MML을 어떻게 넣을까요\?/);
+  assert.match(studio, /선택 트랙만 교체/);
+  assert.match(studio, /녹음 시작 위치/);
+  assert.match(studio, /현재 재생 위치/);
+  assert.match(studio, /연결 트랙의 빈 끝부분/);
+  assert.match(studio, /resolveRecordingStartTick/);
+});
+
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

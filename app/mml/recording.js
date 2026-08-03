@@ -1,5 +1,16 @@
 import { serializeTrackEvents, TICKS_PER_QUARTER } from "./core.js";
 
+export function resolveRecordingStartTick(mode, currentTick, trackDurations = [], routedTrackIndexes = []) {
+  if (mode === "beginning") return 0;
+  if (mode === "empty") {
+    const indexes = [...new Set(routedTrackIndexes)]
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value >= 0 && value < trackDurations.length);
+    return Math.max(0, ...indexes.map((index) => Number(trackDurations[index]) || 0));
+  }
+  return Math.max(0, Number(currentTick) || 0);
+}
+
 export const QUANTIZE_TICKS = {
   "1/1": 384,
   "1/2": 192,
