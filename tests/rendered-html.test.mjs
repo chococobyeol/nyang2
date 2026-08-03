@@ -110,8 +110,9 @@ test("includes the MML studio without changing the public route", async () => {
   assert.match(css, /\.mml-studio/);
   assert.match(css, /\.mml-studio\.is-hidden \{\s*display: none;/s);
   assert.match(css, /\.mml-open \.performance-surface \.cat-zone \{[^}]*display: grid;/s);
-  assert.match(css, /\.mml-open \.performance-surface \.cat-zone\.is-double \{[^}]*top: clamp\(170px, 22vh, 250px\);[^}]*transform: none;/s);
-  assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: clamp\(300px, 30vh, 390px\);/s);
+  assert.match(css, /\.mml-open \.performance-surface \.cat-zone\.is-double \{[^}]*top: 23%;[^}]*height: 24%;[^}]*transform: none;/s);
+  assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 42%;/s);
+  assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \.paw-keyboard-group:first-child \{[^}]*translateY\(18%\)/s);
   assert.match(css, /\.mml-open \.performance-surface \.cat-zone\.is-double \{\s*display: none;/s);
   assert.match(studio, /if \(!visible\) return;[\s\S]*?window\.addEventListener\("keydown", down\)/);
 });
@@ -281,6 +282,9 @@ test("changes the instrument for several selected tracks at once", async () => {
   ]);
   assert.match(studio, /const \[batchTrackIds, setBatchTrackIds\] = useState<string\[\]>\(\[\]\)/);
   assert.match(studio, /const updateBatchTheme = \(themeId: string\) =>/);
+  assert.match(studio, /const updateBatchTheme = \(themeId: string\) => \{[\s\S]*?clearPlayback\(\);[\s\S]*?track\.themeId = themeId/);
+  assert.match(studio, /<label>음색<select[^>]*onChange=\{\(event\) => \{ clearPlayback\(\); updateTrack\(selectedTrack\.id, \{ themeId: event\.target\.value \}\); \}\}/);
+  assert.match(studio, /const replayFromTick = fromTick >= songDuration \? 0 : fromTick;/);
   assert.match(studio, /if \(selectedIds\.has\(track\.id\)\) track\.themeId = themeId/);
   assert.match(studio, /aria-label="선택한 트랙 음색"/);
   assert.match(studio, /className="mml-track-batch-checkbox"/);
@@ -417,7 +421,7 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(page, /preparing \? \(accented \? 1760 : 1480\)/);
   assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 64px;[^}]*grid-template-rows: 78px 68px/s);
   assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 64px;[^}]*height: 64px/s);
-  assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: clamp\(300px, 30vh, 390px\);[^}]*height: auto/s);
+  assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 42%;[^}]*height: auto/s);
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
   assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;/s);
   assert.match(css, /\.mml-rest-button\.is-active \{[^}]*drop-shadow/s);

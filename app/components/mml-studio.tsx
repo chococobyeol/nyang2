@@ -539,7 +539,8 @@ export default function MmlStudio({
     if (parseError || tempoConflict || !displayTracks.length) return;
     const runningMetronomeClock = metronomeClockRef.current;
     clearPlayback();
-    const requestedStartTick = Math.max(0, Math.min(fromTick, songDuration));
+    const replayFromTick = fromTick >= songDuration ? 0 : fromTick;
+    const requestedStartTick = Math.max(0, Math.min(replayFromTick, songDuration));
     const loopStartTick = Math.max(0, Math.min(project.view.loopStart, songDuration));
     const loopEndTick = project.view.loopEnd > loopStartTick ? Math.min(project.view.loopEnd, songDuration) : songDuration;
     const startTick = project.view.loop && (requestedStartTick < loopStartTick || requestedStartTick >= loopEndTick)
@@ -1155,6 +1156,7 @@ export default function MmlStudio({
 
   const updateBatchTheme = (themeId: string) => {
     if (!themeId || batchTrackIds.length === 0) return;
+    clearPlayback();
     const selectedIds = new Set(batchTrackIds);
     commit((draft: any) => {
       draft.tracks.forEach((track: any) => {
@@ -1613,7 +1615,7 @@ export default function MmlStudio({
           <div className="mml-quick-settings-head"><span><strong>트랙 설정</strong><small>선택한 트랙의 녹음·재생 속성</small></span><button type="button" onClick={() => setTrackSettingsView(false)}>닫기</button></div>
           <label className="mml-track-name-field">이름<input value={selectedTrack.name} onChange={(event) => updateTrack(selectedTrack.id, { name: event.target.value })} /></label>
           <label>색상<input type="color" value={selectedTrack.color} onChange={(event) => updateTrack(selectedTrack.id, { color: event.target.value })} /></label>
-          <label>음색<select value={selectedTrack.themeId} onChange={(event) => updateTrack(selectedTrack.id, { themeId: event.target.value })}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
+          <label>음색<select value={selectedTrack.themeId} onChange={(event) => { clearPlayback(); updateTrack(selectedTrack.id, { themeId: event.target.value }); }}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
           <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
           <label className="mml-track-volume-field">재생 음량<input aria-label={`${selectedTrack.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={selectedTrack.mixerVolume} onChange={(event) => updateTrack(selectedTrack.id, { mixerVolume: Number(event.target.value) })} /></label>
           <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
