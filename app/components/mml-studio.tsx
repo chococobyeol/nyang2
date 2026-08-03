@@ -5,6 +5,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -28,7 +29,7 @@ import {
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
 
 type KeyboardSide = "left" | "right";
@@ -247,6 +248,11 @@ export default function MmlStudio({
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
+  const timelineZoomRef = useRef(1);
+  const pitchZoomRef = useRef(1);
+  const timelineZoomAnchorRef = useRef<{ tick: number; offset: number } | null>(null);
+  const pitchZoomAnchorRef = useRef<{ midi: number; offset: number } | null>(null);
+  const wheelZoomRef = useRef({ frame: 0, timelineSteps: 0, pitchSteps: 0, x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
@@ -1012,6 +1018,10 @@ export default function MmlStudio({
     recordingArmedRef.current = false;
     activeRecordingRef.current.clear();
     window.cancelAnimationFrame(recordingRafRef.current);
+    window.cancelAnimationFrame(wheelZoomRef.current.frame);
+    wheelZoomRef.current.frame = 0;
+    wheelZoomRef.current.timelineSteps = 0;
+    wheelZoomRef.current.pitchSteps = 0;
     if (countInTimerRef.current !== null) window.clearTimeout(countInTimerRef.current);
     clearCountInClicks();
     clearBeatVisualTimers();
@@ -1205,16 +1215,18 @@ export default function MmlStudio({
   };
   const changeTimelineZoom = (factor: number, anchorOffset?: number) => {
     const roll = pianoRollRef.current;
-    setTimelineZoom((current) => {
-      const next = clampTimelineZoom(current * factor);
-      if (!roll || next === current) return next;
-      const offset = anchorOffset ?? roll.clientWidth / 2;
-      const contentX = roll.scrollLeft + offset;
-      window.requestAnimationFrame(() => {
-        roll.scrollLeft = Math.max(0, contentX * (next / current) - offset);
-      });
-      return next;
-    });
+    const current = timelineZoomRef.current;
+    const next = clampTimelineZoom(current * factor);
+    if (next === current) return;
+    if (roll) {
+      const offset = Math.max(0, Math.min(roll.clientWidth, anchorOffset ?? roll.clientWidth / 2));
+      timelineZoomAnchorRef.current = {
+        tick: (roll.scrollLeft + offset) / (PIANO_PIXELS_PER_TICK * current),
+        offset,
+      };
+    }
+    timelineZoomRef.current = next;
+    setTimelineZoom(next);
   };
   const visibleNotes = useMemo(() => displayTracks.flatMap((track: any, trackIndex: number) => {
     if (!project.tracks[trackIndex]?.pianoRollVisible) return [];
@@ -1229,18 +1241,50 @@ export default function MmlStudio({
   const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT * pitchZoom;
   const pianoHeight = (maxMidi - minMidi + 1) * pixelsPerPitch;
 
-  const changePitchZoom = (factor: number) => {
+  const changePitchZoom = (factor: number, anchorOffset?: number) => {
     const roll = pianoRollRef.current;
-    setPitchZoom((current) => {
-      const next = Math.max(0.5, Math.min(3, current * factor));
-      if (!roll || next === current) return next;
-      const currentCenterY = roll.scrollTop + roll.clientHeight / 2;
-      const centerMidi = maxMidi + 0.5 - currentCenterY / (PIANO_PITCH_ROW_HEIGHT * current);
-      window.requestAnimationFrame(() => {
-        roll.scrollTop = Math.max(0, (maxMidi - centerMidi + 0.5) * PIANO_PITCH_ROW_HEIGHT * next - roll.clientHeight / 2);
-      });
-      return next;
-    });
+    const current = pitchZoomRef.current;
+    const next = Math.max(0.5, Math.min(3, current * factor));
+    if (next === current) return;
+    if (roll) {
+      const offset = Math.max(0, Math.min(roll.clientHeight, anchorOffset ?? roll.clientHeight / 2));
+      pitchZoomAnchorRef.current = {
+        midi: maxMidi + 0.5 - (roll.scrollTop + offset) / (PIANO_PITCH_ROW_HEIGHT * current),
+        offset,
+      };
+    }
+    pitchZoomRef.current = next;
+    setPitchZoom(next);
+  };
+
+  useLayoutEffect(() => {
+    timelineZoomRef.current = timelineZoom;
+    const anchor = timelineZoomAnchorRef.current;
+    const roll = pianoRollRef.current;
+    if (!anchor || !roll) return;
+    roll.scrollLeft = Math.max(0, anchor.tick * PIANO_PIXELS_PER_TICK * timelineZoom - anchor.offset);
+    timelineZoomAnchorRef.current = null;
+  }, [timelineZoom]);
+
+  useLayoutEffect(() => {
+    pitchZoomRef.current = pitchZoom;
+    const anchor = pitchZoomAnchorRef.current;
+    const roll = pianoRollRef.current;
+    if (!anchor || !roll) return;
+    roll.scrollTop = Math.max(0, (maxMidi - anchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT * pitchZoom - anchor.offset);
+    pitchZoomAnchorRef.current = null;
+  }, [maxMidi, pitchZoom]);
+
+  const animateWheelZoom = () => {
+    const state = wheelZoomRef.current;
+    state.frame = 0;
+    const timeline = consumeWheelSteps(state.timelineSteps);
+    const pitch = consumeWheelSteps(state.pitchSteps);
+    state.timelineSteps = timeline.remaining;
+    state.pitchSteps = pitch.remaining;
+    if (timeline.step) changeTimelineZoom(Math.exp(-timeline.step * 0.045), state.x);
+    if (pitch.step) changePitchZoom(Math.exp(-pitch.step * 0.045), state.y);
+    if (state.timelineSteps || state.pitchSteps) state.frame = window.requestAnimationFrame(animateWheelZoom);
   };
 
   const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -1253,13 +1297,16 @@ export default function MmlStudio({
       : null;
     const steps = normalizedWheelSteps(delta, event.deltaMode, event.currentTarget.clientHeight, windowsWheelDelta);
     if (!steps) return;
-    const factor = Math.pow(1.08, -Math.max(-4, Math.min(4, steps)));
-    if (event.shiftKey) {
-      changePitchZoom(factor);
-      return;
-    }
     const rect = event.currentTarget.getBoundingClientRect();
-    changeTimelineZoom(factor, event.clientX - rect.left);
+    const state = wheelZoomRef.current;
+    state.x = event.clientX - rect.left;
+    state.y = event.clientY - rect.top;
+    if (event.shiftKey) {
+      state.pitchSteps = Math.max(-24, Math.min(24, state.pitchSteps + steps));
+    } else {
+      state.timelineSteps = Math.max(-24, Math.min(24, state.timelineSteps + steps));
+    }
+    if (!state.frame) state.frame = window.requestAnimationFrame(animateWheelZoom);
   };
 
   useEffect(() => {

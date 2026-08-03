@@ -189,8 +189,11 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /if \(!event\.altKey\) return/);
   assert.match(studio, /nativeEvent\.wheelDeltaY \?\? nativeEvent\.wheelDelta/);
   assert.match(studio, /normalizedWheelSteps\(delta, event\.deltaMode, event\.currentTarget\.clientHeight, windowsWheelDelta\)/);
-  assert.match(studio, /Math\.pow\(1\.08, -Math\.max\(-4, Math\.min\(4, steps\)\)\)/);
-  assert.match(studio, /if \(event\.shiftKey\)[\s\S]*?changePitchZoom/);
+  assert.match(studio, /consumeWheelSteps\(state\.timelineSteps\)/);
+  assert.match(studio, /window\.requestAnimationFrame\(animateWheelZoom\)/);
+  assert.match(studio, /timelineZoomAnchorRef/);
+  assert.match(studio, /useLayoutEffect\(\(\) => \{[\s\S]*?roll\.scrollLeft/);
+  assert.match(studio, /if \(event\.shiftKey\)[\s\S]*?state\.pitchSteps/);
   assert.match(studio, /title="Alt\+휠 시간축 · Alt\+Shift\+휠 음정 간격"/);
   assert.match(studio, /const minMidi = Math\.min\(12, \.\.\.visibleMidi\)/);
   assert.match(studio, /const maxMidi = Math\.max\(108, \.\.\.visibleMidi\)/);

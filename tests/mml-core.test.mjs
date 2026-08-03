@@ -3,7 +3,7 @@ import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 
 test("clamps timeline zoom to a useful range", () => {
@@ -18,6 +18,12 @@ test("normalizes Windows and high-resolution wheel movement by physical delta", 
   assert.equal(normalizedWheelSteps(120, 0), 1);
   assert.equal(normalizedWheelSteps(3, 1), 1);
   assert.equal(normalizedWheelSteps(1, 2, 600), 5);
+});
+
+test("consumes a wheel burst in small stable animation steps", () => {
+  assert.deepEqual(consumeWheelSteps(4), { step: 0.5, remaining: 3.5 });
+  assert.deepEqual(consumeWheelSteps(-0.2), { step: -0.2, remaining: 0 });
+  assert.deepEqual(consumeWheelSteps(0.0005), { step: 0, remaining: 0 });
 });
 
 test("changes note and rest lengths only inside the selected MML text", () => {

@@ -12,6 +12,15 @@ export function normalizedWheelSteps(delta, deltaMode = 0, viewportSize = 800, w
   return rawDelta * unit / 120;
 }
 
+export function consumeWheelSteps(pendingSteps, maxStep = 0.5, epsilon = 0.001) {
+  const pending = Number(pendingSteps) || 0;
+  if (Math.abs(pending) <= epsilon) return { step: 0, remaining: 0 };
+  const limit = Math.max(epsilon, Math.abs(Number(maxStep) || 0.5));
+  const step = Math.sign(pending) * Math.min(Math.abs(pending), limit);
+  const remaining = pending - step;
+  return { step, remaining: Math.abs(remaining) <= epsilon ? 0 : remaining };
+}
+
 function validSignature(signature, fallback) {
   return {
     numerator: Math.max(1, Number(signature?.numerator) || fallback.numerator),
