@@ -1133,7 +1133,7 @@ export default function MmlStudio({
     });
   };
   const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-    if (!event.ctrlKey && !event.metaKey) return;
+    if (!event.altKey) return;
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
     changeTimelineZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left);
@@ -1320,7 +1320,7 @@ export default function MmlStudio({
         </aside>
 
         <div className="mml-work-area">
-          <div className="mml-zoom-controls" aria-label="타임라인 확대 축소">
+          <div className="mml-zoom-controls" aria-label="타임라인 확대 축소" title="Alt+휠로 확대·축소">
             <button type="button" onClick={() => changeTimelineZoom(1 / 1.25)} aria-label="타임라인 축소" title="타임라인 축소">−</button>
             <output aria-live="polite">{Math.round(timelineZoom * 100)}%</output>
             <button type="button" onClick={() => changeTimelineZoom(1.25)} aria-label="타임라인 확대" title="타임라인 확대">＋</button>
