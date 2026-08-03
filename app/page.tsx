@@ -1838,7 +1838,17 @@ export default function Home() {
         <div className="performance-surface">
         <header className={`top-bar ${settings.keyboardCount === 2 ? "has-double-keyboard" : ""}`}>
           <div className="brand-block">
-            <button type="button" className="brand-mark" onClick={() => { if (mmlOpen) { setMmlExpanded(false); setMmlOpen(false); } else openMml(); }} aria-label={mmlOpen ? "MML 닫기" : "MML 열기"} title="MML 열기 · Alt+M"><img src={theme.visuals.pawPad} alt="" /></button>
+            <button
+              type="button"
+              className={`brand-mark ${mmlOpen ? "is-mml-open" : ""}`}
+              onClick={() => { if (mmlOpen) { setMmlExpanded(false); setMmlOpen(false); } else openMml(); }}
+              aria-label={mmlOpen ? "MML 편집창 닫기" : "MML 편집창 열기"}
+              aria-pressed={mmlOpen}
+              title={mmlOpen ? "MML 편집창 닫기 · Alt+M" : "MML 편집창 열기 · Alt+M"}
+            >
+              <img src={theme.visuals.pawPad} alt="" />
+              <span className="brand-mark-mml" aria-hidden="true">MML</span>
+            </button>
             <div>
               <h1>냥냥</h1>
             </div>

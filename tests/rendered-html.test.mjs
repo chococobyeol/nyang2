@@ -110,7 +110,8 @@ test("includes the MML studio without changing the public route", async () => {
   assert.match(page, /visible=\{mmlOpen\}/);
   assert.doesNotMatch(page, /\{mmlOpen && \(\s*<MmlStudio/);
   assert.match(page, /불어서 연주를 끄고 MML을 열까요/);
-  assert.match(page, /className="brand-mark"/);
+  assert.match(page, /className=\{`brand-mark \$\{mmlOpen \? "is-mml-open" : ""\}`\}/);
+  assert.match(page, /className="brand-mark-mml"[^>]*>MML<\/span>/);
   assert.doesNotMatch(page, /className="settings-tabs"/);
   assert.doesNotMatch(page, />MML 설정</);
   assert.match(css, /\.mml-open \.app-stage/);
