@@ -315,3 +315,12 @@ export function tickToSeconds(tick, tempoEvents, defaultTempo = 120) {
   }
   return seconds + ((tick - cursorTick) / TICKS_PER_QUARTER) * (60 / bpm);
 }
+
+export function sourceRangeAtTick(track, tick) {
+  const safeTick = Math.max(0, Number(tick) || 0);
+  const items = [...(track?.notes ?? []), ...(track?.rests ?? [])]
+    .sort((a, b) => a.tick - b.tick || a.sourceStart - b.sourceStart);
+  const current = items.find((item) => item.tick <= safeTick && safeTick < item.tick + item.duration);
+  if (!current) return null;
+  return { start: current.sourceStart, end: current.sourceEnd };
+}

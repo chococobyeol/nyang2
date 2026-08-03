@@ -306,6 +306,13 @@ test("offers MML paste choices and configurable recording start positions", asyn
   assert.match(studio, /appendTimelineSecondsAt\(at\)/);
 });
 
+test("highlights the active MML source token while playback advances", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  assert.match(studio, /sourceRangeAtTick\(displayTracks\[selectedTrackIndex\], playhead\)/);
+  assert.match(studio, /className="mml-playback-source"/);
+  assert.match(studio, /<mark ref=\{playbackTokenRef\}>/);
+});
+
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

@@ -22,6 +22,7 @@ import {
   parseMmlDocument,
   parseTrack,
   serializeTrackEvents,
+  sourceRangeAtTick,
   tempoAtTick,
   tickToSeconds,
   TICKS_PER_QUARTER,
@@ -249,6 +250,8 @@ export default function MmlStudio({
   const [importPayload, setImportPayload] = useState<string[] | null>(null);
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const playbackSourceRef = useRef<HTMLPreElement | null>(null);
+  const playbackTokenRef = useRef<HTMLElement | null>(null);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
   const timelineZoomRef = useRef(1);
@@ -483,6 +486,26 @@ export default function MmlStudio({
   }, [project.tracks]);
 
   const displayTracks = parsedTracks.length ? parsedTracks : lastValidTracks;
+  const selectedTrackIndex = project.tracks.findIndex((track: any) => track.id === selectedTrack.id);
+  const playbackSourceRange = useMemo(
+    () => playing ? sourceRangeAtTick(displayTracks[selectedTrackIndex], playhead) : null,
+    [displayTracks, playhead, playing, selectedTrackIndex],
+  );
+  const playbackSourceStart = playbackSourceRange?.start ?? -1;
+  const playbackSourceEnd = playbackSourceRange?.end ?? -1;
+
+  useLayoutEffect(() => {
+    if (!playing || playbackSourceStart < 0 || playbackSourceEnd < 0) return;
+    const container = playbackSourceRef.current;
+    const token = playbackTokenRef.current;
+    if (!container || !token) return;
+    const padding = 14;
+    const top = token.offsetTop;
+    const bottom = top + token.offsetHeight;
+    if (top < container.scrollTop + padding) container.scrollTop = Math.max(0, top - padding);
+    else if (bottom > container.scrollTop + container.clientHeight - padding) container.scrollTop = bottom - container.clientHeight + padding;
+  }, [playing, playbackSourceStart, playbackSourceEnd, selectedTrack.id]);
+
   const allTempoEvents = useMemo(() => {
     const events = displayTracks.flatMap((track: any) => track.tempos);
     return events.sort((a: any, b: any) => a.tick - b.tick);
@@ -1661,7 +1684,11 @@ export default function MmlStudio({
             </nav>
             <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>
           </div>
-          <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onContextMenu={(event) => {
+          {playing ? (
+            <pre ref={playbackSourceRef} className="mml-playback-source" aria-label={`${selectedTrack.name} MML 재생 위치`}>
+              {playbackSourceRange ? <>{selectedTrack.sourceText.slice(0, playbackSourceRange.start)}<mark ref={playbackTokenRef}>{selectedTrack.sourceText.slice(playbackSourceRange.start, playbackSourceRange.end)}</mark>{selectedTrack.sourceText.slice(playbackSourceRange.end)}</> : selectedTrack.sourceText}
+            </pre>
+          ) : <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onContextMenu={(event) => {
             const editor = event.currentTarget;
             if (editor.selectionStart === editor.selectionEnd) return;
             event.preventDefault();
@@ -1686,7 +1713,7 @@ export default function MmlStudio({
             } catch (error) {
               window.alert(`붙여넣은 MML을 나누지 못했습니다.\n${(error as Error).message}`);
             }
-          }} aria-label={`${selectedTrack.name} MML 편집`} />
+          }} aria-label={`${selectedTrack.name} MML 편집`} />}
           <div className="mml-status-line">
             <span>{parseError ? `Track ${parseError.trackIndex + 1} · ${parseError.line}줄 ${parseError.column}자 · ${parseError.message}` : tempoConflict || `${Math.round(songDuration)} tick · ${project.tempo} BPM · ${project.timeSignature.numerator}/${project.timeSignature.denominator}`}</span>
             <span>{droppedCount > 0 ? `놓친 음 ${droppedCount}개` : recordingMessage}</span>
