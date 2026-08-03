@@ -493,18 +493,10 @@ button {
   margin-right: calc(var(--cat-overlap) * -1);
 }
 
-.cat-middle-strip {
-  flex: 0 0 auto;
-  align-self: stretch;
-  width: calc(
-    (var(--cat-height) * 0.125 - var(--cat-overlap) * 2) * var(--cat-segments)
-    + var(--cat-overlap) * 2
-  );
+.cat-middle {
+  width: calc(var(--cat-height) * 0.125);
   margin: 0 calc(var(--cat-overlap) * -1);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  pointer-events: none;
+  transform: scaleX(1.08);
 }
 
 .cat-end {

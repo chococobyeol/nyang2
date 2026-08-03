@@ -57,9 +57,9 @@ test("ships the tuned E4 nyang sample with conditional tail-only reverb", async 
   assert.match(page, /source\.start\(now, sampleSourceOffset\)/);
   assert.match(page, /offset - state\.sourceOffset/);
   assert.match(page, /Object\.values\(theme\.visuals\)\.forEach/);
-  assert.match(page, /className="cat-middle-strip"/);
-  assert.match(page, /"--cat-segments": segmentCount/);
-  assert.match(page, /backgroundImage: `url\(\$\{JSON\.stringify\(theme\.visuals\.bodyMiddle\)\}\)`/);
+  assert.match(page, /Array\.from\(\{ length: segmentCount \}/);
+  assert.match(page, /className="cat-middle" src=\{theme\.visuals\.bodyMiddle\}/);
+  assert.doesNotMatch(page, /cat-middle-strip/);
   assert.match(page, /themeId: "nyang-voice"/);
   assert.match(page, /name: "냥 보이스"/);
   assert.match(page, /description: "냥\.\."/);

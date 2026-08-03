@@ -1902,15 +1902,9 @@ export default function Home() {
           <div className="cat-track">
             <div className="cat-assembly" aria-hidden="true">
               <img className="cat-mouth" src={mouthOpen ? theme.visuals.mouthOpen : theme.visuals.mouthClosed} alt="" draggable={false} />
-              {segmentCount > 0 && (
-                <span
-                  className="cat-middle-strip"
-                  style={{
-                    "--cat-segments": segmentCount,
-                    backgroundImage: `url(${JSON.stringify(theme.visuals.bodyMiddle)})`,
-                  } as CSSProperties}
-                />
-              )}
+              {Array.from({ length: segmentCount }, (_, index) => (
+                <img className="cat-middle" src={theme.visuals.bodyMiddle} alt="" draggable={false} key={`segment-${index}`} />
+              ))}
               <img className="cat-end" src={theme.visuals.bodyEnd} alt="" draggable={false} />
             </div>
           </div>
