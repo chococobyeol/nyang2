@@ -28,7 +28,7 @@ import {
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll } from "../mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, limitWheelZoom } from "../mml/timeline.js";
 
 type KeyboardSide = "left" | "right";
 
@@ -245,6 +245,7 @@ export default function MmlStudio({
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
+  const wheelZoomStateRef = useRef({ lastEventAt: -Infinity, lastAppliedAt: -Infinity, direction: 0 });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
@@ -1176,12 +1177,17 @@ export default function MmlStudio({
   const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     if (!event.altKey) return;
     event.preventDefault();
+    const delta = event.deltaY || event.deltaX;
+    const decision = limitWheelZoom(wheelZoomStateRef.current, window.performance.now(), delta);
+    wheelZoomStateRef.current = decision.state;
+    if (!decision.apply) return;
+    const factor = decision.direction < 0 ? 1.08 : 1 / 1.08;
     if (event.shiftKey) {
-      changePitchZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15);
+      changePitchZoom(factor);
       return;
     }
     const rect = event.currentTarget.getBoundingClientRect();
-    changeTimelineZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left);
+    changeTimelineZoom(factor, event.clientX - rect.left);
   };
 
   useEffect(() => {

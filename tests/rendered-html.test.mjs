@@ -187,6 +187,8 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   ]);
   assert.match(studio, /onWheel=\{zoomTimelineWithWheel\}/);
   assert.match(studio, /if \(!event\.altKey\) return/);
+  assert.match(studio, /limitWheelZoom\(wheelZoomStateRef\.current, window\.performance\.now\(\), delta\)/);
+  assert.match(studio, /decision\.direction < 0 \? 1\.08 : 1 \/ 1\.08/);
   assert.match(studio, /if \(event\.shiftKey\)[\s\S]*?changePitchZoom/);
   assert.doesNotMatch(studio, /event\.ctrlKey && !event\.metaKey/);
   assert.match(studio, /title="Alt\+휠 시간축 · Alt\+Shift\+휠 음정 간격"/);

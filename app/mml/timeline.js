@@ -4,6 +4,24 @@ export function clampTimelineZoom(value) {
   return Math.max(0.5, Math.min(4, Number(value) || 1));
 }
 
+export function limitWheelZoom(previous, now, delta, interval = 120, gestureGap = 180) {
+  const timestamp = Math.max(0, Number(now) || 0);
+  const direction = Math.sign(Number(delta) || 0);
+  const state = previous ?? { lastEventAt: -Infinity, lastAppliedAt: -Infinity, direction: 0 };
+  if (!direction) return { apply: false, direction: 0, state };
+  const newGesture = direction !== state.direction || timestamp - state.lastEventAt > gestureGap;
+  const apply = newGesture || timestamp - state.lastAppliedAt >= interval;
+  return {
+    apply,
+    direction,
+    state: {
+      lastEventAt: timestamp,
+      lastAppliedAt: apply ? timestamp : state.lastAppliedAt,
+      direction,
+    },
+  };
+}
+
 function validSignature(signature, fallback) {
   return {
     numerator: Math.max(1, Number(signature?.numerator) || fallback.numerator),

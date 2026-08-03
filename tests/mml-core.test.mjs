@@ -3,12 +3,29 @@ import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll } from "../app/mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, limitWheelZoom } from "../app/mml/timeline.js";
 
 test("clamps timeline zoom to a useful range", () => {
   assert.equal(clampTimelineZoom(0.1), 0.5);
   assert.equal(clampTimelineZoom(1.25), 1.25);
   assert.equal(clampTimelineZoom(9), 4);
+});
+
+test("limits bursty and free-spinning mouse wheel zoom events", () => {
+  const initial = { lastEventAt: -Infinity, lastAppliedAt: -Infinity, direction: 0 };
+  const first = limitWheelZoom(initial, 1000, -1200);
+  assert.equal(first.apply, true);
+  assert.equal(first.direction, -1);
+
+  const burst = limitWheelZoom(first.state, 1015, -1200);
+  assert.equal(burst.apply, false);
+
+  const throttled = limitWheelZoom(burst.state, 1125, -1200);
+  assert.equal(throttled.apply, true);
+
+  const reversed = limitWheelZoom(throttled.state, 1130, 1200);
+  assert.equal(reversed.apply, true);
+  assert.equal(reversed.direction, 1);
 });
 
 test("uses append recording by default and migrates the previous default", () => {
