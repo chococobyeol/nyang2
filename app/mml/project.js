@@ -1,3 +1,5 @@
+import { parseTrack, serializeTempoEvents } from "./core.js";
+
 export const PROJECT_STORAGE_KEY = "nyangnyang-mml-project-v1";
 
 const TRACK_COLORS = ["#ef6b5a", "#e8ad45", "#5f9f8d", "#7b78b8", "#ca769b", "#5d87b6"];
@@ -21,11 +23,9 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 8,
+    version: 9,
     title: "",
     tracks,
-    tempo: 120,
-    tempoMap: [{ tick: 0, bpm: 120 }],
     timeSignature: { numerator: 4, denominator: 4 },
     timeSignatureMap: [{ tick: 0, numerator: 4, denominator: 4 }],
     routing: { left: [tracks[0].id], right: [tracks[1].id] },
@@ -62,6 +62,32 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     name: typeof track.name === "string" ? track.name : `Track ${index + 1}`,
     sourceText: typeof track.sourceText === "string" ? track.sourceText : "",
   }));
+  if (Number(value.version) < 9 && Array.isArray(value.tempoMap)) {
+    const codeTempos = new Map();
+    for (const track of tracks) {
+      try {
+        for (const event of parseTrack(track.sourceText).tempos) {
+          if (!codeTempos.has(event.tick)) codeTempos.set(event.tick, event.bpm);
+        }
+      } catch {
+        // Keep invalid source untouched; it can be repaired in the editor.
+      }
+    }
+    const missing = value.tempoMap
+      .map((marker) => ({
+        tick: Math.max(0, Number(marker.tick) || 0),
+        bpm: Math.max(1, Number(marker.bpm) || Number(value.tempo) || 120),
+      }))
+      .filter((marker) => codeTempos.get(marker.tick) !== marker.bpm);
+    if (missing.length) {
+      const tempoTrack = createTrack(tracks.length, themeId);
+      tempoTrack.name = "Tempo";
+      tempoTrack.sourceText = serializeTempoEvents(missing);
+      tempoTrack.pianoRollVisible = false;
+      tempoTrack.mmlRole = "tempo";
+      tracks.push(tempoTrack);
+    }
+  }
   const ids = new Set(tracks.map((track) => track.id));
   const route = (side) => Array.isArray(value.routing?.[side]) ? value.routing[side].filter((id) => ids.has(id)) : [];
   let leftRouting = route("left");
@@ -90,11 +116,14 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     selectedTrackId: ids.has(value.view?.selectedTrackId) ? value.view.selectedTrackId : tracks[0].id,
   };
   if (Number(value.version) < 5 && Number(view.loopStart) === 0 && Number(view.loopEnd) === 384) view.loopEnd = 0;
+  const projectValue = { ...value };
+  delete projectValue.tempo;
+  delete projectValue.tempoMap;
   return {
     ...fallback,
-    ...value,
+    ...projectValue,
     format: "nyangmml",
-    version: 8,
+    version: 9,
     tracks,
     routing: { left: leftRouting, right: rightRouting },
     recording,
@@ -102,15 +131,6 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
       numerator: Math.max(1, Number(value.timeSignature?.numerator) || 4),
       denominator: Math.max(1, Number(value.timeSignature?.denominator) || 4),
     },
-    tempoMap: Array.isArray(value.tempoMap) && value.tempoMap.length
-      ? value.tempoMap
-        .map((marker) => ({
-          tick: Math.max(0, Number(marker.tick) || 0),
-          bpm: Math.max(1, Number(marker.bpm) || Number(value.tempo) || 120),
-        }))
-        .sort((a, b) => a.tick - b.tick)
-        .filter((marker, index, list) => index === list.findIndex((candidate) => candidate.tick === marker.tick))
-      : [{ tick: 0, bpm: Math.max(1, Number(value.tempo) || 120) }],
     timeSignatureMap: Array.isArray(value.timeSignatureMap) && value.timeSignatureMap.length
       ? value.timeSignatureMap
         .map((marker) => ({

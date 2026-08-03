@@ -23,6 +23,7 @@ import {
   mergeTempoEvents,
   parseMmlDocument,
   parseTrack,
+  serializeTempoEvents,
   serializeTrackEvents,
   sourceRangeAtTick,
   tempoAtTick,
@@ -154,6 +155,7 @@ function renderRecordingProject(
   const recordingLength = Math.max(0, recordedEndTick);
   const connectedIds = new Set([...baseProject.routing.left, ...baseProject.routing.right]);
   draft.tracks.forEach((track: any, index: number) => {
+    if (track.mmlRole === "tempo") return;
     const newText = result.texts.get(track.id);
     const fillsTimeline = recordingLength > 0
       && connectedIds.has(track.id)
@@ -184,7 +186,6 @@ function renderRecordingProject(
     }
     draft.tracks[index].sourceText = sourceText;
   });
-  draft.tempo = options.bpm;
   return { project: draft, result, recordedEndTick };
 }
 
@@ -506,14 +507,15 @@ export default function MmlStudio({
   );
 
   const trackTempoEvents = useMemo(
-    () => displayTracks.flatMap((track: any) => track.tempos).sort((a: any, b: any) => a.tick - b.tick),
+    () => displayTracks.flatMap((track: any, trackIndex: number) => track.tempos.map((event: any) => ({ ...event, trackIndex }))).sort((a: any, b: any) => a.tick - b.tick),
     [displayTracks],
   );
 
   const allTempoEvents = useMemo(
-    () => mergeTempoEvents(trackTempoEvents, project.tempoMap, project.tempo),
-    [project.tempo, project.tempoMap, trackTempoEvents],
+    () => mergeTempoEvents(trackTempoEvents, [], 120),
+    [trackTempoEvents],
   );
+  const baseTempo = tempoAtTick(0, allTempoEvents, 120);
 
   const tempoConflict = useMemo(() => {
     const byTick = new Map<number, Set<number>>();
@@ -526,7 +528,7 @@ export default function MmlStudio({
     return conflict ? `${Math.round(conflict[0])} tick에 서로 다른 템포가 있습니다.` : "";
   }, [trackTempoEvents]);
 
-  const recordTempo = tempoAtTick(playhead, allTempoEvents, project.tempo);
+  const recordTempo = tempoAtTick(playhead, allTempoEvents, 120);
   const recordMeter = [...project.timeSignatureMap]
     .filter((marker: any) => marker.tick <= playhead)
     .sort((a: any, b: any) => a.tick - b.tick)
@@ -561,9 +563,9 @@ export default function MmlStudio({
     const startTick = project.view.loop && (requestedStartTick < loopStartTick || requestedStartTick >= loopEndTick)
       ? loopStartTick
       : requestedStartTick;
-    const startSeconds = tickToSeconds(startTick, allTempoEvents, project.tempo);
+    const startSeconds = tickToSeconds(startTick, allTempoEvents, baseTempo);
     const endTick = project.view.loop ? Math.max(loopEndTick, startTick + 1) : songDuration;
-    const endSeconds = tickToSeconds(endTick, allTempoEvents, project.tempo);
+    const endSeconds = tickToSeconds(endTick, allTempoEvents, baseTempo);
     const soloed = project.tracks.some((track: any) => track.solo);
     const now = performance.now() / 1000;
     const currentMeter = [...project.timeSignatureMap]
@@ -600,9 +602,9 @@ export default function MmlStudio({
       const elapsed = performance.now() / 1000 - playStartedRef.current.audioStartedAt;
       while (scheduleCursor < scheduledNotes.length) {
         const item = scheduledNotes[scheduleCursor];
-        const startsIn = tickToSeconds(item.noteStart, allTempoEvents, project.tempo) - startSeconds - elapsed;
+        const startsIn = tickToSeconds(item.noteStart, allTempoEvents, baseTempo) - startSeconds - elapsed;
         if (startsIn > 0.35) break;
-        const duration = Math.max(0.01, tickToSeconds(item.noteEnd, allTempoEvents, project.tempo) - tickToSeconds(item.noteStart, allTempoEvents, project.tempo));
+        const duration = Math.max(0.01, tickToSeconds(item.noteEnd, allTempoEvents, baseTempo) - tickToSeconds(item.noteStart, allTempoEvents, baseTempo));
         const delaySeconds = Math.max(0, startsIn);
         playMidi(item.sourceId, item.note.midi, item.track.themeId, item.track.mixerVolume * item.note.velocity / 15, delaySeconds);
         playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), (delaySeconds + duration) * 1000));
@@ -610,7 +612,7 @@ export default function MmlStudio({
       }
       while (beatCursor < scheduledBeats.length) {
         const beat = scheduledBeats[beatCursor];
-        const startsIn = tickToSeconds(beat.tick, allTempoEvents, project.tempo) - startSeconds - elapsed;
+        const startsIn = tickToSeconds(beat.tick, allTempoEvents, baseTempo) - startSeconds - elapsed;
         if (startsIn > 0.35) break;
         if (startsIn < -0.04) {
           beatCursor += 1;
@@ -647,7 +649,7 @@ export default function MmlStudio({
       playRafRef.current = window.requestAnimationFrame(follow);
     };
     playRafRef.current = window.requestAnimationFrame(follow);
-  }, [allTempoEvents, clearPlayback, clickMetronome, displayTracks, parseError, playMidi, playhead, project, releaseMidi, songDuration, tempoConflict]);
+  }, [allTempoEvents, baseTempo, clearPlayback, clickMetronome, displayTracks, parseError, playMidi, playhead, project, releaseMidi, songDuration, tempoConflict]);
 
   const startPlayback = useCallback((fromTick = playhead) => {
     if (parseError || tempoConflict || !displayTracks.length) return;
@@ -888,10 +890,11 @@ export default function MmlStudio({
       routedTrackIndexes,
     );
     const startTick = snapTickToGrid(requestedStartTick, current.recording.quantize);
-    const bpm = tempoAtTick(startTick, currentTempoEvents, current.tempo);
+    const defaultTempo = tempoAtTick(0, currentTempoEvents, 120);
+    const bpm = tempoAtTick(startTick, currentTempoEvents, defaultTempo);
     recordingBaseProjectRef.current = current;
     recordingTempoRef.current = bpm;
-    recordingDefaultTempoRef.current = current.tempo;
+    recordingDefaultTempoRef.current = defaultTempo;
     recordingTempoEventsRef.current = currentTempoEvents;
     recordingInputsRef.current = [];
     activeRecordingRef.current.clear();
@@ -1226,8 +1229,6 @@ export default function MmlStudio({
   const updateMasterTempo = (value: number) => {
     const bpm = Math.max(1, Math.round(value || 1));
     commit((draft: any) => {
-      draft.tempo = bpm;
-      draft.tempoMap = [{ tick: 0, bpm }, ...(draft.tempoMap ?? []).filter((item: any) => item.tick !== 0)];
       let wroteTempo = false;
       draft.tracks.forEach((track: any) => {
         try {
@@ -1242,6 +1243,58 @@ export default function MmlStudio({
       if (!wroteTempo && draft.tracks[0]) draft.tracks[0].sourceText = `t${bpm}${draft.tracks[0].sourceText}`;
       return draft;
     });
+  };
+
+  const writeTimelineTempoToCode = (draft: any, tick: number, bpm: number) => {
+    let replaced = false;
+    draft.tracks.forEach((track: any) => {
+      let events;
+      try { events = parseTrack(track.sourceText).tempos.filter((event: any) => event.tick === tick); } catch { return; }
+      if (!events.length) return;
+      replaced = true;
+      for (const event of [...events].sort((a: any, b: any) => b.sourceStart - a.sourceStart)) {
+        track.sourceText = `${track.sourceText.slice(0, event.sourceStart)}t${bpm}${track.sourceText.slice(event.sourceEnd)}`;
+      }
+    });
+    if (replaced) return;
+    let tempoTrack = draft.tracks.find((track: any) => track.mmlRole === "tempo");
+    if (!tempoTrack) {
+      tempoTrack = createTrack(draft.tracks.length, currentThemeId);
+      tempoTrack.name = "Tempo";
+      tempoTrack.sourceText = "";
+      tempoTrack.pianoRollVisible = false;
+      tempoTrack.mmlRole = "tempo";
+      draft.tracks.push(tempoTrack);
+    }
+    const events = parseTrack(tempoTrack.sourceText).tempos
+      .filter((event: any) => event.tick !== tick)
+      .map((event: any) => ({ tick: event.tick, bpm: event.bpm }));
+    tempoTrack.sourceText = serializeTempoEvents([...events, { tick, bpm }]);
+  };
+
+  const deleteTimelineTempoFromCode = (draft: any, tick: number) => {
+    draft.tracks.forEach((track: any) => {
+      let parsed;
+      try { parsed = parseTrack(track.sourceText); } catch { return; }
+      if (track.mmlRole === "tempo") {
+        track.sourceText = serializeTempoEvents(parsed.tempos
+          .filter((event: any) => event.tick !== tick)
+          .map((event: any) => ({ tick: event.tick, bpm: event.bpm })));
+        return;
+      }
+      const events = parsed.tempos.filter((event: any) => event.tick === tick);
+      for (const event of [...events].sort((a: any, b: any) => b.sourceStart - a.sourceStart)) {
+        track.sourceText = `${track.sourceText.slice(0, event.sourceStart)}${track.sourceText.slice(event.sourceEnd)}`;
+      }
+    });
+    const removedIds = new Set(draft.tracks
+      .filter((track: any) => track.mmlRole === "tempo" && !track.sourceText.trim())
+      .map((track: any) => track.id));
+    if (!removedIds.size) return;
+    draft.tracks = draft.tracks.filter((track: any) => !removedIds.has(track.id));
+    draft.routing.left = draft.routing.left.filter((id: string) => !removedIds.has(id));
+    draft.routing.right = draft.routing.right.filter((id: string) => !removedIds.has(id));
+    if (removedIds.has(draft.view.selectedTrackId)) draft.view.selectedTrackId = draft.tracks[0]?.id ?? "";
   };
 
   const captureShortcut = (action: "play" | "record" | "stop", event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -1344,6 +1397,10 @@ export default function MmlStudio({
         draft.tracks = ranges.map((sourceText: string, index: number) => ({ ...createTrack(index, currentThemeId), sourceText }));
         draft.routing = { left: draft.tracks[0] ? [draft.tracks[0].id] : [], right: draft.tracks[1] ? [draft.tracks[1].id] : [] };
         draft.view.selectedTrackId = draft.tracks[0].id;
+        draft.timeSignature = { numerator: 4, denominator: 4 };
+        draft.timeSignatureMap = [{ tick: 0, numerator: 4, denominator: 4 }];
+        draft.view.loopStart = 0;
+        draft.view.loopEnd = 0;
       } else if (mode === "append") {
         ranges.forEach((sourceText: string, index: number) => {
           if (!draft.tracks[index]) draft.tracks.push(createTrack(index, currentThemeId));
@@ -1357,6 +1414,12 @@ export default function MmlStudio({
       }
       return draft;
     });
+    if (mode === "replace") {
+      clearPlayback();
+      playheadRef.current = 0;
+      setPlayhead(0);
+      setTimelineEditor(null);
+    }
     setImportPayload(null);
   };
 
@@ -1390,7 +1453,7 @@ export default function MmlStudio({
   const pianoWidth = pianoTimelineDuration * pianoPixelsPerTick;
   const timelineGrid = buildTimelineGrid(pianoTimelineDuration, project.timeSignatureMap, project.timeSignature);
   const timelineChangeTicks = [...new Set([
-    ...(project.tempoMap ?? []).map((marker: any) => marker.tick),
+    ...trackTempoEvents.map((marker: any) => marker.tick),
     ...project.timeSignatureMap.map((marker: any) => marker.tick),
   ])].filter((tick) => tick > 0).sort((a, b) => a - b);
   const songMeasures = timelineGrid.measures.filter((measure: any) => measure.tick < songDuration);
@@ -1408,13 +1471,13 @@ export default function MmlStudio({
   };
   const openTimelineEditor = (tick: number) => {
     const safeTick = Math.max(0, Math.min(pianoTimelineDuration, Math.round(tick)));
-    const tempo = (project.tempoMap ?? []).find((marker: any) => marker.tick === safeTick);
+    const tempo = trackTempoEvents.find((marker: any) => marker.tick === safeTick);
     const meter = project.timeSignatureMap.find((marker: any) => marker.tick === safeTick)
       ?? [...project.timeSignatureMap].filter((marker: any) => marker.tick <= safeTick).at(-1)
       ?? project.timeSignature;
     setTimelineEditor({
       tick: safeTick,
-      bpm: tempo?.bpm ?? tempoAtTick(safeTick, allTempoEvents, project.tempo),
+      bpm: tempo?.bpm ?? tempoAtTick(safeTick, allTempoEvents, baseTempo),
       numerator: meter.numerator,
       denominator: meter.denominator,
     });
@@ -1426,19 +1489,19 @@ export default function MmlStudio({
       updateMasterTempo(marker.bpm);
     } else {
       commit((draft: any) => {
-        draft.tempoMap = [...(draft.tempoMap ?? []).filter((item: any) => item.tick !== marker.tick), marker].sort((a: any, b: any) => a.tick - b.tick);
+        writeTimelineTempoToCode(draft, marker.tick, marker.bpm);
         return draft;
       });
     }
-    setRecordingMessage(`${timelinePositionLabel(marker.tick)} 템포를 ${marker.bpm} BPM으로 저장했습니다.`);
+    setRecordingMessage(`${timelinePositionLabel(marker.tick)}에 t${marker.bpm} 코드를 저장했습니다.`);
   };
   const deleteTimelineTempo = () => {
-    if (!timelineEditor || timelineEditor.tick === 0) return;
+    if (!timelineEditor) return;
     commit((draft: any) => {
-      draft.tempoMap = (draft.tempoMap ?? []).filter((item: any) => item.tick !== timelineEditor.tick);
+      deleteTimelineTempoFromCode(draft, timelineEditor.tick);
       return draft;
     });
-    setRecordingMessage(`${timelinePositionLabel(timelineEditor.tick)} 템포 변경을 삭제했습니다.`);
+    setRecordingMessage(`${timelinePositionLabel(timelineEditor.tick)}의 템포 코드를 삭제했습니다.`);
   };
   const saveTimelineMeter = () => {
     if (!timelineEditor) return;
@@ -1815,7 +1878,7 @@ export default function MmlStudio({
                 <label>템포<input aria-label="변경 템포" type="number" min="1" value={timelineEditor.bpm} onChange={(event) => setTimelineEditor({ ...timelineEditor, bpm: Math.max(1, Number(event.target.value) || 1) })} /></label>
                 <span className="mml-timeline-unit">BPM</span>
                 <button type="button" className="is-save" onClick={saveTimelineTempo}>저장</button>
-                <button type="button" className="is-delete" disabled={timelineEditor.tick === 0 || !(project.tempoMap ?? []).some((marker: any) => marker.tick === timelineEditor.tick)} onClick={deleteTimelineTempo}>변경 삭제</button>
+                <button type="button" className="is-delete" disabled={!trackTempoEvents.some((marker: any) => marker.tick === timelineEditor.tick)} onClick={deleteTimelineTempo}>코드 삭제</button>
               </section>
               <section>
                 <label>박자표<span className="mml-timeline-fraction"><input aria-label="변경 박자 분자" type="number" min="1" value={timelineEditor.numerator} onChange={(event) => setTimelineEditor({ ...timelineEditor, numerator: Math.max(1, Number(event.target.value) || 1) })} /><i>/</i><input aria-label="변경 박자 분모" type="number" min="1" value={timelineEditor.denominator} onChange={(event) => setTimelineEditor({ ...timelineEditor, denominator: Math.max(1, Number(event.target.value) || 1) })} /></span></label>
@@ -1825,12 +1888,12 @@ export default function MmlStudio({
               <div className="mml-timeline-change-list">
                 <strong>변경 지점</strong>
                 {timelineChangeTicks.length ? timelineChangeTicks.map((tick) => {
-                  const tempo = (project.tempoMap ?? []).find((marker: any) => marker.tick === tick);
+                  const tempo = trackTempoEvents.find((marker: any) => marker.tick === tick);
                   const meter = project.timeSignatureMap.find((marker: any) => marker.tick === tick);
                   return <button type="button" onClick={() => openTimelineEditor(tick)} key={`change-list-${tick}`}><span>{timelinePositionLabel(tick)}</span><small>{[tempo ? `♩ ${tempo.bpm}` : "", meter ? `${meter.numerator}/${meter.denominator}` : ""].filter(Boolean).join(" · ")}</small></button>;
                 }) : <small>추가한 변경 지점이 없습니다.</small>}
               </div>
-              <p>피아노롤에서 원하는 위치를 오른쪽 클릭해 새 변경 지점을 만들 수 있습니다.</p>
+              <p>템포는 MML 트랙의 t 코드로 기록됩니다. 피아노롤에서 원하는 위치를 오른쪽 클릭해 변경 지점을 만들 수 있습니다.</p>
             </div>
           )}
           <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onWheel={zoomTimelineWithWheel} onContextMenu={timelineContext} onClick={(event) => {
@@ -1854,7 +1917,7 @@ export default function MmlStudio({
               <div className="mml-timeline-ruler">
                 {timelineGrid.measures.map((measure: any) => <span className="mml-measure-label" style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-label-${measure.tick}`}>{measure.number}</span>)}
                 {timelineChangeTicks.map((tick) => {
-                  const tempo = (project.tempoMap ?? []).find((marker: any) => marker.tick === tick);
+                  const tempo = trackTempoEvents.find((marker: any) => marker.tick === tick);
                   const meter = project.timeSignatureMap.find((marker: any) => marker.tick === tick);
                   const text = [tempo ? `♩${tempo.bpm}` : "", meter ? `${meter.numerator}/${meter.denominator}` : ""].filter(Boolean).join(" · ");
                   return <button type="button" className="mml-change-marker" style={{ left: `${tickToPianoX(tick)}px` }} onClick={(event) => { event.stopPropagation(); openTimelineEditor(tick); }} title={`${timelinePositionLabel(tick)} 변경 편집`} key={`change-marker-${tick}`}>{text}</button>;
@@ -1915,7 +1978,7 @@ export default function MmlStudio({
             }
           }} aria-label={`${selectedTrack.name} MML 편집`} />}
           <div className="mml-status-line">
-            <span>{parseError ? `Track ${parseError.trackIndex + 1} · ${parseError.line}줄 ${parseError.column}자 · ${parseError.message}` : tempoConflict || `${Math.round(songDuration)} tick · ${project.tempo} BPM · ${project.timeSignature.numerator}/${project.timeSignature.denominator}`}</span>
+            <span>{parseError ? `Track ${parseError.trackIndex + 1} · ${parseError.line}줄 ${parseError.column}자 · ${parseError.message}` : tempoConflict || `${Math.round(songDuration)} tick · ${baseTempo} BPM · ${project.timeSignature.numerator}/${project.timeSignature.denominator}`}</span>
             <span>{droppedCount > 0 ? `놓친 음 ${droppedCount}개` : recordingMessage}</span>
           </div>
         </div>

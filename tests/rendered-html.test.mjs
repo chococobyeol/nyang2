@@ -227,7 +227,7 @@ test("pre-schedules playback notes on the same audio clock as the metronome", as
   assert.match(page, /voicesRef\.current\.values\(\)[\s\S]*?voice\.inputId\.startsWith\("mml:"\)[\s\S]*?stopVoice\(voice, true\)/);
   assert.match(page, /Math\.max\(graph\.context\.currentTime, scheduledStartAt\) \+ 0\.001/);
   assert.match(studio, /buildMetronomeEvents\(endTick, project\.timeSignatureMap, project\.timeSignature\)/);
-  assert.match(studio, /tickToSeconds\(beat\.tick, allTempoEvents, project\.tempo\) - startSeconds - elapsed/);
+  assert.match(studio, /tickToSeconds\(beat\.tick, allTempoEvents, baseTempo\) - startSeconds - elapsed/);
   assert.match(studio, /if \(!projectRef\.current\.recording\.metronome\) break/);
   assert.match(studio, /playbackMetronomeCancelsRef\.current\.forEach\(\(cancel\) => cancel\(\)\)/);
   assert.match(studio, /className="mml-timeline-ruler"/);
@@ -353,7 +353,7 @@ test("offers MML paste choices and configurable recording start positions", asyn
   assert.match(studio, /연결 트랙의 빈 끝부분/);
   assert.match(studio, /resolveRecordingStartTick/);
   assert.match(studio, /currentParsedTracks = current\.tracks\.map/);
-  assert.match(studio, /tempoAtTick\(startTick, currentTempoEvents, current\.tempo\)/);
+  assert.match(studio, /tempoAtTick\(startTick, currentTempoEvents, defaultTempo\)/);
   assert.match(studio, /elapsedSecondsToTicks\(/);
   assert.match(studio, /quantizeBpm: base\.recording\.mode === "append" \? 60/);
   assert.match(studio, /appendTimelineSecondsAt\(at\)/);

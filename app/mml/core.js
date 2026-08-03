@@ -301,6 +301,23 @@ export function serializeTrackEvents(events, { velocity = 15, initialOctave = 4,
   return result;
 }
 
+export function serializeTempoEvents(events = []) {
+  const byTick = new Map();
+  for (const event of [...events].sort((a, b) => a.tick - b.tick)) {
+    const tick = Math.max(0, Math.round(Number(event.tick) || 0));
+    byTick.set(tick, Math.max(1, Math.round(Number(event.bpm) || 120)));
+  }
+  let cursor = 0;
+  let result = "";
+  for (const [tick, bpm] of byTick) {
+    const gap = Math.max(0, tick - cursor);
+    if (gap > 0) result += encodeDuration(gap).map((length) => `r${length}`).join("");
+    result += `t${bpm}`;
+    cursor = tick;
+  }
+  return result;
+}
+
 export function tempoAtTick(tick, tempoEvents, defaultTempo = 120) {
   let bpm = defaultTempo;
   for (const event of [...tempoEvents].sort((a, b) => a.tick - b.tick)) {

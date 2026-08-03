@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { combineTracks, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
+import { combineTracks, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTempoEvents, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
@@ -51,7 +51,9 @@ test("uses append recording by default and migrates the previous default", () =>
   assert.equal(project.recording.startPosition, "playhead");
   assert.equal(project.recording.metronome, false);
   assert.equal(project.recording.shortcuts.play, "Space");
-  assert.deepEqual(project.tempoMap, [{ tick: 0, bpm: 120 }]);
+  assert.equal("tempoMap" in project, false);
+  assert.equal("tempo" in project, false);
+  assert.equal(parseTrack(project.tracks[0].sourceText).tempos[0].bpm, 120);
   assert.deepEqual(project.routing, { left: [project.tracks[0].id], right: [project.tracks[1].id] });
   const legacy = createProject();
   legacy.version = 1;
@@ -71,7 +73,7 @@ test("uses append recording by default and migrates the previous default", () =>
   assert.equal(sanitizeProject(customShortcut).recording.shortcuts.play, "Alt+Enter");
 });
 
-test("stores editable timeline tempo markers and lets them override MML tempo at the same tick", () => {
+test("serializes editable tempo changes as visible MML code and migrates old timeline metadata", () => {
   const merged = mergeTempoEvents(
     [{ tick: 0, bpm: 120 }, { tick: 384, bpm: 90 }],
     [{ tick: 384, bpm: 72 }, { tick: 768, bpm: 140 }],
@@ -82,9 +84,18 @@ test("stores editable timeline tempo markers and lets them override MML tempo at
     { tick: 384, bpm: 72 },
     { tick: 768, bpm: 140 },
   ]);
-  const project = createProject();
-  project.tempoMap = [{ tick: 0, bpm: 120 }, { tick: 384, bpm: 72 }];
-  assert.deepEqual(sanitizeProject(project).tempoMap, project.tempoMap);
+  assert.equal(serializeTempoEvents([{ tick: 0, bpm: 120 }, { tick: 384, bpm: 72 }]), "t120r1t72");
+  const legacy = createProject();
+  legacy.version = 8;
+  legacy.tempo = 120;
+  legacy.tempoMap = [{ tick: 0, bpm: 120 }, { tick: 384, bpm: 72 }];
+  const migrated = sanitizeProject(legacy);
+  assert.equal("tempoMap" in migrated, false);
+  assert.equal("tempo" in migrated, false);
+  assert.deepEqual(migrated.tracks.flatMap((track) => parseTrack(track.sourceText).tempos).map(({ tick, bpm }) => ({ tick, bpm })), [
+    { tick: 0, bpm: 120 },
+    { tick: 384, bpm: 72 },
+  ]);
 });
 
 test("resolves recording start from the playhead, beginning, or routed tracks' empty end", () => {
@@ -269,11 +280,13 @@ visible=false
 
   const project = createProjectFromMmi(source, "nyang-voice", "fallback");
   assert.equal(project.title, "고양이 합주");
-  assert.equal(project.tracks.length, 4);
+  assert.equal(project.tracks.length, 5);
   assert.equal(project.tracks[0].mixerVolume, 0.8);
   assert.equal(project.tracks[3].pianoRollVisible, false);
   assert.deepEqual(project.routing.left, [project.tracks[0].id]);
   assert.deepEqual(project.routing.right, [project.tracks[1].id]);
+  assert.equal(project.tracks[4].name, "Tempo");
+  assert.deepEqual(parseTrack(project.tracks[4].sourceText).tempos.map(({ tick, bpm }) => ({ tick, bpm })), [{ tick: 384, bpm: 126 }]);
 });
 
 test("applies MMI track offsets as leading rests", () => {
@@ -323,7 +336,7 @@ test("imports MIDI notes, tempo, meter, and separates overlapping voices", () =>
 
   const project = createProjectFromMidi(midi.writeMIDI(), "nyang-voice", "fallback");
   assert.equal(project.title, "고양이 MIDI");
-  assert.equal(project.tempo, 90);
+  assert.equal(project.tracks.flatMap((track) => parseTrack(track.sourceText).tempos).find((event) => event.tick === 0).bpm, 90);
   assert.deepEqual(project.timeSignature, { numerator: 3, denominator: 4 });
   assert.equal(project.tracks[0].name, "Tempo");
   assert.equal(project.tracks.length, 3);
@@ -340,7 +353,6 @@ test("imports MIDI notes, tempo, meter, and separates overlapping voices", () =>
 test("exports a standard MIDI file that can be imported again", () => {
   const project = createProject();
   project.title = "냥 MIDI";
-  project.tempo = 108;
   project.timeSignature = { numerator: 6, denominator: 8 };
   project.timeSignatureMap = [{ tick: 0, numerator: 6, denominator: 8 }];
   project.tracks[0].sourceText = "t108o4v5c4v15e8g8";
@@ -351,7 +363,7 @@ test("exports a standard MIDI file that can be imported again", () => {
   assert.equal(new TextDecoder().decode(binary.slice(0, 4)), "MThd");
   assert.equal(midiFilename(project), "냥 MIDI.mid");
   const imported = createProjectFromMidi(binary, "nyang-voice", "fallback");
-  assert.equal(imported.tempo, 108);
+  assert.equal(imported.tracks.flatMap((track) => parseTrack(track.sourceText).tempos).find((event) => event.tick === 0).bpm, 108);
   assert.deepEqual(imported.timeSignature, { numerator: 6, denominator: 8 });
   assert.deepEqual(imported.tracks.flatMap((track) => parseTrack(track.sourceText).notes).map((note) => note.midi), [60, 64, 67, 48]);
 });

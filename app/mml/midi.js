@@ -1,5 +1,5 @@
 import { BasicMIDI, MIDIBuilder, MIDIMessageTypes } from "spessasynth_core";
-import { encodeDuration, parseTrack, serializeTrackEvents, TICKS_PER_QUARTER } from "./core.js";
+import { parseTrack, serializeTempoEvents, serializeTrackEvents, TICKS_PER_QUARTER } from "./core.js";
 import { createProject, createTrack } from "./project.js";
 
 const textDecoder = new TextDecoder("utf-8");
@@ -69,18 +69,6 @@ function splitVoices(notes) {
     voice.end = note.tick + note.duration;
   }
   return voices.map((voice) => voice.notes);
-}
-
-function tempoSource(tempos) {
-  let cursor = 0;
-  let source = "v15";
-  for (const event of tempos) {
-    const gap = event.tick - cursor;
-    if (gap > 0) source += encodeDuration(gap).map((length) => `r${length}`).join("");
-    source += `t${Math.max(1, Math.round(event.bpm))}`;
-    cursor = event.tick;
-  }
-  return source;
 }
 
 function uniqueTempos(midi) {
@@ -156,16 +144,15 @@ export function createProjectFromMidi(arrayBuffer, themeId = "nyang-voice", fall
   if (tempos.length > 1) {
     const conductor = createTrack(0, themeId);
     conductor.name = "Tempo";
-    conductor.sourceText = tempoSource(tempos);
+    conductor.sourceText = serializeTempoEvents(tempos);
     conductor.pianoRollVisible = false;
+    conductor.mmlRole = "tempo";
     tracks = [conductor, ...importedTracks];
   }
   const project = createProject(themeId);
   const firstMusicIndex = tempos.length > 1 ? 1 : 0;
   project.title = midi.getName?.("utf-8") || fallbackTitle;
   project.tracks = tracks;
-  project.tempo = tempos[0]?.bpm ?? 120;
-  project.tempoMap = tempos.length ? tempos : [{ tick: 0, bpm: project.tempo }];
   project.timeSignature = { numerator: meterMap[0].numerator, denominator: meterMap[0].denominator };
   project.timeSignatureMap = meterMap;
   project.routing = {
@@ -185,24 +172,22 @@ function safeTitle(project) {
 }
 
 export function createMidiFile(project) {
-  const builder = new MIDIBuilder({
-    timeDivision: TICKS_PER_QUARTER,
-    initialTempo: Math.max(1, Math.round(project.tempo || 120)),
-    format: 1,
-    name: safeTitle(project),
-  });
   const tempoByTick = new Map();
   for (const track of project.tracks) {
     for (const event of parseTrack(track.sourceText).tempos) {
       if (!tempoByTick.has(event.tick)) tempoByTick.set(event.tick, event.bpm);
     }
   }
-  tempoByTick.set(0, Math.max(1, Math.round(project.tempo || 120)));
-  for (const event of project.tempoMap ?? []) {
-    if (event.tick > 0) tempoByTick.set(event.tick, event.bpm);
-  }
+  if (!tempoByTick.has(0)) tempoByTick.set(0, 120);
+  const initialTempo = tempoByTick.get(0);
+  const builder = new MIDIBuilder({
+    timeDivision: TICKS_PER_QUARTER,
+    initialTempo: Math.max(1, Math.round(initialTempo)),
+    format: 1,
+    name: safeTitle(project),
+  });
   for (const [tick, bpm] of [...tempoByTick].sort((a, b) => a[0] - b[0])) {
-    if (tick === 0 && Math.round(bpm) === Math.round(project.tempo || 120)) continue;
+    if (tick === 0 && Math.round(bpm) === Math.round(initialTempo)) continue;
     builder.setTempo(Math.max(0, Math.round(tick)), Math.max(1, bpm));
   }
   for (const marker of project.timeSignatureMap ?? []) {
