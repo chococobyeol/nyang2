@@ -29,7 +29,7 @@ import {
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
+import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
 
 type KeyboardSide = "left" | "right";
@@ -59,7 +59,7 @@ type Props = {
   playMidi: (sourceId: string, midi: number, themeId: string, volume: number, delaySeconds?: number) => void;
   releaseMidi: (sourceId: string) => void;
   stopMmlAudio: () => void;
-  clickMetronome: (accent: boolean, volume: number, delaySeconds?: number, preparing?: boolean) => void;
+  clickMetronome: (accent: boolean, volume: number, delaySeconds?: number, preparing?: boolean) => () => void;
   onPlayShortcutChange?: (shortcut: string) => void;
   onRestShortcutChange?: (shortcut: string) => void;
   onRestPressedChange?: (pressed: boolean) => void;
@@ -267,6 +267,11 @@ export default function MmlStudio({
   const beatVisualTimersRef = useRef(new Set<number>());
   const metronomeTimerRef = useRef<number | null>(null);
   const metronomeClockRef = useRef<{ startAt: number; beatSeconds: number } | null>(null);
+  const standaloneMetronomeCancelsRef = useRef(new Set<() => void>());
+  const playbackMetronomeCancelsRef = useRef(new Set<() => void>());
+  const stopMetronomeClockRef = useRef<() => void>(() => undefined);
+  const scheduleBeatVisualRef = useRef<(beat: number, count: number, preparing: boolean, delaySeconds?: number) => void>(() => undefined);
+  const clearBeatVisualTimersRef = useRef<() => void>(() => undefined);
   const recordingStartRef = useRef(0);
   const recordingStartTickRef = useRef(0);
   const recordingTempoRef = useRef(120);
@@ -489,6 +494,9 @@ export default function MmlStudio({
     playTimersRef.current = [];
     if (playSchedulerRef.current !== null) window.clearInterval(playSchedulerRef.current);
     playSchedulerRef.current = null;
+    playbackMetronomeCancelsRef.current.forEach((cancel) => cancel());
+    playbackMetronomeCancelsRef.current.clear();
+    clearBeatVisualTimersRef.current();
     window.cancelAnimationFrame(playRafRef.current);
     stopMmlAudio();
     setPlaying(false);
@@ -496,6 +504,7 @@ export default function MmlStudio({
 
   const startPlayback = useCallback((fromTick = playhead) => {
     if (parseError || tempoConflict || !displayTracks.length) return;
+    const runningMetronomeClock = metronomeClockRef.current;
     clearPlayback();
     const requestedStartTick = Math.max(0, Math.min(fromTick, songDuration));
     const loopStartTick = Math.max(0, Math.min(project.view.loopStart, songDuration));
@@ -512,11 +521,12 @@ export default function MmlStudio({
       .filter((marker: any) => marker.tick <= startTick)
       .sort((a: any, b: any) => a.tick - b.tick)
       .at(-1) ?? { tick: 0, ...project.timeSignature };
-    const audioStartedAt = syncedPlaybackStartAt(project.recording.metronome, metronomeClockRef.current, now, {
+    const audioStartedAt = syncedPlaybackStartAt(project.recording.metronome, runningMetronomeClock, now, {
       startTick,
       meterStartTick: currentMeter.tick,
       timeSignature: currentMeter,
     });
+    if (project.recording.metronome) stopMetronomeClockRef.current();
     const playbackWait = Math.max(0, audioStartedAt - now);
     playStartedRef.current = { audioStartedAt, tick: startTick };
     setPlaying(true);
@@ -533,7 +543,12 @@ export default function MmlStudio({
       }
     });
     scheduledNotes.sort((a, b) => a.noteStart - b.noteStart);
+    const scheduledBeats = project.recording.metronome
+      ? buildMetronomeEvents(endTick, project.timeSignatureMap, project.timeSignature)
+        .filter((beat: any) => beat.tick >= startTick && beat.tick < endTick)
+      : [];
     let scheduleCursor = 0;
+    let beatCursor = 0;
     const scheduleWindow = () => {
       const elapsed = performance.now() / 1000 - playStartedRef.current.audioStartedAt;
       while (scheduleCursor < scheduledNotes.length) {
@@ -546,7 +561,17 @@ export default function MmlStudio({
         playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), (delaySeconds + duration) * 1000));
         scheduleCursor += 1;
       }
-      if (scheduleCursor >= scheduledNotes.length && playSchedulerRef.current !== null) {
+      while (beatCursor < scheduledBeats.length) {
+        const beat = scheduledBeats[beatCursor];
+        const startsIn = tickToSeconds(beat.tick, allTempoEvents, project.tempo) - startSeconds - elapsed;
+        if (startsIn > 0.35) break;
+        const delaySeconds = Math.max(0, startsIn);
+        const cancel = clickMetronome(beat.accent, project.recording.metronomeVolume, delaySeconds, false);
+        playbackMetronomeCancelsRef.current.add(cancel);
+        scheduleBeatVisualRef.current(beat.beat, beat.count, false, delaySeconds);
+        beatCursor += 1;
+      }
+      if (scheduleCursor >= scheduledNotes.length && beatCursor >= scheduledBeats.length && playSchedulerRef.current !== null) {
         window.clearInterval(playSchedulerRef.current);
         playSchedulerRef.current = null;
       }
@@ -570,7 +595,7 @@ export default function MmlStudio({
       playRafRef.current = window.requestAnimationFrame(follow);
     };
     playRafRef.current = window.requestAnimationFrame(follow);
-  }, [allTempoEvents, clearPlayback, displayTracks, parseError, playMidi, playhead, project, releaseMidi, songDuration, tempoConflict]);
+  }, [allTempoEvents, clearPlayback, clickMetronome, displayTracks, parseError, playMidi, playhead, project, releaseMidi, songDuration, tempoConflict]);
 
   useEffect(() => {
     startPlaybackRef.current = startPlayback;
@@ -625,6 +650,8 @@ export default function MmlStudio({
     if (metronomeTimerRef.current !== null) window.clearTimeout(metronomeTimerRef.current);
     metronomeTimerRef.current = null;
     metronomeClockRef.current = null;
+    standaloneMetronomeCancelsRef.current.forEach((cancel) => cancel());
+    standaloneMetronomeCancelsRef.current.clear();
   }, []);
 
   const startMetronomeClock = useCallback((startAt: number, bpm: number, numerator: number, denominator: number) => {
@@ -643,7 +670,9 @@ export default function MmlStudio({
       while (nextAt <= now + 0.28) {
         if (nextAt >= now - 0.04) {
           const delay = Math.max(0, nextAt - now);
-          clickMetronome(beat % numerator === 0, projectRef.current.recording.metronomeVolume, delay, false);
+          const cancel = clickMetronome(beat % numerator === 0, projectRef.current.recording.metronomeVolume, delay, false);
+          standaloneMetronomeCancelsRef.current.add(cancel);
+          window.setTimeout(() => standaloneMetronomeCancelsRef.current.delete(cancel), (delay + 0.2) * 1000);
           scheduleBeatVisual(beat % numerator, numerator, false, delay);
         }
         beat += 1;
@@ -655,14 +684,20 @@ export default function MmlStudio({
   }, [clickMetronome, scheduleBeatVisual, stopMetronomeClock]);
 
   useEffect(() => {
-    if (!hydrated || !project.recording.metronome) {
+    stopMetronomeClockRef.current = stopMetronomeClock;
+    scheduleBeatVisualRef.current = scheduleBeatVisual;
+    clearBeatVisualTimersRef.current = clearBeatVisualTimers;
+  }, [clearBeatVisualTimers, scheduleBeatVisual, stopMetronomeClock]);
+
+  useEffect(() => {
+    if (!hydrated || !project.recording.metronome || playing) {
       stopMetronomeClock();
-      clearBeatVisualTimers();
+      if (!playing) clearBeatVisualTimers();
       return;
     }
     startMetronomeClock(performance.now() / 1000 + 0.04, recordTempo, project.timeSignature.numerator, project.timeSignature.denominator);
     return stopMetronomeClock;
-  }, [clearBeatVisualTimers, hydrated, project.recording.metronome, project.timeSignature.denominator, project.timeSignature.numerator, recordTempo, startMetronomeClock, stopMetronomeClock]);
+  }, [clearBeatVisualTimers, hydrated, playing, project.recording.metronome, project.timeSignature.denominator, project.timeSignature.numerator, recordTempo, startMetronomeClock, stopMetronomeClock]);
 
   const toggleMetronome = useCallback(() => {
     setProject((current: any) => {

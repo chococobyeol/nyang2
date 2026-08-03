@@ -4,7 +4,7 @@ import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
+import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 
 test("clamps timeline zoom to a useful range", () => {
@@ -384,6 +384,14 @@ test("builds measure labels and beat lines from the same tick positions", () => 
   assert.deepEqual(grid.measures.map((marker) => marker.tick), [0, 384, 768, 1152, 1536]);
   assert.deepEqual(grid.measures.map((marker) => marker.number), [1, 2, 3, 4, 5]);
   assert.deepEqual(grid.beats.slice(0, 3).map((marker) => marker.tick), [96, 192, 288]);
+});
+
+test("keeps playback metronome beats on the song grid across a mid-measure tempo change", () => {
+  const beats = buildMetronomeEvents(384, [{ tick: 0, numerator: 4, denominator: 4 }]);
+  assert.deepEqual(beats.map((beat) => beat.tick), [0, 96, 192, 288, 384]);
+  assert.deepEqual(beats.slice(0, 4).map((beat) => beat.beat), [0, 1, 2, 3]);
+  const tempos = [{ tick: 0, bpm: 120 }, { tick: 144, bpm: 60 }];
+  assert.deepEqual(beats.slice(0, 4).map((beat) => tickToSeconds(beat.tick, tempos)), [0, 0.5, 1.25, 2.25]);
 });
 
 test("starts a new measure exactly at a time-signature change", () => {

@@ -1412,6 +1412,23 @@ export default function Home() {
     gain.connect(graph.master);
     oscillator.start(now);
     oscillator.stop(now + (preparing ? 0.09 : 0.055));
+    let active = true;
+    const disconnect = () => {
+      if (!active) return;
+      active = false;
+      oscillator.disconnect();
+      gain.disconnect();
+    };
+    oscillator.onended = disconnect;
+    return () => {
+      if (!active) return;
+      try {
+        oscillator.stop(graph.context.currentTime);
+      } catch {
+        // The click may already have ended.
+      }
+      disconnect();
+    };
   }, [initAudio]);
 
   const openMml = useCallback(() => {

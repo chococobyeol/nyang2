@@ -71,6 +71,26 @@ export function buildTimelineGrid(duration, timeSignatureMap = [], fallback = { 
   return { measures, beats };
 }
 
+export function buildMetronomeEvents(duration, timeSignatureMap = [], fallback = { numerator: 4, denominator: 4 }) {
+  const grid = buildTimelineGrid(duration, timeSignatureMap, fallback);
+  const events = grid.measures.map((measure) => ({
+    tick: measure.tick,
+    beat: 0,
+    count: measure.numerator,
+    accent: true,
+  }));
+  for (const beat of grid.beats) {
+    const measure = [...grid.measures].reverse().find((candidate) => candidate.tick <= beat.tick);
+    events.push({
+      tick: beat.tick,
+      beat: Math.max(0, beat.beat - 1),
+      count: measure?.numerator ?? fallback.numerator,
+      accent: false,
+    });
+  }
+  return events.sort((a, b) => a.tick - b.tick);
+}
+
 export function followTimelineScroll(scrollLeft, viewportWidth, contentWidth, playheadX, anchor = 0.65, backAnchor = 0.2) {
   const width = Math.max(0, Number(viewportWidth) || 0);
   const maxScroll = Math.max(0, (Number(contentWidth) || 0) - width);

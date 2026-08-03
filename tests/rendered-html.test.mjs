@@ -180,7 +180,7 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.match(studio, /if \(!playing && recordState !== "recording"\) return/);
   assert.match(studio, /\[pianoPixelsPerTick, playhead, playing, recordState\]/);
   assert.match(studio, /appendLegatoContinuation\([\s\S]*?appendWallStartRef\.current = at/);
-  assert.match(studio, /syncedPlaybackStartAt\(project\.recording\.metronome, metronomeClockRef\.current, now, \{/);
+  assert.match(studio, /syncedPlaybackStartAt\(project\.recording\.metronome, runningMetronomeClock, now, \{/);
   assert.match(studio, /meterStartTick: currentMeter\.tick/);
   assert.match(studio, /playbackWait \+ endSeconds - startSeconds/);
   assert.match(studio, /aria-label="맨앞으로 이동"/);
@@ -203,6 +203,10 @@ test("pre-schedules playback notes on the same audio clock as the metronome", as
   assert.match(page, /audioDelaySeconds\?: number/);
   assert.match(page, /scheduledStartAt = graph\.context\.currentTime \+ Math\.max\(0, options\.audioDelaySeconds \?\? 0\)/);
   assert.match(page, /const now = Math\.max\(graph\.context\.currentTime, scheduledStartAt\)/);
+  assert.match(studio, /buildMetronomeEvents\(endTick, project\.timeSignatureMap, project\.timeSignature\)/);
+  assert.match(studio, /tickToSeconds\(beat\.tick, allTempoEvents, project\.tempo\) - startSeconds - elapsed/);
+  assert.match(studio, /project\.recording\.metronome \|\| playing/);
+  assert.match(page, /oscillator\.onended = disconnect/);
 });
 
 test("provides direct track controls, timeline zoom, and full-screen composing", async () => {
