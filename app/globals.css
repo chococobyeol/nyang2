@@ -1848,7 +1848,7 @@ button {
   display: grid;
   width: 100%;
   min-height: 68px;
-  grid-template-columns: minmax(0, 1fr) 47px;
+  grid-template-columns: minmax(0, 1fr) 58px;
   align-items: center;
   gap: 4px;
   margin: 0 0 5px;
@@ -1917,18 +1917,18 @@ button {
 }
 
 .mml-track-route-actions {
-  grid-template-columns: repeat(2, 22px);
+  grid-template-columns: repeat(2, 28px);
 }
 
 .mml-track-play-actions {
-  grid-template-columns: repeat(3, 14px);
+  grid-template-columns: repeat(3, 18px);
 }
 
 .mml-track-actions button {
   position: relative;
   display: grid;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   place-items: center;
   padding: 0;
   border: 1px solid var(--line);
@@ -1937,13 +1937,13 @@ button {
   color: var(--muted);
   cursor: pointer;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 900;
   line-height: 1;
 }
 
 .mml-track-route-actions button {
-  width: 22px;
+  width: 28px;
 }
 
 .mml-track-actions button.is-on {
@@ -1955,19 +1955,24 @@ button {
 .mml-track-visibility span {
   position: relative;
   display: block;
-  width: 9px;
+  width: 14px;
   height: 9px;
-  border: 1.3px solid currentColor;
-  border-radius: 70% 0 70% 0;
-  transform: rotate(45deg);
 }
 
 .mml-track-visibility span::before {
   position: absolute;
+  inset: 0;
+  border: 1.4px solid currentColor;
+  border-radius: 50% / 65%;
+  content: "";
+}
+
+.mml-track-visibility span::after {
+  position: absolute;
   top: 50%;
   left: 50%;
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: currentColor;
   content: "";
@@ -1976,7 +1981,7 @@ button {
 
 .mml-track-visibility.is-hidden::after {
   position: absolute;
-  width: 13px;
+  width: 16px;
   height: 1.5px;
   border-radius: 999px;
   background: currentColor;
@@ -2194,10 +2199,10 @@ button {
   }
 
   .mml-track-card {
-    flex: 0 0 128px;
-    width: 128px;
-    min-height: 38px;
-    grid-template-columns: minmax(0, 1fr) 47px;
+    flex: 0 0 142px;
+    width: 142px;
+    min-height: 42px;
+    grid-template-columns: minmax(0, 1fr) 58px;
     margin: 0;
     padding: 3px 4px;
   }

@@ -204,8 +204,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(page, /expanded=\{mmlExpanded\}/);
   assert.match(css, /\.mml-expanded \.performance-surface \{[^}]*visibility: hidden;[^}]*pointer-events: none;/s);
   assert.match(css, /\.mml-zoom-controls/);
-  assert.match(css, /\.mml-track-route-actions \{\s*grid-template-columns: repeat\(2, 22px\);/s);
-  assert.match(css, /\.mml-track-play-actions \{\s*grid-template-columns: repeat\(3, 14px\);/s);
+  assert.match(css, /\.mml-track-route-actions \{\s*grid-template-columns: repeat\(2, 28px\);/s);
+  assert.match(css, /\.mml-track-play-actions \{\s*grid-template-columns: repeat\(3, 18px\);/s);
+  assert.match(css, /\.mml-track-visibility span \{[^}]*width: 14px;[^}]*height: 9px;/s);
   assert.match(css, /\.mml-track-visibility\.is-hidden::after/);
 });
 
