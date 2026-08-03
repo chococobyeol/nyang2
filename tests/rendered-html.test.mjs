@@ -174,23 +174,27 @@ test("keeps existing top controls while placing touch rest input with the keyboa
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /className=\{`keyboard-deck[\s\S]*className="mml-rest-button"/);
+  assert.match(page, /className="paw-row paw-row-accidental"[\s\S]*className=\{`mml-rest-button/);
   assert.doesNotMatch(page, /<span aria-hidden="true">R<\/span>/);
-  assert.match(page, /className="mml-rest-symbol"[^>]*>𝄽<\/span>/);
+  assert.match(page, /className="mml-rest-symbol"[^>]*>☾<\/span>/);
+  assert.match(page, /className="mml-rest-shortcut"/);
   assert.doesNotMatch(page, /<small>쉼표<\/small>/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOn/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOff/);
+  assert.match(page, /onClick=\{restControl\.onClick\}/);
   assert.match(studio, /restOn: \(at: number\) => void/);
+  assert.match(studio, /onRestShortcutChange\?\.\(project\.recording\.restKey\)/);
+  assert.match(studio, /setRestInputActive\(true\)/);
   assert.match(studio, /className=\{`mml-beat-visual/);
   assert.match(page, /preparing \? \(accented \? 1760 : 1480\)/);
-  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 70px minmax\(158px, 1fr\) 190px 38px/s);
-  assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 42px;[^}]*height: 42px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 64px;[^}]*grid-template-rows: 78px 68px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 64px;[^}]*height: 64px/s);
   assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 224px;[^}]*height: auto/s);
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
-  assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Noto Music", serif;/s);
-  assert.match(css, /\.keyboard-deck\.is-double \.mml-rest-button \{[^}]*top: 50%;/s);
-  assert.match(css, /\.keyboard-deck\.is-double \.mml-rest-button:active \{[^}]*calc\(-50% \+ 5px\)/s);
-  assert.match(css, /\.top-bar\.has-double-keyboard \{[^}]*grid-template-rows: 56px 42px;/s);
+  assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;/s);
+  assert.match(css, /\.mml-rest-button\.is-active \{[^}]*drop-shadow/s);
+  assert.match(css, /\.mml-rest-shortcut \{[^}]*border-radius: 999px/s);
+  assert.match(css, /\.mml-rest-button \{[^}]*pointer-events: auto/s);
   assert.match(css, /\.keyboard-deck:not\(\.is-double\) \{[^}]*height: 190px;/s);
   assert.match(css, /\.mml-rest-button::before \{[^}]*background: #f4ead9;/s);
   assert.match(css, /\.mml-beat-visual\.is-preparing/);

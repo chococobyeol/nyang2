@@ -2073,60 +2073,55 @@ button {
 }
 
 .mml-open .performance-surface .top-bar {
-  grid-template-columns: 70px minmax(158px, 1fr) 190px 38px;
-  gap: 4px;
-  padding: 8px 8px 4px;
+  grid-template-columns: 88px minmax(0, 1fr) 64px;
+  grid-template-rows: 78px 68px;
+  column-gap: 6px;
+  row-gap: 5px;
+  padding: 8px 8px 5px;
 }
 
-.mml-open .performance-surface .top-bar.has-double-keyboard {
-  grid-template-columns: 70px minmax(0, 1fr) 38px;
-  grid-template-rows: 56px 42px;
-  column-gap: 5px;
-  row-gap: 4px;
-}
-
-.mml-open .performance-surface .top-bar.has-double-keyboard .brand-block {
+.mml-open .performance-surface .top-bar .brand-block {
   grid-column: 1;
   grid-row: 1;
 }
 
-.mml-open .performance-surface .top-bar.has-double-keyboard .octave-area {
+.mml-open .performance-surface .top-bar .octave-area {
   grid-column: 2;
   grid-row: 1;
 }
 
-.mml-open .performance-surface .top-bar.has-double-keyboard .transpose-panel {
+.mml-open .performance-surface .top-bar .transpose-panel {
   grid-column: 2 / 4;
   grid-row: 2;
   justify-self: end;
-  width: 190px;
+  width: min(410px, 100%);
   margin-top: 0;
 }
 
-.mml-open .performance-surface .top-bar.has-double-keyboard .header-actions {
+.mml-open .performance-surface .top-bar .header-actions {
   grid-column: 3;
   grid-row: 1;
 }
 
 .mml-open .performance-surface .brand-block {
   gap: 6px;
-  min-height: 42px;
+  min-height: 76px;
 }
 
 .mml-open .performance-surface .brand-mark {
-  flex-basis: 34px;
-  width: 34px;
-  height: 34px;
+  flex-basis: 50px;
+  width: 50px;
+  height: 50px;
   box-shadow: 2px 2px 0 var(--ink);
 }
 
 .mml-open .performance-surface .brand-mark img {
-  width: 23px;
-  height: 23px;
+  width: 33px;
+  height: 33px;
 }
 
 .mml-open .performance-surface .brand-block h1 {
-  font-size: 16px;
+  font-size: 19px;
 }
 
 .mml-open .performance-surface .octave-area.is-double {
@@ -2142,60 +2137,63 @@ button {
 }
 
 .mml-open .performance-surface .octave-panel {
-  grid-template-rows: auto 42px;
+  grid-template-rows: auto 60px;
   gap: 3px;
 }
 
 .mml-open .performance-surface .octave-buttons {
-  grid-template-columns: repeat(4, minmax(0, 42px));
+  grid-template-columns: repeat(4, minmax(0, 64px));
   gap: 3px;
+}
+
+.mml-open .performance-surface .top-bar.has-double-keyboard .octave-buttons {
+  grid-template-columns: repeat(4, minmax(0, 54px));
 }
 
 .mml-open .performance-surface .octave-button {
-  border-radius: 12px;
-  background-size: 28px;
-  font-size: 13px;
+  border-radius: 16px;
+  background-size: 39px;
+  font-size: 17px;
 }
 
 .mml-open .performance-surface .transpose-panel {
-  grid-template-columns: 42px minmax(104px, 1fr) 38px;
-  gap: 4px;
-  height: 42px;
-  margin-top: 11px;
+  grid-template-columns: 64px minmax(220px, 1fr) 56px;
+  gap: 6px;
+  height: 64px;
+  margin-top: 0;
 }
 
 .mml-open .performance-surface .transpose-grid {
-  height: 42px;
-  gap: 3px;
+  height: 64px;
+  gap: 5px;
 }
 
 .mml-open .performance-surface .transpose-grid button {
-  padding: 1px;
-  font-size: 8px;
+  padding: 3px;
+  font-size: 12px;
 }
 
 .mml-open .performance-surface .header-actions {
-  min-height: 42px;
-  height: 42px;
-  margin-top: 11px;
+  min-height: 64px;
+  height: 64px;
+  margin-top: 12px;
 }
 
 .mml-open .performance-surface .settings-button {
-  min-height: 42px;
-  height: 42px;
-  border-radius: 10px;
-  font-size: 8px;
+  min-height: 64px;
+  height: 64px;
+  border-radius: 15px;
+  font-size: 10px;
 }
 
 .mml-open .performance-surface .mml-rest-button {
   position: absolute;
-  z-index: 12;
-  right: auto;
-  left: 50%;
-  top: -72px;
+  z-index: 4;
+  top: 0;
   display: flex;
-  width: 64px;
-  height: 64px;
+  height: auto;
+  max-width: 106px;
+  aspect-ratio: 1;
   align-items: center;
   justify-content: center;
   padding: 0;
@@ -2208,6 +2206,7 @@ button {
   cursor: pointer;
   font-family: inherit;
   font-weight: 900;
+  pointer-events: auto;
   transform: translateX(-50%);
   touch-action: none;
   transition: transform 90ms ease, filter 90ms ease;
@@ -2228,11 +2227,34 @@ button {
   position: relative;
   z-index: 1;
   display: block;
-  height: 31px;
-  font-family: "Noto Music", serif;
-  font-size: 33px;
-  font-weight: 400;
+  height: 32px;
+  margin-top: -7px;
+  font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;
+  font-size: 34px;
+  font-weight: 700;
   line-height: 1;
+}
+
+.mml-open .performance-surface .mml-rest-shortcut {
+  position: absolute;
+  z-index: 2;
+  bottom: 13%;
+  left: 50%;
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border: 1px solid rgba(31, 37, 36, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.9);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  transform: translateX(-50%);
 }
 
 .mml-open .performance-surface .mml-rest-button:focus-visible {
@@ -2240,22 +2262,16 @@ button {
   outline-offset: 3px;
 }
 
-.mml-open .performance-surface .mml-rest-button:active {
+.mml-open .performance-surface .mml-rest-button:active,
+.mml-open .performance-surface .mml-rest-button.is-active {
   transform: translateX(-50%) translateY(5px) scale(0.9);
+  filter: drop-shadow(0 0 10px var(--accent));
 }
 
-.mml-open .performance-surface .mml-rest-button:active::before {
+.mml-open .performance-surface .mml-rest-button:active::before,
+.mml-open .performance-surface .mml-rest-button.is-active::before {
   background: var(--accent);
   box-shadow: 0 1px 0 rgba(31, 37, 36, 0.12);
-}
-
-.mml-open .performance-surface .keyboard-deck.is-double .mml-rest-button {
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.mml-open .performance-surface .keyboard-deck.is-double .mml-rest-button:active {
-  transform: translate(-50%, calc(-50% + 5px)) scale(0.9);
 }
 
 .mml-open .performance-surface .cat-zone {
@@ -3332,8 +3348,10 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .top-bar {
-    grid-template-columns: 40px minmax(154px, 1fr) 132px 31px;
-    gap: 3px;
+    grid-template-columns: 40px minmax(0, 1fr) 31px;
+    grid-template-rows: 42px 36px;
+    column-gap: 3px;
+    row-gap: 3px;
     padding: 7px 5px 3px;
   }
 
@@ -3395,14 +3413,22 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .mml-rest-button {
-    top: -50px;
-    width: 44px;
-    height: 44px;
+    top: 0;
+    height: auto;
+    max-width: 44px;
   }
 
   .mml-open .performance-surface .mml-rest-symbol {
     height: 22px;
+    margin-top: -5px;
     font-size: 24px;
+  }
+
+  .mml-open .performance-surface .mml-rest-shortcut {
+    min-width: 13px;
+    height: 13px;
+    padding: 0 3px;
+    font-size: 6px;
   }
 
   .mml-open .performance-surface .keyboard-deck:not(.is-double) {
@@ -3413,13 +3439,6 @@ summary:focus-visible {
     top: 100px;
     bottom: 24px;
     height: auto;
-  }
-
-  .mml-open .performance-surface .top-bar.has-double-keyboard {
-    grid-template-columns: 40px minmax(0, 1fr) 31px;
-    grid-template-rows: 42px 36px;
-    column-gap: 3px;
-    row-gap: 3px;
   }
 
   .mml-open .performance-surface .top-bar.has-double-keyboard .transpose-panel {

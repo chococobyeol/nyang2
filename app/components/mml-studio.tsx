@@ -55,6 +55,8 @@ type Props = {
   releaseMidi: (sourceId: string) => void;
   stopMmlAudio: () => void;
   clickMetronome: (accent: boolean, volume: number, delaySeconds?: number, preparing?: boolean) => void;
+  onRestShortcutChange?: (shortcut: string) => void;
+  onRestPressedChange?: (pressed: boolean) => void;
 };
 
 type RecordingInput = {
@@ -209,6 +211,8 @@ export default function MmlStudio({
   releaseMidi,
   stopMmlAudio,
   clickMetronome,
+  onRestShortcutChange,
+  onRestPressedChange,
 }: Props) {
   const [project, setProject] = useState(() => createProject(currentThemeId));
   const [hydrated, setHydrated] = useState(false);
@@ -221,6 +225,7 @@ export default function MmlStudio({
   const [playing, setPlaying] = useState(false);
   const [recordState, setRecordState] = useState<"idle" | "count-in" | "recording">("idle");
   const [recordingMessage, setRecordingMessage] = useState("");
+  const [restInputActive, setRestInputActive] = useState(false);
   const [metronomeVisual, setMetronomeVisual] = useState({ beat: -1, count: 4, preparing: false, pulse: 0 });
   const [liveRecordingNotes, setLiveRecordingNotes] = useState<LiveRecordingNote[]>([]);
   const [droppedCount, setDroppedCount] = useState(0);
@@ -267,6 +272,15 @@ export default function MmlStudio({
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
+
+  useEffect(() => {
+    onRestShortcutChange?.(project.recording.restKey);
+  }, [onRestShortcutChange, project.recording.restKey]);
+
+  useEffect(() => {
+    onRestPressedChange?.(restInputActive);
+    return () => onRestPressedChange?.(false);
+  }, [onRestPressedChange, restInputActive]);
 
   useEffect(() => {
     playheadRef.current = playhead;
@@ -577,6 +591,7 @@ export default function MmlStudio({
   }, []);
 
   const finishRecording = useCallback(() => {
+    setRestInputActive(false);
     if (countInTimerRef.current !== null) window.clearTimeout(countInTimerRef.current);
     countInTimerRef.current = null;
     clearCountInClicks();
@@ -637,6 +652,7 @@ export default function MmlStudio({
   }, [clearBeatVisualTimers, clearCountInClicks, recordTempo, startMetronomeClock]);
 
   const beginRecording = useCallback(() => {
+    setRestInputActive(false);
     if (parseError || tempoConflict) return;
     clearPlayback();
     const current = clone(projectRef.current);
@@ -743,10 +759,12 @@ export default function MmlStudio({
     }
     if (appendWallStartRef.current === null) appendWallStartRef.current = at;
     restStartedRef.current = appendCursorRef.current + (at - appendWallStartRef.current);
+    setRestInputActive(true);
     setRecordingMessage("쉼표 입력 중");
   }, []);
 
   const finishRestInput = useCallback((at: number) => {
+    setRestInputActive(false);
     const current = projectRef.current;
     if (!recordingActiveRef.current || current.recording.mode !== "append" || restStartedRef.current === null) return;
     const end = appendCursorRef.current + (at - (appendWallStartRef.current ?? at));
@@ -767,6 +785,7 @@ export default function MmlStudio({
       playheadRef.current = absoluteTick;
       setPlayhead(absoluteTick);
     }
+    setRecordingMessage(`이어붙이기 녹음 · ${recordingTempoRef.current} BPM`);
     updateRecordingPreview();
   }, [updateRecordingPreview]);
 

@@ -479,6 +479,15 @@ type KeyboardGroupProps = {
     side: KeyboardSide,
     offset: number,
   ) => void;
+  restControl?: {
+    active: boolean;
+    shortcut: string;
+    showShortcut: boolean;
+    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+    onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+    onPointerCancel: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+    onClick: () => void;
+  };
 };
 
 function KeyboardGroup({
@@ -490,6 +499,7 @@ function KeyboardGroup({
   activeKeys,
   pawPad,
   onPointerDown,
+  restControl,
 }: KeyboardGroupProps) {
   const showLowerB = side === "left" ? settings.leftShowLowerB : settings.rightShowLowerB;
   const showUpperC = side === "left" ? settings.leftShowUpperC : settings.rightShowUpperC;
@@ -565,6 +575,25 @@ function KeyboardGroup({
             </button>
           );
         })}
+        {restControl && (
+          <button
+            type="button"
+            className={`mml-rest-button ${restControl.active ? "is-active" : ""}`}
+            style={{
+              left: `${((((visibleWhites.indexOf(2) + 1) / visibleWhites.length) + ((visibleWhites.indexOf(5) + 1) / visibleWhites.length)) / 2) * 100}%`,
+              width: `${Math.min(10.5, 88 / visibleWhites.length)}%`,
+            }}
+            aria-label={`쉼표 입력, ${restControl.shortcut} 키, 누르는 동안 길이 지정`}
+            title={`누르는 동안 쉼표 입력 · ${restControl.shortcut}`}
+            onPointerDown={restControl.onPointerDown}
+            onPointerUp={restControl.onPointerUp}
+            onPointerCancel={restControl.onPointerCancel}
+            onClick={restControl.onClick}
+          >
+            <span className="mml-rest-symbol" aria-hidden="true">☾</span>
+            {restControl.showShortcut && <kbd className="mml-rest-shortcut">{restControl.shortcut}</kbd>}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -581,6 +610,8 @@ export default function Home() {
   const [transpose, setTranspose] = useState(0);
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [sustainPressed, setSustainPressed] = useState(false);
+  const [mmlRestShortcut, setMmlRestShortcut] = useState("KeyS");
+  const [mmlRestPressed, setMmlRestPressed] = useState(false);
   const [lastCatPitchClass, setLastCatPitchClass] = useState(11);
   const [mouthOpen, setMouthOpen] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
@@ -1525,6 +1556,8 @@ export default function Home() {
             releaseMidi={releaseMmlMidi}
             stopMmlAudio={stopMmlAudio}
             clickMetronome={clickMetronome}
+            onRestShortcutChange={setMmlRestShortcut}
+            onRestPressedChange={setMmlRestPressed}
           />
         )}
         <div className="performance-surface">
@@ -1618,6 +1651,32 @@ export default function Home() {
             activeKeys={activeKeys}
             pawPad={theme.visuals.pawPad}
             onPointerDown={handlePointerDown}
+            restControl={mmlOpen ? {
+              active: mmlRestPressed,
+              shortcut: codeLabel(mmlRestShortcut),
+              showShortcut: settings.showKeyMapping,
+              onPointerDown: (event) => {
+                event.preventDefault();
+                setMmlRestPressed(true);
+                event.currentTarget.setPointerCapture(event.pointerId);
+                mmlInputSinkRef.current?.restOn(inputEventSeconds(event));
+              },
+              onPointerUp: (event) => {
+                event.preventDefault();
+                setMmlRestPressed(false);
+                mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+              },
+              onPointerCancel: (event) => {
+                setMmlRestPressed(false);
+                mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
+              },
+              onClick: () => {
+                if (!mmlRestPressed) return;
+                setMmlRestPressed(false);
+                mmlInputSinkRef.current?.restOff(performance.now() / 1000);
+              },
+            } : undefined}
           />
           {settings.keyboardCount === 2 && (
             <KeyboardGroup
@@ -1630,29 +1689,6 @@ export default function Home() {
               pawPad={theme.visuals.pawPad}
               onPointerDown={handlePointerDown}
             />
-          )}
-          {mmlOpen && (
-            <button
-              type="button"
-              className="mml-rest-button"
-              aria-label="쉼표 입력, 누르는 동안 길이 지정"
-              title="누르는 동안 쉼표 입력"
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.currentTarget.setPointerCapture(event.pointerId);
-                mmlInputSinkRef.current?.restOn(inputEventSeconds(event));
-              }}
-              onPointerUp={(event) => {
-                event.preventDefault();
-                mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
-                if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-              }}
-              onPointerCancel={(event) => {
-                mmlInputSinkRef.current?.restOff(inputEventSeconds(event));
-              }}
-            >
-              <span className="mml-rest-symbol" aria-hidden="true">𝄽</span>
-            </button>
           )}
         </section>
 
