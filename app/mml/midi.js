@@ -165,6 +165,7 @@ export function createProjectFromMidi(arrayBuffer, themeId = "nyang-voice", fall
   project.title = midi.getName?.("utf-8") || fallbackTitle;
   project.tracks = tracks;
   project.tempo = tempos[0]?.bpm ?? 120;
+  project.tempoMap = tempos.length ? tempos : [{ tick: 0, bpm: project.tempo }];
   project.timeSignature = { numerator: meterMap[0].numerator, denominator: meterMap[0].denominator };
   project.timeSignatureMap = meterMap;
   project.routing = {
@@ -195,6 +196,10 @@ export function createMidiFile(project) {
     for (const event of parseTrack(track.sourceText).tempos) {
       if (!tempoByTick.has(event.tick)) tempoByTick.set(event.tick, event.bpm);
     }
+  }
+  tempoByTick.set(0, Math.max(1, Math.round(project.tempo || 120)));
+  for (const event of project.tempoMap ?? []) {
+    if (event.tick > 0) tempoByTick.set(event.tick, event.bpm);
   }
   for (const [tick, bpm] of [...tempoByTick].sort((a, b) => a[0] - b[0])) {
     if (tick === 0 && Math.round(bpm) === Math.round(project.tempo || 120)) continue;

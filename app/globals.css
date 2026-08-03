@@ -1316,7 +1316,7 @@ button {
 
 .mml-measure-label {
   position: absolute;
-  z-index: 2;
+  z-index: 1;
   top: 3px;
   padding-left: 3px;
   color: var(--muted);
@@ -1324,17 +1324,34 @@ button {
   font-weight: 900;
 }
 
-.mml-meter-marker {
+.mml-timeline-ruler {
+  position: sticky;
+  z-index: 12;
+  top: 0;
+  width: 100%;
+  height: 42px;
+  border-bottom: 1px solid rgba(31, 37, 36, 0.2);
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(247, 243, 235, 0.94));
+  box-shadow: 0 2px 5px rgba(31, 37, 36, 0.08);
+  pointer-events: none;
+}
+
+.mml-change-marker {
   position: absolute;
-  z-index: 4;
+  z-index: 2;
   top: 18px;
-  bottom: 0;
-  padding-left: 3px;
-  border-left: 2px solid #5f9f8d;
-  color: #3f7768;
+  height: 20px;
+  padding: 1px 6px;
+  border: 1px solid #5f9f8d;
+  border-radius: 5px;
+  background: #edf6f1;
+  color: #315f54;
+  cursor: pointer;
   font-size: 9px;
   font-weight: 900;
-  pointer-events: none;
+  line-height: 1;
+  pointer-events: auto;
+  white-space: nowrap;
 }
 
 .mml-note-block {
@@ -2285,6 +2302,182 @@ button {
   font-weight: 900;
 }
 
+.mml-zoom-controls .mml-open-timeline-editor {
+  width: 100%;
+  height: 27px;
+  padding: 0 7px;
+  border-color: #5f9f8d;
+  color: #315f54;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.mml-timeline-editor {
+  position: absolute;
+  z-index: 80;
+  top: 8px;
+  right: 152px;
+  display: grid;
+  width: min(430px, calc(100% - 172px));
+  gap: 9px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: #f0e8dc;
+  box-shadow: 5px 5px 0 rgba(31, 37, 36, 0.22);
+}
+
+.mml-timeline-editor header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mml-timeline-editor header > span {
+  display: grid;
+  gap: 1px;
+}
+
+.mml-timeline-editor header strong {
+  font-size: 14px;
+}
+
+.mml-timeline-editor header small,
+.mml-timeline-editor p,
+.mml-timeline-change-list > small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.mml-timeline-editor header > button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fffdf7;
+  cursor: pointer;
+  font-size: 19px;
+}
+
+.mml-timeline-editor section {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto 58px 82px;
+  align-items: end;
+  gap: 6px;
+}
+
+.mml-timeline-editor section + section {
+  grid-template-columns: minmax(110px, 1fr) 58px 82px;
+}
+
+.mml-timeline-editor label {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.mml-timeline-editor input,
+.mml-timeline-editor section button {
+  height: 34px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fffdf7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mml-timeline-editor section button {
+  cursor: pointer;
+}
+
+.mml-timeline-editor section button.is-save {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.mml-timeline-editor section button.is-delete {
+  color: #9e4035;
+}
+
+.mml-timeline-editor section button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.mml-timeline-unit {
+  align-self: end;
+  padding-bottom: 9px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.mml-timeline-fraction {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.mml-timeline-fraction i {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.mml-timeline-change-list {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.mml-timeline-change-list > strong {
+  flex: 0 0 auto;
+  margin-right: 3px;
+  font-size: 10px;
+}
+
+.mml-timeline-change-list button {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 1px;
+  min-width: 82px;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdf7;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mml-timeline-change-list button span {
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.mml-timeline-change-list button small {
+  color: #315f54;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.mml-timeline-editor p {
+  margin: 0;
+}
+
 .mml-zoom-controls output {
   min-width: 38px;
   color: var(--muted);
@@ -2348,6 +2541,24 @@ button {
     height: 36px;
     min-width: 34px;
     padding: 0;
+  }
+
+  .mml-timeline-editor {
+    top: 6px;
+    right: 6px;
+    left: 6px;
+    width: auto;
+    max-height: calc(100% - 12px);
+    overflow-y: auto;
+  }
+
+  .mml-timeline-editor section,
+  .mml-timeline-editor section + section {
+    grid-template-columns: minmax(92px, 1fr) 52px 74px;
+  }
+
+  .mml-timeline-editor section:first-of-type .mml-timeline-unit {
+    display: none;
   }
 
   .mml-transport button span,

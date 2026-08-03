@@ -228,7 +228,13 @@ test("pre-schedules playback notes on the same audio clock as the metronome", as
   assert.match(page, /Math\.max\(graph\.context\.currentTime, scheduledStartAt\) \+ 0\.001/);
   assert.match(studio, /buildMetronomeEvents\(endTick, project\.timeSignatureMap, project\.timeSignature\)/);
   assert.match(studio, /tickToSeconds\(beat\.tick, allTempoEvents, project\.tempo\) - startSeconds - elapsed/);
-  assert.match(studio, /project\.recording\.metronome \|\| playing/);
+  assert.match(studio, /if \(!projectRef\.current\.recording\.metronome\) break/);
+  assert.match(studio, /playbackMetronomeCancelsRef\.current\.forEach\(\(cancel\) => cancel\(\)\)/);
+  assert.match(studio, /className="mml-timeline-ruler"/);
+  assert.match(studio, /className="mml-change-marker"/);
+  assert.match(studio, /aria-label="박자와 템포 변경"/);
+  assert.match(studio, /변경 삭제/);
+  assert.doesNotMatch(studio, /window\.prompt\("이 위치에 추가/);
   assert.match(page, /oscillator\.onended = disconnect/);
 });
 

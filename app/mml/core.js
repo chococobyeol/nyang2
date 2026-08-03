@@ -310,6 +310,20 @@ export function tempoAtTick(tick, tempoEvents, defaultTempo = 120) {
   return bpm;
 }
 
+export function mergeTempoEvents(trackEvents = [], timelineEvents = [], defaultTempo = 120) {
+  const byTick = new Map();
+  for (const event of [...trackEvents].sort((a, b) => a.tick - b.tick)) {
+    const tick = Math.max(0, Number(event.tick) || 0);
+    if (!byTick.has(tick)) byTick.set(tick, { ...event, tick, bpm: Math.max(1, Number(event.bpm) || defaultTempo) });
+  }
+  for (const event of [...timelineEvents].sort((a, b) => a.tick - b.tick)) {
+    const tick = Math.max(0, Number(event.tick) || 0);
+    byTick.set(tick, { ...event, tick, bpm: Math.max(1, Number(event.bpm) || defaultTempo), timeline: true });
+  }
+  if (!byTick.has(0)) byTick.set(0, { tick: 0, bpm: Math.max(1, Number(defaultTempo) || 120), timeline: true });
+  return [...byTick.values()].sort((a, b) => a.tick - b.tick);
+}
+
 export function tickToSeconds(tick, tempoEvents, defaultTempo = 120) {
   const events = [...tempoEvents].sort((a, b) => a.tick - b.tick);
   let cursorTick = 0;

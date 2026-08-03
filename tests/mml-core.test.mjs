@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
+import { combineTracks, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
@@ -51,6 +51,7 @@ test("uses append recording by default and migrates the previous default", () =>
   assert.equal(project.recording.startPosition, "playhead");
   assert.equal(project.recording.metronome, false);
   assert.equal(project.recording.shortcuts.play, "Space");
+  assert.deepEqual(project.tempoMap, [{ tick: 0, bpm: 120 }]);
   assert.deepEqual(project.routing, { left: [project.tracks[0].id], right: [project.tracks[1].id] });
   const legacy = createProject();
   legacy.version = 1;
@@ -68,6 +69,22 @@ test("uses append recording by default and migrates the previous default", () =>
   customShortcut.version = 5;
   customShortcut.recording.shortcuts.play = "Alt+Enter";
   assert.equal(sanitizeProject(customShortcut).recording.shortcuts.play, "Alt+Enter");
+});
+
+test("stores editable timeline tempo markers and lets them override MML tempo at the same tick", () => {
+  const merged = mergeTempoEvents(
+    [{ tick: 0, bpm: 120 }, { tick: 384, bpm: 90 }],
+    [{ tick: 384, bpm: 72 }, { tick: 768, bpm: 140 }],
+    120,
+  );
+  assert.deepEqual(merged.map(({ tick, bpm }) => ({ tick, bpm })), [
+    { tick: 0, bpm: 120 },
+    { tick: 384, bpm: 72 },
+    { tick: 768, bpm: 140 },
+  ]);
+  const project = createProject();
+  project.tempoMap = [{ tick: 0, bpm: 120 }, { tick: 384, bpm: 72 }];
+  assert.deepEqual(sanitizeProject(project).tempoMap, project.tempoMap);
 });
 
 test("resolves recording start from the playhead, beginning, or routed tracks' empty end", () => {

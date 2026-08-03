@@ -21,10 +21,11 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 7,
+    version: 8,
     title: "",
     tracks,
     tempo: 120,
+    tempoMap: [{ tick: 0, bpm: 120 }],
     timeSignature: { numerator: 4, denominator: 4 },
     timeSignatureMap: [{ tick: 0, numerator: 4, denominator: 4 }],
     routing: { left: [tracks[0].id], right: [tracks[1].id] },
@@ -93,7 +94,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     ...fallback,
     ...value,
     format: "nyangmml",
-    version: 7,
+    version: 8,
     tracks,
     routing: { left: leftRouting, right: rightRouting },
     recording,
@@ -101,6 +102,15 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
       numerator: Math.max(1, Number(value.timeSignature?.numerator) || 4),
       denominator: Math.max(1, Number(value.timeSignature?.denominator) || 4),
     },
+    tempoMap: Array.isArray(value.tempoMap) && value.tempoMap.length
+      ? value.tempoMap
+        .map((marker) => ({
+          tick: Math.max(0, Number(marker.tick) || 0),
+          bpm: Math.max(1, Number(marker.bpm) || Number(value.tempo) || 120),
+        }))
+        .sort((a, b) => a.tick - b.tick)
+        .filter((marker, index, list) => index === list.findIndex((candidate) => candidate.tick === marker.tick))
+      : [{ tick: 0, bpm: Math.max(1, Number(value.tempo) || 120) }],
     timeSignatureMap: Array.isArray(value.timeSignatureMap) && value.timeSignatureMap.length
       ? value.timeSignatureMap
         .map((marker) => ({

@@ -174,6 +174,7 @@ export function createProjectFromMmi(source, themeId = "nyang-voice", fallbackTi
   project.title = imported.title || fallbackTitle;
   project.author = imported.author;
   project.tempo = imported.tempo;
+  project.tempoMap = imported.tempoEvents?.length ? imported.tempoEvents : [{ tick: 0, bpm: imported.tempo }];
   project.timeSignature = imported.timeSignature;
   project.timeSignatureMap = imported.timeSignatureMap;
   project.tracks = imported.tracks.map((track, index) => ({
