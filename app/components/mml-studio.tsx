@@ -34,6 +34,7 @@ import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
 import { createProjectFromMmi } from "../mml/mmi.js";
+import { createMidiFile, createProjectFromMidi, midiFilename } from "../mml/midi.js";
 
 type KeyboardSide = "left" | "right";
 
@@ -91,7 +92,7 @@ type ParsedTrack = ReturnType<typeof parseTrack>;
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 const PIANO_PIXELS_PER_TICK = 190 / (TICKS_PER_QUARTER * 4);
 
-function saveBlob(name: string, type: string, content: string) {
+function saveBlob(name: string, type: string, content: BlobPart) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement("a");
   link.href = url;
@@ -1243,8 +1244,16 @@ export default function MmlStudio({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    const text = await file.text();
     try {
+      if (/\.(mid|midi)$/i.test(file.name)) {
+        if (!window.confirm("현재 작업을 MIDI 파일의 곡으로 바꿀까요?")) return;
+        const fallbackTitle = file.name.replace(/\.(mid|midi)$/i, "");
+        const imported = createProjectFromMidi(await file.arrayBuffer(), currentThemeId, fallbackTitle);
+        commit(sanitizeProject(imported, currentThemeId));
+        setFileMenuView(false);
+        return;
+      }
+      const text = await file.text();
       if (file.name.toLowerCase().endsWith(".nyangmml")) {
         if (!window.confirm("현재 작업을 불러온 프로젝트로 바꿀까요?")) return;
         commit(sanitizeProject(JSON.parse(text), currentThemeId));
@@ -1310,6 +1319,7 @@ export default function MmlStudio({
     const name = project.title.trim().replace(/[\\/:*?"<>|]+/g, "-") || "nyangnyang";
     saveBlob(`${name}.mml`, "text/plain;charset=utf-8", combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true }));
   };
+  const exportMidi = () => saveBlob(midiFilename(project), "audio/midi", createMidiFile(project));
 
   const pianoPixelsPerTick = PIANO_PIXELS_PER_TICK * timelineZoom;
   const pianoTimelineDuration = Math.max(
@@ -1545,14 +1555,15 @@ export default function MmlStudio({
           <button type="button" className={settingsView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setSettingsView((value) => !value); setTrackSettingsView(false); setFileMenuView(false); }}><Settings className="mml-tool-icon" aria-hidden="true" /><span>녹음 설정</span></button>
           <button type="button" className={fileMenuView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setFileMenuView((value) => !value); setSettingsView(false); setTrackSettingsView(false); }}><Ellipsis className="mml-tool-icon" aria-hidden="true" /><span>파일</span></button>
         </div>
-        <input ref={fileInputRef} type="file" accept=".mml,.mmi,.nyangmml,text/plain,application/json" hidden onChange={importFile} />
+        <input ref={fileInputRef} type="file" accept=".mml,.mmi,.nyangmml,.mid,.midi,audio/midi,audio/x-midi,text/plain,application/json" hidden onChange={importFile} />
       </div>
 
       {fileMenuView && (
         <div className="mml-action-menu" role="dialog" aria-label="MML 파일 메뉴">
           <div className="mml-action-menu-head"><strong>파일</strong><button type="button" onClick={() => setFileMenuView(false)}>닫기</button></div>
           <button type="button" onClick={resetProject}><b>＋</b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML·마비꼬 MMI·냥 프로젝트</small></span></button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
+          <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b>♪</b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
           <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
           <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b>⧉</b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
           <button type="button" onClick={() => { exportProject(); setFileMenuView(false); }}><b>냥</b><span><strong>프로젝트 저장</strong><small>설정과 트랙을 함께 보관</small></span></button>

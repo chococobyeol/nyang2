@@ -7,6 +7,8 @@ import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
+import { createMidiFile, createProjectFromMidi, midiFilename } from "../app/mml/midi.js";
+import { MIDIBuilder, MIDIMessageTypes } from "spessasynth_core";
 
 test("clamps timeline zoom to a useful range", () => {
   assert.equal(clampTimelineZoom(0.1), 0.5);
@@ -281,6 +283,60 @@ test("serializes events with rests and exact note lengths", () => {
     { tick: 48, duration: 48, midi: 60 },
     { tick: 96, duration: 96, midi: 64 },
   ]);
+});
+
+test("preserves per-note velocity while serializing imported events", () => {
+  const parsed = parseTrack(serializeTrackEvents([
+    { tick: 0, duration: 96, midi: 60, velocity: 4 },
+    { tick: 96, duration: 96, midi: 64, velocity: 13 },
+  ]));
+  assert.deepEqual(parsed.notes.map((note) => note.velocity), [4, 13]);
+});
+
+test("imports MIDI notes, tempo, meter, and separates overlapping voices", () => {
+  const midi = new MIDIBuilder({ timeDivision: 480, initialTempo: 90, format: 1, name: "고양이 MIDI" });
+  midi.addEvent(0, 0, MIDIMessageTypes.timeSignature, [3, 2, 24, 8]);
+  midi.addTrack("Piano");
+  midi.noteOn(0, 1, 0, 60, 40);
+  midi.noteOn(240, 1, 0, 64, 100);
+  midi.noteOff(480, 1, 0, 60);
+  midi.noteOff(720, 1, 0, 64);
+  midi.setTempo(480, 120);
+  midi.flush(true);
+
+  const project = createProjectFromMidi(midi.writeMIDI(), "nyang-voice", "fallback");
+  assert.equal(project.title, "고양이 MIDI");
+  assert.equal(project.tempo, 90);
+  assert.deepEqual(project.timeSignature, { numerator: 3, denominator: 4 });
+  assert.equal(project.tracks[0].name, "Tempo");
+  assert.equal(project.tracks.length, 3);
+  assert.deepEqual(project.routing.left, [project.tracks[1].id]);
+  assert.deepEqual(project.routing.right, [project.tracks[2].id]);
+  const notes = project.tracks.slice(1).flatMap((track) => parseTrack(track.sourceText).notes);
+  assert.deepEqual(notes.map(({ tick, duration, midi: note }) => ({ tick, duration, midi: note })), [
+    { tick: 0, duration: 96, midi: 60 },
+    { tick: 48, duration: 96, midi: 64 },
+  ]);
+  assert.match(project.tracks[0].sourceText, /t90.*t120/);
+});
+
+test("exports a standard MIDI file that can be imported again", () => {
+  const project = createProject();
+  project.title = "냥 MIDI";
+  project.tempo = 108;
+  project.timeSignature = { numerator: 6, denominator: 8 };
+  project.timeSignatureMap = [{ tick: 0, numerator: 6, denominator: 8 }];
+  project.tracks[0].sourceText = "t108o4v5c4v15e8g8";
+  project.tracks[1].sourceText = "o3v9c2";
+  project.tracks[2].sourceText = "";
+
+  const binary = createMidiFile(project);
+  assert.equal(new TextDecoder().decode(binary.slice(0, 4)), "MThd");
+  assert.equal(midiFilename(project), "냥 MIDI.mid");
+  const imported = createProjectFromMidi(binary, "nyang-voice", "fallback");
+  assert.equal(imported.tempo, 108);
+  assert.deepEqual(imported.timeSignature, { numerator: 6, denominator: 8 });
+  assert.deepEqual(imported.tracks.flatMap((track) => parseTrack(track.sourceText).notes).map((note) => note.midi), [60, 64, 67, 48]);
 });
 
 test("converts ticks through tempo changes", () => {

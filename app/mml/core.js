@@ -281,10 +281,18 @@ export function serializeTrackEvents(events, { velocity = 15, initialOctave = 4,
   const ordered = [...events].sort((a, b) => a.tick - b.tick || b.midi - a.midi);
   let cursor = 0;
   let octave = initialOctave;
-  let result = `${Number.isFinite(tempo) && tempo > 0 ? `t${Math.round(tempo)}` : ""}v${velocity}`;
+  let currentVelocity = Math.max(0, Math.min(15, Math.round(velocity)));
+  let result = `${Number.isFinite(tempo) && tempo > 0 ? `t${Math.round(tempo)}` : ""}v${currentVelocity}`;
   for (const event of ordered) {
     const gap = Math.max(0, Math.round(event.tick - cursor));
     if (gap > 0) result += encodeDuration(gap).map((length) => `r${length}`).join("");
+    const eventVelocity = Number.isFinite(event.velocity)
+      ? Math.max(0, Math.min(15, Math.round(event.velocity)))
+      : currentVelocity;
+    if (eventVelocity !== currentVelocity) {
+      result += `v${eventVelocity}`;
+      currentVelocity = eventVelocity;
+    }
     const encoded = encodeEvent(event.midi, event.duration, octave);
     result += encoded.text;
     octave = encoded.octave;
