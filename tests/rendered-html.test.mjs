@@ -164,6 +164,8 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.doesNotMatch(studio, /setPlayhead\(visibleTick\)/);
   assert.match(studio, /const elapsedTick = recordingStartTickRef\.current[\s\S]*?setPlayhead\(tick\)/);
   assert.match(studio, /liveNotesEndTick\(nextLiveNotes, elapsedTick\)/);
+  assert.match(studio, /if \(!playing && recordState !== "recording"\) return/);
+  assert.match(studio, /\[pianoPixelsPerTick, playhead, playing, recordState\]/);
   assert.match(studio, /appendLegatoContinuation\([\s\S]*?appendWallStartRef\.current = at/);
   assert.match(studio, /syncedPlaybackStartAt\(project\.recording\.metronome, metronomeClockRef\.current, now\)/);
   assert.match(studio, /playbackWait \+ endSeconds - startSeconds/);

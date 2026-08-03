@@ -1166,7 +1166,7 @@ export default function MmlStudio({
   }, [hydrated, maxMidi, minMidi, pixelsPerPitch, visibleMidi]);
 
   useEffect(() => {
-    if (recordState !== "recording") return;
+    if (!playing && recordState !== "recording") return;
     const roll = pianoRollRef.current;
     if (!roll) return;
     roll.scrollLeft = followTimelineScroll(
@@ -1175,7 +1175,7 @@ export default function MmlStudio({
       roll.scrollWidth,
       playhead * pianoPixelsPerTick,
     );
-  }, [pianoPixelsPerTick, playhead, recordState]);
+  }, [pianoPixelsPerTick, playhead, playing, recordState]);
 
   const timelineContext = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
