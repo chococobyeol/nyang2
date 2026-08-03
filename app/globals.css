@@ -2732,6 +2732,31 @@ button {
 }
 
 .mml-open .performance-surface .cat-zone {
+  --cat-height: clamp(112px, 15vh, 158px);
+  z-index: 3;
+  top: 166px;
+  right: 24px;
+  bottom: 228px;
+  left: 24px;
+  display: grid;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.mml-open .performance-surface .cat-zone.is-double {
+  top: 50%;
+  right: 12%;
+  bottom: auto;
+  left: 12%;
+  height: 150px;
+  transform: translateY(-50%);
+}
+
+.mml-open .performance-surface .cat-zone.has-breath {
+  grid-template-columns: 1fr;
+}
+
+.mml-open .performance-surface .cat-zone .breath-meter {
   display: none;
 }
 
@@ -3985,6 +4010,18 @@ summary:focus-visible {
     height: 13px;
     padding: 0 3px;
     font-size: 6px;
+  }
+
+  .mml-open .performance-surface .cat-zone {
+    --cat-height: 76px;
+    top: 88px;
+    right: 12px;
+    bottom: 142px;
+    left: 12px;
+  }
+
+  .mml-open .performance-surface .cat-zone.is-double {
+    display: none;
   }
 
   .mml-open .performance-surface .keyboard-deck:not(.is-double) {

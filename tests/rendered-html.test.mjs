@@ -109,6 +109,9 @@ test("includes the MML studio without changing the public route", async () => {
   assert.match(css, /\.mml-open \.app-stage/);
   assert.match(css, /\.mml-studio/);
   assert.match(css, /\.mml-studio\.is-hidden \{\s*display: none;/s);
+  assert.match(css, /\.mml-open \.performance-surface \.cat-zone \{[^}]*display: grid;/s);
+  assert.match(css, /\.mml-open \.performance-surface \.cat-zone\.is-double \{[^}]*transform: translateY\(-50%\);/s);
+  assert.match(css, /\.mml-open \.performance-surface \.cat-zone\.is-double \{\s*display: none;/s);
   assert.match(studio, /if \(!visible\) return;[\s\S]*?window\.addEventListener\("keydown", down\)/);
 });
 
