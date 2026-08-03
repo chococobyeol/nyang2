@@ -85,6 +85,7 @@ type AudioGraph = {
 type SampleVoiceState = {
   buffer: AudioBuffer;
   playbackRate: number;
+  sourceOffset: number;
   startedAt: number;
   dryEnded: boolean;
   sustainLatched: boolean;
@@ -192,6 +193,7 @@ const TRANSPOSE_SHORTCUT_LABELS: Record<TransposeShortcutAction, string> = {
 };
 
 const NYANG_SAMPLE = { midi: 64, url: "/audio/nyang/e4.mp3" } as const;
+const NYANG_SAMPLE_START_OFFSET_SECONDS = 0.032;
 const NYANG_LONG_PRESS_MS = 260;
 const NYANG_TAIL_SOURCE_SECONDS = 0.22;
 const NYANG_REVERB_SECONDS = 2.6;
@@ -684,6 +686,17 @@ export default function Home() {
     () => THEMES.find((candidate) => candidate.id === settings.themeId) ?? THEMES[0],
     [settings.themeId],
   );
+
+  useEffect(() => {
+    Object.values(theme.visuals).forEach((source) => {
+      const image = new Image();
+      image.src = source;
+      void image.decode?.().catch(() => {
+        // The visible image retries normally if eager decoding is unavailable.
+      });
+    });
+  }, [theme.visuals]);
+
   const availableThemes = useMemo(() => [
     ...THEMES.map(({ id, name, accent }) => ({ id, name, accent })),
     ...(soundPack?.presets ?? []).map((preset) => ({
@@ -939,9 +952,9 @@ export default function Home() {
     const source = graph.context.createBufferSource();
     const convolver = graph.context.createConvolver();
     const tailGain = graph.context.createGain();
-    const offset = Math.max(0, state.buffer.duration - NYANG_TAIL_SOURCE_SECONDS);
+    const offset = Math.max(state.sourceOffset, state.buffer.duration - NYANG_TAIL_SOURCE_SECONDS);
     const duration = Math.min(NYANG_TAIL_SOURCE_SECONDS, state.buffer.duration - offset);
-    const naturalTailTime = state.startedAt + offset / state.playbackRate;
+    const naturalTailTime = state.startedAt + Math.max(0, offset - state.sourceOffset) / state.playbackRate;
     const startAt = Math.max(graph.context.currentTime, naturalTailTime);
 
     source.buffer = state.buffer;
@@ -1128,6 +1141,7 @@ export default function Home() {
       const sources: AudioScheduledSourceNode[] = [];
       let sampleSource: AudioBufferSourceNode | null = null;
       let samplePlaybackRate = 1;
+      let sampleSourceOffset = 0;
 
       if (sampleBuffer) {
         const source = graph.context.createBufferSource();
@@ -1138,7 +1152,8 @@ export default function Home() {
         source.connect(gain);
         gain.gain.setValueAtTime(0.0001, now);
         gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.82 * voiceVolume), now + 0.012);
-        source.start(now);
+        sampleSourceOffset = Math.min(NYANG_SAMPLE_START_OFFSET_SECONDS, Math.max(0, sampleBuffer.duration - 0.001));
+        source.start(now, sampleSourceOffset);
         sources.push(source);
         sampleSource = source;
       } else {
@@ -1178,6 +1193,7 @@ export default function Home() {
           ? {
               buffer: sampleBuffer,
               playbackRate: samplePlaybackRate,
+              sourceOffset: sampleSourceOffset,
               startedAt: now,
               dryEnded: false,
               sustainLatched: false,
@@ -1886,9 +1902,15 @@ export default function Home() {
           <div className="cat-track">
             <div className="cat-assembly" aria-hidden="true">
               <img className="cat-mouth" src={mouthOpen ? theme.visuals.mouthOpen : theme.visuals.mouthClosed} alt="" draggable={false} />
-              {Array.from({ length: segmentCount }, (_, index) => (
-                <img className="cat-middle" src={theme.visuals.bodyMiddle} alt="" draggable={false} key={`segment-${index}`} />
-              ))}
+              {segmentCount > 0 && (
+                <span
+                  className="cat-middle-strip"
+                  style={{
+                    "--cat-segments": segmentCount,
+                    backgroundImage: `url(${JSON.stringify(theme.visuals.bodyMiddle)})`,
+                  } as CSSProperties}
+                />
+              )}
               <img className="cat-end" src={theme.visuals.bodyEnd} alt="" draggable={false} />
             </div>
           </div>

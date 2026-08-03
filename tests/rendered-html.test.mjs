@@ -53,6 +53,13 @@ test("ships the tuned E4 nyang sample with conditional tail-only reverb", async 
   }
 
   assert.match(page, /const NYANG_SAMPLE = \{ midi: 64/);
+  assert.match(page, /const NYANG_SAMPLE_START_OFFSET_SECONDS = 0\.032/);
+  assert.match(page, /source\.start\(now, sampleSourceOffset\)/);
+  assert.match(page, /offset - state\.sourceOffset/);
+  assert.match(page, /Object\.values\(theme\.visuals\)\.forEach/);
+  assert.match(page, /className="cat-middle-strip"/);
+  assert.match(page, /"--cat-segments": segmentCount/);
+  assert.match(page, /backgroundImage: `url\(\$\{JSON\.stringify\(theme\.visuals\.bodyMiddle\)\}\)`/);
   assert.match(page, /themeId: "nyang-voice"/);
   assert.match(page, /name: "냥 보이스"/);
   assert.match(page, /description: "냥\.\."/);
