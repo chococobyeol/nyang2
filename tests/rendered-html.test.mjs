@@ -268,8 +268,12 @@ test("changes the instrument for several selected tracks at once", async () => {
   assert.match(studio, /const updateBatchTheme = \(themeId: string\) =>/);
   assert.match(studio, /if \(selectedIds\.has\(track\.id\)\) track\.themeId = themeId/);
   assert.match(studio, /aria-label="선택한 트랙 음색"/);
-  assert.match(studio, /className=\{`mml-track-batch-toggle/);
+  assert.match(studio, /className="mml-track-batch-checkbox"/);
+  assert.match(studio, /const toggleAllBatchTracks = \(\) =>/);
+  assert.match(studio, /\? "전체 해제" : "전체 선택"/);
   assert.match(css, /\.mml-track-batch-panel/);
+  assert.match(css, /\.mml-track-select-all/);
+  assert.match(css, /\.mml-track-batch-checkbox input:checked/);
   assert.match(css, /\.mml-track-card\.is-batch-selected/);
 });
 

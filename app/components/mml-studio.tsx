@@ -1171,6 +1171,12 @@ export default function MmlStudio({
       : [...current, trackId]);
   };
 
+  const toggleAllBatchTracks = () => {
+    setBatchTrackIds((current) => current.length === project.tracks.length
+      ? []
+      : project.tracks.map((track: any) => track.id));
+  };
+
   const updateBatchTheme = (themeId: string) => {
     if (!themeId || batchTrackIds.length === 0) return;
     const selectedIds = new Set(batchTrackIds);
@@ -1644,7 +1650,13 @@ export default function MmlStudio({
 
       <div className="mml-main-grid">
         <aside className="mml-track-list">
-          <div className="mml-track-list-title"><strong>트랙</strong><small>색상 표시를 눌러 여러 개 선택</small></div>
+          <div className="mml-track-list-title">
+            <strong>트랙</strong>
+            <label className="mml-track-select-all">
+              <input type="checkbox" checked={project.tracks.length > 0 && batchTrackIds.length === project.tracks.length} onChange={toggleAllBatchTracks} />
+              <span>{project.tracks.length > 0 && batchTrackIds.length === project.tracks.length ? "전체 해제" : "전체 선택"}</span>
+            </label>
+          </div>
           {batchSelectedTracks.length > 0 && (
             <div className="mml-track-batch-panel">
               <div><strong>{batchSelectedTracks.length}개 트랙 선택</strong><button type="button" onClick={() => setBatchTrackIds([])}>해제</button></div>
@@ -1659,7 +1671,11 @@ export default function MmlStudio({
           )}
           {project.tracks.map((track: any, index: number) => (
             <div className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""} ${batchTrackIds.includes(track.id) ? "is-batch-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id}>
-              <button type="button" className={`mml-track-batch-toggle ${batchTrackIds.includes(track.id) ? "is-on" : ""}`} aria-pressed={batchTrackIds.includes(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 ${batchTrackIds.includes(track.id) ? "선택 해제" : "선택"}`} title="여러 트랙을 함께 바꿀 때 선택" onClick={() => toggleBatchTrack(track.id)}><span style={{ background: track.color }} aria-hidden="true">{batchTrackIds.includes(track.id) ? "✓" : ""}</span></button>
+              <label className="mml-track-batch-checkbox" title="여러 트랙을 함께 바꿀 때 선택">
+                <input type="checkbox" checked={batchTrackIds.includes(track.id)} onChange={() => toggleBatchTrack(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 선택`} />
+                <span aria-hidden="true" />
+                <i style={{ background: track.color }} aria-hidden="true" />
+              </label>
               <button type="button" className="mml-track-select" onClick={() => selectTrack(track.id)} onDoubleClick={() => { selectTrack(track.id); setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }} aria-pressed={track.id === selectedTrack.id} aria-label={`${track.name || `Track ${index + 1}`} 선택, 두 번 누르면 트랙 설정`} title="두 번 누르면 트랙 설정">
                 <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
               </button>

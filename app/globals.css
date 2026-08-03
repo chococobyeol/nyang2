@@ -1989,12 +1989,44 @@ button {
   font-size: 12px;
 }
 
-.mml-track-list-title small {
-  max-width: 82px;
+.mml-track-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
-  font-size: 7px;
-  line-height: 1.25;
-  text-align: right;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.mml-track-select-all input,
+.mml-track-batch-checkbox input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  appearance: none;
+  background: #fffdf7;
+  cursor: pointer;
+}
+
+.mml-track-select-all input:checked,
+.mml-track-batch-checkbox input:checked {
+  background: var(--ink);
+}
+
+.mml-track-select-all input:checked::after,
+.mml-track-batch-checkbox input:checked::after {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  color: #fffdf7;
+  content: "✓";
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .mml-track-list-title button {
@@ -2013,7 +2045,7 @@ button {
   display: grid;
   width: 100%;
   min-height: 68px;
-  grid-template-columns: 18px minmax(0, 1fr) 58px;
+  grid-template-columns: 20px minmax(0, 1fr) 58px;
   align-items: center;
   gap: 4px;
   margin: 0 0 5px;
@@ -2025,34 +2057,24 @@ button {
   text-align: left;
 }
 
-.mml-track-batch-toggle {
+.mml-track-batch-checkbox {
   display: grid;
-  width: 18px;
-  height: 32px;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  width: 20px;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
   cursor: pointer;
 }
 
-.mml-track-batch-toggle span {
-  display: grid;
-  width: 8px;
-  height: 28px;
-  place-items: center;
-  border-radius: 4px;
-  color: var(--ink);
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 10px;
-  font-weight: 900;
+.mml-track-batch-checkbox span {
+  display: none;
 }
 
-.mml-track-batch-toggle.is-on span {
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--ink);
-  border-radius: 5px;
+.mml-track-batch-checkbox i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 .mml-track-select {
@@ -2452,7 +2474,7 @@ button {
     display: none;
   }
 
-  .mml-track-list-title small {
+  .mml-track-select-all span {
     display: none;
   }
 
@@ -2467,14 +2489,13 @@ button {
     flex: 0 0 142px;
     width: 142px;
     min-height: 42px;
-    grid-template-columns: 16px minmax(0, 1fr) 58px;
+    grid-template-columns: 20px minmax(0, 1fr) 58px;
     margin: 0;
     padding: 3px 4px;
   }
 
-  .mml-track-batch-toggle {
-    width: 16px;
-    height: 28px;
+  .mml-track-batch-checkbox {
+    width: 20px;
   }
 
   .mml-track-select {
