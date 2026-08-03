@@ -290,6 +290,10 @@ function codeLabel(code: string) {
   return labels[code] ?? code.replace(/^Numpad/, "Num ");
 }
 
+function shortcutCodeLabel(shortcut: string) {
+  return shortcut.split("+").map(codeLabel).join("+");
+}
+
 function createReverbImpulse(context: AudioContext) {
   const length = Math.round(context.sampleRate * NYANG_REVERB_SECONDS);
   const impulse = context.createBuffer(2, length, context.sampleRate);
@@ -612,6 +616,7 @@ export default function Home() {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [sustainPressed, setSustainPressed] = useState(false);
   const [mmlRestShortcut, setMmlRestShortcut] = useState("KeyS");
+  const [mmlPlayShortcut, setMmlPlayShortcut] = useState("Space");
   const [mmlRestPressed, setMmlRestPressed] = useState(false);
   const [lastCatPitchClass, setLastCatPitchClass] = useState(11);
   const [mouthOpen, setMouthOpen] = useState(false);
@@ -1566,6 +1571,7 @@ export default function Home() {
             releaseMidi={releaseMmlMidi}
             stopMmlAudio={stopMmlAudio}
             clickMetronome={clickMetronome}
+            onPlayShortcutChange={setMmlPlayShortcut}
             onRestShortcutChange={setMmlRestShortcut}
             onRestPressedChange={setMmlRestPressed}
           />
@@ -1704,7 +1710,7 @@ export default function Home() {
 
         <footer className="performance-footer">
           <span className={audioReady ? "is-ready" : ""}>{audioReady ? "● AUDIO READY" : "첫 건반을 누르면 오디오가 시작됩니다"}</span>
-          <span className={sustainPressed ? "sustain-on" : ""}>{mmlOpen ? "SPACE · 재생/정지" : `SPACE · SUSTAIN ${sustainPressed ? "ON" : ""}`}</span>
+          <span className={sustainPressed ? "sustain-on" : ""}>{mmlOpen ? `${shortcutCodeLabel(mmlPlayShortcut)} · 재생/정지` : `SPACE · SUSTAIN ${sustainPressed ? "ON" : ""}`}</span>
           <button type="button" onClick={allNotesOff}>모든 음 끄기</button>
         </footer>
         </div>

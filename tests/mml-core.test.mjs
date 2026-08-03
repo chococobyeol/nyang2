@@ -46,6 +46,7 @@ test("uses append recording by default and migrates the previous default", () =>
   const project = createProject();
   assert.equal(project.recording.mode, "append");
   assert.equal(project.recording.metronome, false);
+  assert.equal(project.recording.shortcuts.play, "Space");
   assert.deepEqual(project.routing, { left: [project.tracks[0].id], right: [project.tracks[1].id] });
   const legacy = createProject();
   legacy.version = 1;
@@ -53,6 +54,16 @@ test("uses append recording by default and migrates the previous default", () =>
   legacy.recording.metronome = true;
   assert.equal(sanitizeProject(legacy).recording.mode, "append");
   assert.equal(sanitizeProject(legacy).recording.metronome, false);
+
+  const previousShortcut = createProject();
+  previousShortcut.version = 5;
+  previousShortcut.recording.shortcuts.play = "Alt+KeyP";
+  assert.equal(sanitizeProject(previousShortcut).recording.shortcuts.play, "Space");
+
+  const customShortcut = createProject();
+  customShortcut.version = 5;
+  customShortcut.recording.shortcuts.play = "Alt+Enter";
+  assert.equal(sanitizeProject(customShortcut).recording.shortcuts.play, "Alt+Enter");
 });
 
 test("uses the whole song as the default repeat range and migrates the old one-measure default", () => {

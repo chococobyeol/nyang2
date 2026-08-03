@@ -60,6 +60,7 @@ type Props = {
   releaseMidi: (sourceId: string) => void;
   stopMmlAudio: () => void;
   clickMetronome: (accent: boolean, volume: number, delaySeconds?: number, preparing?: boolean) => void;
+  onPlayShortcutChange?: (shortcut: string) => void;
   onRestShortcutChange?: (shortcut: string) => void;
   onRestPressedChange?: (pressed: boolean) => void;
 };
@@ -220,6 +221,7 @@ export default function MmlStudio({
   releaseMidi,
   stopMmlAudio,
   clickMetronome,
+  onPlayShortcutChange,
   onRestShortcutChange,
   onRestPressedChange,
 }: Props) {
@@ -282,7 +284,7 @@ export default function MmlStudio({
 
   const selectedTrack = project.tracks.find((track: any) => track.id === project.view.selectedTrackId) ?? project.tracks[0];
   const recordingShortcuts = Object.assign({
-    play: "Alt+KeyP",
+    play: "Space",
     record: "Alt+KeyR",
     stop: "Alt+KeyS",
   }, project.recording.shortcuts ?? {});
@@ -294,6 +296,10 @@ export default function MmlStudio({
   useEffect(() => {
     onRestShortcutChange?.(project.recording.restKey);
   }, [onRestShortcutChange, project.recording.restKey]);
+
+  useEffect(() => {
+    onPlayShortcutChange?.(recordingShortcuts.play);
+  }, [onPlayShortcutChange, recordingShortcuts.play]);
 
   useEffect(() => {
     onRestPressedChange?.(restInputActive);
@@ -964,19 +970,14 @@ export default function MmlStudio({
         }
         return;
       }
-      if (!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.code === "Space") {
-        event.preventDefault();
-        if (event.repeat || recordState !== "idle") return;
-        if (playing) clearPlayback(); else startPlayback();
-        return;
-      }
       const shortcuts = Object.assign({
-        play: "Alt+KeyP",
+        play: "Space",
         record: "Alt+KeyR",
         stop: "Alt+KeyS",
       }, projectRef.current.recording.shortcuts ?? {});
       if (matchesShortcut(event, shortcuts.play)) {
         event.preventDefault();
+        if (event.repeat || recordState !== "idle") return;
         if (playing) clearPlayback(); else startPlayback();
         return;
       }
@@ -1056,6 +1057,7 @@ export default function MmlStudio({
 
   const captureShortcut = (action: "play" | "record" | "stop", event: ReactKeyboardEvent<HTMLInputElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     const shortcut = shortcutFromEvent(event);
     const collision = Object.entries(recordingShortcuts).find(([name, value]) => name !== action && value === shortcut);
     if (collision) {
@@ -1388,7 +1390,7 @@ export default function MmlStudio({
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
         <div className="mml-transport-primary">
-          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}><b>{playing ? "Ⅱ" : "▶"}</b><span>{playing ? "일시정지" : "재생"}</span><kbd>Space</kbd></button>
+          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}><b>{playing ? "Ⅱ" : "▶"}</b><span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
           <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}><b>■</b><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
           <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><b>●</b><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         </div>

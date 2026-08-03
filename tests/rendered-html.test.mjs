@@ -249,7 +249,13 @@ test("supports selection-based MML duration editing and Space playback", async (
   assert.match(studio, /onContextMenu=\{\(event\) => \{/);
   assert.match(studio, /setSelectedMmlLength/);
   assert.match(studio, /event\.code === "Comma" \|\| event\.code === "Period"/);
-  assert.match(studio, /event\.code === "Space"/);
+  assert.match(studio, /play: "Space"/);
+  assert.match(studio, /matchesShortcut\(event, shortcuts\.play\)/);
+  assert.match(studio, /shortcutLabel\(recordingShortcuts\.play\)/);
+  assert.match(studio, /event\.stopPropagation\(\)/);
+  assert.match(studio, /onPlayShortcutChange\?\.\(recordingShortcuts\.play\)/);
+  assert.match(page, /onPlayShortcutChange=\{setMmlPlayShortcut\}/);
+  assert.match(page, /shortcutCodeLabel\(mmlPlayShortcut\)/);
   assert.match(page, /mmlOpen && event\.code === "Space"/);
 });
 

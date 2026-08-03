@@ -21,7 +21,7 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 5,
+    version: 6,
     title: "",
     tracks,
     tempo: 120,
@@ -39,7 +39,7 @@ export function createProject(themeId = "nyang-voice") {
       insertScope: "all",
       restKey: "KeyS",
       shortcuts: {
-        play: "Alt+KeyP",
+        play: "Space",
         record: "Alt+KeyR",
         stop: "Alt+KeyS",
       },
@@ -81,6 +81,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
   };
   if (Number(value.version) < 2) recording.mode = "append";
   if (Number(value.version) < 3) recording.metronome = false;
+  if (Number(value.version) < 6 && recording.shortcuts.play === "Alt+KeyP") recording.shortcuts.play = "Space";
   const view = {
     ...fallback.view,
     ...value.view,
@@ -91,7 +92,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     ...fallback,
     ...value,
     format: "nyangmml",
-    version: 5,
+    version: 6,
     tracks,
     routing: { left: leftRouting, right: rightRouting },
     recording,
