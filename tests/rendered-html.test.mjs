@@ -107,6 +107,16 @@ test("includes the MML studio without changing the public route", async () => {
   assert.match(css, /\.mml-studio/);
 });
 
+test("keeps the MML workspace text readable in the split layout", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.mml-project-title input \{[^}]*font-size: 18px;/s);
+  assert.match(css, /\.mml-transport button \{[^}]*font-size: 13px;/s);
+  assert.match(css, /\.mml-track-card strong \{\s*font-size: 12px;/s);
+  assert.match(css, /\.mml-work-area textarea \{[^}]*font-size: 15px;/s);
+  assert.match(css, /\.mml-status-line \{[^}]*font-size: 10px;/s);
+  assert.match(css, /\.mml-quick-settings input,[^}]*font-size: 12px;/s);
+});
+
 test("aligns compact octave, key, and settings controls", async () => {
   const [css, page] = await Promise.all([
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),

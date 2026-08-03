@@ -1073,14 +1073,14 @@ button {
 .mml-quick-settings input,
 .mml-quick-settings select,
 .mml-quick-settings button {
-  height: 28px;
+  height: 34px;
   min-width: 55px;
   width: 100%;
   padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: #fff;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -1258,7 +1258,7 @@ button {
   padding: 0 2px;
   background: rgba(247, 243, 235, 0.88);
   color: var(--muted);
-  font-size: 6px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 900;
 }
@@ -1292,7 +1292,7 @@ button {
   top: 3px;
   padding-left: 3px;
   color: var(--muted);
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 900;
 }
 
@@ -1304,7 +1304,7 @@ button {
   padding-left: 3px;
   border-left: 2px solid #5f9f8d;
   color: #3f7768;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 900;
   pointer-events: none;
 }
@@ -1351,11 +1351,12 @@ button {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: #eee7dc;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .mml-editor-head small {
   color: var(--muted);
+  font-size: 10px;
 }
 
 .mml-editor-head button {
@@ -1363,7 +1364,7 @@ button {
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
 }
 
@@ -1377,7 +1378,7 @@ button {
   background: #fffdf7;
   color: var(--ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: 15px;
   line-height: 1.55;
 }
 
@@ -1395,7 +1396,7 @@ button {
   padding: 0 8px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 900;
 }
 
@@ -1409,7 +1410,7 @@ button {
 .mml-studio {
   container-name: mml-studio;
   container-type: inline-size;
-  grid-template-rows: 48px 48px minmax(0, 1fr);
+  grid-template-rows: 58px 54px minmax(0, 1fr);
 }
 
 .mml-studio-header {
@@ -1427,18 +1428,18 @@ button {
 
 .mml-project-title span {
   flex: 0 0 auto;
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .mml-project-title input {
   min-width: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .mml-record-state {
   max-width: 180px;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .mml-record-state strong {
@@ -1448,9 +1449,9 @@ button {
 }
 
 .mml-close {
-  width: 28px;
-  height: 28px;
-  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  font-size: 21px;
 }
 
 .mml-transport {
@@ -1478,22 +1479,22 @@ button {
   display: flex;
   flex: 0 0 auto;
   width: auto;
-  height: 34px;
-  min-width: 34px;
+  height: 40px;
+  min-width: 38px;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 0 8px;
+  padding: 0 9px;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .mml-transport button b {
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .mml-transport button span {
-  font-size: 8px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -1501,7 +1502,7 @@ button {
   padding: 1px 3px;
   border: 1px solid #d0c8bc;
   border-radius: 4px;
-  font-size: 5px;
+  font-size: 8px;
   white-space: nowrap;
 }
 
@@ -1553,6 +1554,7 @@ button {
 
 .mml-quick-settings-head {
   min-height: 35px;
+  font-size: 13px;
 }
 
 .mml-quick-settings-head > span {
@@ -1562,7 +1564,7 @@ button {
 
 .mml-quick-settings-head small {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .mml-quick-settings label,
@@ -1570,7 +1572,7 @@ button {
   display: grid;
   gap: 3px;
   color: var(--muted);
-  font-size: 7px;
+  font-size: 11px;
   font-weight: 900;
 }
 
@@ -1578,13 +1580,13 @@ button {
 .mml-track-settings select,
 .mml-track-settings button {
   width: 100%;
-  height: 30px;
+  height: 36px;
   min-width: 0;
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: #fffdf7;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -1610,7 +1612,7 @@ button {
   align-items: center;
   gap: 5px;
   color: var(--muted);
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 900;
 }
 
@@ -1645,7 +1647,7 @@ button {
   justify-content: space-between;
   padding: 2px 2px 7px;
   border-bottom: 1px solid var(--line);
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .mml-action-menu-head button {
@@ -1654,7 +1656,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #fffdf7;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 900;
 }
 
@@ -1686,7 +1688,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 7px;
   background: #fff;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .mml-action-menu > button span,
@@ -1697,7 +1699,7 @@ button {
 .mml-action-menu small,
 .mml-import-card small {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .mml-import-dialog {
@@ -1733,7 +1735,7 @@ button {
 
 .mml-main-grid {
   grid-row: 3;
-  grid-template-columns: 126px minmax(0, 1fr);
+  grid-template-columns: 154px minmax(0, 1fr);
 }
 
 .mml-track-list {
@@ -1744,6 +1746,7 @@ button {
   min-height: 24px;
   margin-bottom: 4px;
   padding: 0 2px;
+  font-size: 12px;
 }
 
 .mml-track-list-title button {
@@ -1761,7 +1764,7 @@ button {
 .mml-track-card {
   display: grid;
   width: 100%;
-  min-height: 48px;
+  min-height: 60px;
   grid-template-columns: 8px minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
@@ -1795,17 +1798,17 @@ button {
 }
 
 .mml-track-card strong {
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .mml-track-card small {
   color: var(--muted);
-  font-size: 6px;
+  font-size: 9px;
 }
 
 .mml-track-card em {
   color: var(--track-color);
-  font-size: 6px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 900;
 }
@@ -1817,18 +1820,18 @@ button {
 
 .mml-track-settings-button {
   width: 100%;
-  height: 30px;
+  height: 36px;
   margin-top: 3px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: #e7dfd3;
   cursor: pointer;
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 900;
 }
 
 .mml-work-area {
-  grid-template-rows: minmax(180px, 1.45fr) 32px minmax(118px, 0.85fr) 22px;
+  grid-template-rows: minmax(180px, 1.45fr) 38px minmax(118px, 0.85fr) 26px;
 }
 
 .mml-editor-head {
@@ -1877,12 +1880,12 @@ button {
   }
 
   .mml-project-title input {
-    font-size: 11px;
+    font-size: 14px;
   }
 
   .mml-record-state {
     max-width: 90px;
-    font-size: 6px;
+    font-size: 9px;
   }
 
   .mml-close {
@@ -1964,11 +1967,11 @@ button {
   }
 
   .mml-track-card strong {
-    font-size: 7px;
+    font-size: 10px;
   }
 
   .mml-track-card small {
-    font-size: 5px;
+    font-size: 8px;
   }
 
   .mml-track-settings-button {
@@ -1996,7 +1999,7 @@ button {
   }
 
   .mml-editor-head button {
-    font-size: 6px;
+    font-size: 9px;
   }
 
   .mml-quick-settings,
@@ -3148,16 +3151,16 @@ summary:focus-visible {
 
   .mml-editor-head {
     padding: 0 6px;
-    font-size: 7px;
+    font-size: 10px;
   }
 
   .mml-work-area textarea {
     padding: 7px;
-    font-size: 9px;
+    font-size: 13px;
   }
 
   .mml-status-line {
-    font-size: 6px;
+    font-size: 9px;
   }
 
   .mml-open .performance-surface .top-bar {
