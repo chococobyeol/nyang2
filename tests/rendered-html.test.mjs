@@ -318,13 +318,24 @@ test("uses standard undo and redo icons without platform-dependent arrow glyphs"
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(studio, /import \{ Ellipsis, Redo2, Settings, Undo2 \} from "lucide-react"/);
+  assert.match(studio, /import \{[^}]*Ellipsis[^}]*Redo2[^}]*Settings[^}]*Undo2[^}]*\} from "lucide-react"/);
   assert.match(studio, /<Undo2 className="mml-tool-icon"/);
   assert.match(studio, /<Redo2 className="mml-tool-icon"/);
   assert.match(studio, /<Settings className="mml-tool-icon"/);
   assert.match(studio, /<Ellipsis className="mml-tool-icon"/);
   assert.doesNotMatch(studio, /<b>↶<\/b>|<b>↷<\/b>/);
   assert.match(css, /\.mml-tool-icon \{[^}]*width: 14px;[^}]*height: 14px;[^}]*stroke-width: 2\.2;/s);
+});
+
+test("places timeline navigation beside playback controls instead of the text editor", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  const transportStart = studio.indexOf('<div className="mml-transport"');
+  const editorStart = studio.indexOf('<div className="mml-editor-head"');
+  const navigationStart = studio.indexOf('<nav className="mml-transport-navigation"');
+  assert.ok(transportStart >= 0 && navigationStart > transportStart && navigationStart < editorStart);
+  assert.doesNotMatch(studio, /mml-timeline-nav/);
+  assert.match(studio, /<SkipBack className="mml-tool-icon"/);
+  assert.match(studio, /<SkipForward className="mml-tool-icon"/);
 });
 
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {

@@ -1596,7 +1596,7 @@ button {
 
 .mml-transport {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto auto minmax(0, 1fr);
   overflow: hidden;
   gap: 7px;
   padding: 6px 8px;
@@ -1604,6 +1604,7 @@ button {
 }
 
 .mml-transport-primary,
+.mml-transport-navigation,
 .mml-transport-toggles,
 .mml-transport-tools {
   display: flex;
@@ -1613,6 +1614,16 @@ button {
 
 .mml-transport-tools {
   justify-content: flex-end;
+}
+
+.mml-transport-navigation {
+  padding-left: 3px;
+  border-left: 1px solid var(--line);
+}
+
+.mml-transport-navigation button {
+  min-width: 38px;
+  padding-inline: 7px;
 }
 
 .mml-transport button {
@@ -2239,34 +2250,35 @@ button {
   margin-left: auto;
 }
 
-.mml-timeline-nav {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 3px;
-  margin-left: auto;
-}
-
-.mml-timeline-nav button,
-.mml-timeline-nav button:first-of-type,
 .mml-editor-head > button:first-of-type {
   min-width: 31px;
   margin-left: 0;
 }
 
-.mml-timeline-nav button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
+@container mml-studio (max-width: 900px) {
+  .mml-transport-navigation button {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+  }
+
+  .mml-transport-navigation button span {
+    display: none;
+  }
 }
 
-.mml-timeline-nav button b {
-  font-size: 10px;
-}
+@container mml-studio (max-width: 680px) {
+  .mml-transport button {
+    width: 34px;
+    height: 36px;
+    min-width: 34px;
+    padding: 0;
+  }
 
-.mml-timeline-nav button span {
-  color: var(--muted);
-  font-size: 8px;
+  .mml-transport button span,
+  .mml-transport button kbd {
+    display: none;
+  }
 }
 
 @container mml-studio (max-width: 560px) {
@@ -2299,12 +2311,13 @@ button {
   }
 
   .mml-transport {
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-columns: auto auto auto minmax(0, 1fr);
     gap: 4px;
     padding: 4px;
   }
 
   .mml-transport-primary,
+  .mml-transport-navigation,
   .mml-transport-toggles,
   .mml-transport-tools {
     gap: 2px;
@@ -2403,15 +2416,6 @@ button {
 
   .mml-editor-head button {
     font-size: 9px;
-  }
-
-  .mml-timeline-nav button {
-    min-width: 25px;
-    padding-inline: 3px;
-  }
-
-  .mml-timeline-nav button span {
-    display: none;
   }
 
   .mml-quick-settings,

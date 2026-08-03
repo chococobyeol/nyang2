@@ -15,7 +15,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { Ellipsis, Redo2, Settings, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Ellipsis, Redo2, Settings, SkipBack, SkipForward, Undo2 } from "lucide-react";
 import {
   combineTracks,
   encodeDuration,
@@ -1507,6 +1507,12 @@ export default function MmlStudio({
           <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}><b>■</b><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
           <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><b>●</b><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         </div>
+        <nav className="mml-transport-navigation" aria-label="재생 위치 이동">
+          <button type="button" aria-label="맨앞으로 이동" title="맨앞으로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(0)}><SkipBack className="mml-tool-icon" aria-hidden="true" /></button>
+          <button type="button" aria-label="한 마디 이전" title="한 마디 이전" disabled={recordState !== "idle"} onClick={() => seekPlayhead(adjacentMeasureTick(timelineGrid.measures, playheadRef.current, -1, songDuration))}><ChevronLeft className="mml-tool-icon" aria-hidden="true" /><span>1마디</span></button>
+          <button type="button" aria-label="한 마디 다음" title="한 마디 다음" disabled={recordState !== "idle"} onClick={() => seekPlayhead(adjacentMeasureTick(timelineGrid.measures, playheadRef.current, 1, songDuration))}><span>1마디</span><ChevronRight className="mml-tool-icon" aria-hidden="true" /></button>
+          <button type="button" aria-label="맨뒤로 이동" title="맨뒤로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(songDuration)}><SkipForward className="mml-tool-icon" aria-hidden="true" /></button>
+        </nav>
         <div className="mml-transport-toggles">
           <button type="button" className={project.recording.metronome ? "is-active" : ""} aria-pressed={project.recording.metronome} onClick={toggleMetronome}><b>♩</b><span>메트로놈</span></button>
           <button type="button" className={project.view.loop ? "is-active" : ""} aria-pressed={project.view.loop} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}><b>↻</b><span>반복</span></button>
@@ -1677,12 +1683,6 @@ export default function MmlStudio({
             <i style={{ background: selectedTrack.color }} />
             <strong>{selectedTrack.name}</strong>
             <small>{project.recording.mode === "realtime" ? "실시간" : "이어붙이기"} · {project.recording.editMode === "overwrite" ? "수정" : "삽입"} · {project.recording.quantize === "off" ? "보정 없음" : `${project.recording.quantize} 보정`}</small>
-            <nav className="mml-timeline-nav" aria-label="재생 위치 이동">
-              <button type="button" aria-label="맨앞으로 이동" title="맨앞으로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(0)}><b>|◀</b></button>
-              <button type="button" aria-label="한 마디 이전" title="한 마디 이전" disabled={recordState !== "idle"} onClick={() => seekPlayhead(adjacentMeasureTick(timelineGrid.measures, playheadRef.current, -1, songDuration))}><b>−1</b><span>마디</span></button>
-              <button type="button" aria-label="한 마디 다음" title="한 마디 다음" disabled={recordState !== "idle"} onClick={() => seekPlayhead(adjacentMeasureTick(timelineGrid.measures, playheadRef.current, 1, songDuration))}><b>+1</b><span>마디</span></button>
-              <button type="button" aria-label="맨뒤로 이동" title="맨뒤로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(songDuration)}><b>▶|</b></button>
-            </nav>
             <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>
           </div>
           {playing ? (
