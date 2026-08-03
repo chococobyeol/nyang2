@@ -53,8 +53,6 @@ export type MmlInputSink = {
 type Props = {
   currentThemeId: string;
   themes: ThemeOption[];
-  settingsRequested?: boolean;
-  onSettingsRequestHandled?: () => void;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
@@ -215,8 +213,6 @@ function matchesShortcut(event: KeyboardEvent, shortcut: string) {
 export default function MmlStudio({
   currentThemeId,
   themes,
-  settingsRequested = false,
-  onSettingsRequestHandled,
   expanded,
   onExpandedChange,
   onClose,
@@ -352,14 +348,6 @@ export default function MmlStudio({
     );
     return (cursorTick + elapsedTicks) / TICKS_PER_QUARTER;
   }, []);
-
-  useEffect(() => {
-    if (!settingsRequested) return;
-    setSettingsView(true);
-    setTrackSettingsView(false);
-    setFileMenuView(false);
-    onSettingsRequestHandled?.();
-  }, [onSettingsRequestHandled, settingsRequested]);
 
   useEffect(() => {
     let cancelled = false;

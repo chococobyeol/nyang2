@@ -866,40 +866,6 @@ button {
   padding: 8px 24px 42px;
 }
 
-.settings-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  height: 43px;
-  padding: 5px 24px 0;
-  gap: 6px;
-  border-bottom: 1px solid var(--line);
-  background: #f1eadf;
-}
-
-.settings-tabs button {
-  border: 0;
-  border-radius: 9px 9px 0 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.settings-tabs button.is-selected {
-  background: #fbf7ef;
-  color: var(--ink);
-}
-
-.settings-drawer:has(.settings-tabs) .settings-content {
-  height: calc(100% - 134px);
-}
-
-.settings-content.is-mml > .settings-section:not(.mml-settings-section),
-.settings-content.is-mml > .danger-section {
-  display: none;
-}
-
 /* MML studio */
 .mml-studio {
   position: relative;

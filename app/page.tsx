@@ -624,10 +624,8 @@ function KeyboardGroup({
 export default function Home() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"keyboard" | "mml">("keyboard");
   const [mmlOpen, setMmlOpen] = useState(false);
   const [mmlExpanded, setMmlExpanded] = useState(false);
-  const [mmlSettingsRequested, setMmlSettingsRequested] = useState(false);
   const [leftOctave, setLeftOctave] = useState(4);
   const [rightOctave, setRightOctave] = useState(5);
   const [transpose, setTranspose] = useState(0);
@@ -1790,8 +1788,6 @@ export default function Home() {
           <MmlStudio
             currentThemeId={settings.themeId}
             themes={availableThemes}
-            settingsRequested={mmlSettingsRequested}
-            onSettingsRequestHandled={() => setMmlSettingsRequested(false)}
             expanded={mmlExpanded}
             onExpandedChange={setMmlExpanded}
             onClose={() => { setMmlExpanded(false); setMmlOpen(false); }}
@@ -1958,19 +1954,7 @@ export default function Home() {
               <button type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기">×</button>
             </div>
 
-            <div className="settings-tabs" role="tablist" aria-label="설정 종류">
-              <button type="button" role="tab" aria-selected={settingsTab === "keyboard"} className={settingsTab === "keyboard" ? "is-selected" : ""} onClick={() => setSettingsTab("keyboard")}>건반 설정</button>
-              <button type="button" role="tab" aria-selected={settingsTab === "mml"} className={settingsTab === "mml" ? "is-selected" : ""} onClick={() => setSettingsTab("mml")}>MML 설정</button>
-            </div>
-
-            <div className={`settings-content ${settingsTab === "mml" ? "is-mml" : ""}`}>
-              {settingsTab === "mml" && (
-                <section className="settings-section mml-settings-section">
-                  <div className="settings-section-title"><span>M</span><h3>MML 스튜디오</h3></div>
-                  <p className="setting-note">녹음 방식, 트랙 연결, 박자 보정, 메트로놈과 프로젝트 설정은 MML 화면에서 곡과 함께 관리합니다.</p>
-                  <button type="button" className="connect-mic-button" onClick={() => { setSettingsOpen(false); setMmlSettingsRequested(true); openMml(); }}>MML 설정 열기</button>
-                </section>
-              )}
+            <div className="settings-content">
               <section className="settings-section">
                 <div className="settings-section-title"><span>01</span><h3>건반과 옥타브</h3></div>
                 <Toggle
