@@ -63,3 +63,13 @@ export function followTimelineScroll(scrollLeft, viewportWidth, contentWidth, pl
   if (position <= current + width * anchor) return current;
   return Math.max(current, Math.min(maxScroll, position - width * anchor));
 }
+
+export function adjacentMeasureTick(measures, currentTick, direction, endTick) {
+  const current = Math.max(0, Number(currentTick) || 0);
+  const end = Math.max(0, Number(endTick) || 0);
+  const ticks = [...new Set(measures.map((measure) => Math.max(0, Number(measure.tick) || 0)))]
+    .filter((tick) => tick <= end)
+    .sort((a, b) => a - b);
+  if (direction < 0) return [...ticks].reverse().find((tick) => tick < current) ?? 0;
+  return ticks.find((tick) => tick > current) ?? end;
+}

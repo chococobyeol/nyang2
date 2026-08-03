@@ -1916,6 +1916,36 @@ button {
   margin-left: auto;
 }
 
+.mml-timeline-nav {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.mml-timeline-nav button,
+.mml-timeline-nav button:first-of-type,
+.mml-editor-head > button:first-of-type {
+  min-width: 31px;
+  margin-left: 0;
+}
+
+.mml-timeline-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.mml-timeline-nav button b {
+  font-size: 10px;
+}
+
+.mml-timeline-nav button span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
 @container mml-studio (max-width: 560px) {
   .mml-studio {
     grid-template-rows: 42px 42px minmax(0, 1fr);
@@ -2051,6 +2081,15 @@ button {
 
   .mml-editor-head button {
     font-size: 9px;
+  }
+
+  .mml-timeline-nav button {
+    min-width: 25px;
+    padding-inline: 3px;
+  }
+
+  .mml-timeline-nav button span {
+    display: none;
   }
 
   .mml-quick-settings,

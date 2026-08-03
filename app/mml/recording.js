@@ -59,6 +59,11 @@ export function nextMetronomeBeatAt(clock, now) {
   return clock.startAt + Math.ceil((now - clock.startAt) / clock.beatSeconds) * clock.beatSeconds;
 }
 
+export function syncedPlaybackStartAt(metronomeEnabled, clock, now, safetySeconds = 0.02) {
+  if (!metronomeEnabled || !clock) return now;
+  return nextMetronomeBeatAt(clock, now + Math.max(0, safetySeconds));
+}
+
 export function recordingStartPlan({ mode, countIn, now, bpm, timeSignature, metronomeClock = null }) {
   if (mode === "append") return { plannedStart: now, waitsForStart: false };
   const beatSeconds = metronomeClock?.beatSeconds ?? (60 / bpm) * (4 / timeSignature.denominator);

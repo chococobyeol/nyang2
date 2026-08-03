@@ -25,9 +25,9 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
+import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
 
 type KeyboardSide = "left" | "right";
 
@@ -434,7 +434,9 @@ export default function MmlStudio({
     const endSeconds = tickToSeconds(endTick, allTempoEvents, project.tempo);
     const soloed = project.tracks.some((track: any) => track.solo);
     const now = performance.now() / 1000;
-    playStartedRef.current = { audioStartedAt: now, tick: startTick };
+    const audioStartedAt = syncedPlaybackStartAt(project.recording.metronome, metronomeClockRef.current, now);
+    const playbackWait = Math.max(0, audioStartedAt - now);
+    playStartedRef.current = { audioStartedAt, tick: startTick };
     setPlaying(true);
 
     const scheduledNotes: Array<{ note: any; track: any; noteStart: number; noteEnd: number; sourceId: string }> = [];
@@ -470,7 +472,7 @@ export default function MmlStudio({
     scheduleWindow();
     playSchedulerRef.current = window.setInterval(scheduleWindow, 80);
 
-    const finishDelay = Math.max(20, (endSeconds - startSeconds) * 1000);
+    const finishDelay = Math.max(20, (playbackWait + endSeconds - startSeconds) * 1000);
     playTimersRef.current.push(window.setTimeout(() => {
       if (projectRef.current.view.loop) startPlaybackRef.current(projectRef.current.view.loopStart);
       else {
@@ -480,7 +482,7 @@ export default function MmlStudio({
     }, finishDelay));
 
     const follow = () => {
-      const elapsed = performance.now() / 1000 - playStartedRef.current.audioStartedAt;
+      const elapsed = Math.max(0, performance.now() / 1000 - playStartedRef.current.audioStartedAt);
       const tick = secondsToTick(startSeconds + elapsed, allTempoEvents, songDuration);
       setPlayhead(Math.min(endTick, tick));
       playRafRef.current = window.requestAnimationFrame(follow);
@@ -1105,6 +1107,12 @@ export default function MmlStudio({
     ? Array.from({ length: Math.floor(pianoTimelineDuration / quantizeGridTicks) + 1 }, (_, index) => index * quantizeGridTicks)
       .filter((tick) => !structuralTicks.has(tick))
     : [];
+  const seekPlayhead = (tick: number) => {
+    clearPlayback();
+    const nextTick = Math.max(0, Math.min(songDuration, tick));
+    playheadRef.current = nextTick;
+    setPlayhead(nextTick);
+  };
   const pianoHeight = 390;
   const visibleNotes = displayTracks.flatMap((track: any, trackIndex: number) => {
     if (!project.tracks[trackIndex]?.pianoRollVisible) return [];
@@ -1318,6 +1326,12 @@ export default function MmlStudio({
             <i style={{ background: selectedTrack.color }} />
             <strong>{selectedTrack.name}</strong>
             <small>{project.recording.mode === "realtime" ? "실시간" : "이어붙이기"} · {project.recording.editMode === "overwrite" ? "수정" : "삽입"} · {project.recording.quantize === "off" ? "보정 없음" : `${project.recording.quantize} 보정`}</small>
+            <nav className="mml-timeline-nav" aria-label="재생 위치 이동">
+              <button type="button" aria-label="맨앞으로 이동" title="맨앞으로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(0)}><b>|◀</b></button>
+              <button type="button" aria-label="한 마디 이전" title="한 마디 이전" disabled={recordState !== "idle"} onClick={() => seekPlayhead(adjacentMeasureTick(timelineGrid.measures, playheadRef.current, -1, songDuration))}><b>−1</b><span>마디</span></button>
+              <button type="button" aria-label="한 마디 다음" title="한 마디 다음" disabled={recordState !== "idle"} onClick={() => seekPlayhead(adjacentMeasureTick(timelineGrid.measures, playheadRef.current, 1, songDuration))}><b>+1</b><span>마디</span></button>
+              <button type="button" aria-label="맨뒤로 이동" title="맨뒤로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(songDuration)}><b>▶|</b></button>
+            </nav>
             <button type="button" onClick={() => { setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }}>트랙 설정</button>
             <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>
           </div>

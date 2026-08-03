@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
+import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
-import { buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
 
 test("uses append recording by default and migrates the previous default", () => {
   assert.equal(createProject().recording.mode, "append");
@@ -45,6 +45,14 @@ test("starts append immediately while real-time recording can arm for the next m
   assert.equal(armedInputStartAt("realtime", 10.5, 10.55), 10.55);
   assert.equal(recordingInputEndAt("append", 21.25, 3, 20.5), 3.75);
   assert.equal(recordingInputEndAt("realtime", 21.25, 3, 20.5), 21.25);
+});
+
+test("starts playback on the next active metronome beat", () => {
+  const clock = { startAt: 10, beatSeconds: 0.5 };
+  assert.equal(syncedPlaybackStartAt(true, clock, 10.2), 10.5);
+  assert.equal(syncedPlaybackStartAt(true, clock, 10.49), 11);
+  assert.equal(syncedPlaybackStartAt(false, clock, 10.2), 10.2);
+  assert.equal(syncedPlaybackStartAt(true, null, 10.2), 10.2);
 });
 
 test("builds a full count-in measure with a distinct downbeat", () => {
@@ -275,6 +283,14 @@ test("starts a new measure exactly at a time-signature change", () => {
   ], { numerator: 4, denominator: 4 });
   assert.deepEqual(grid.measures.map((marker) => marker.tick), [0, 384, 672, 960]);
   assert.deepEqual(grid.measures.map((marker) => marker.number), [1, 2, 3, 4]);
+});
+
+test("moves the playhead by measure boundaries and to the song edges", () => {
+  const measures = [{ tick: 0 }, { tick: 384 }, { tick: 672 }, { tick: 960 }];
+  assert.equal(adjacentMeasureTick(measures, 500, -1, 1100), 384);
+  assert.equal(adjacentMeasureTick(measures, 384, -1, 1100), 0);
+  assert.equal(adjacentMeasureTick(measures, 500, 1, 1100), 672);
+  assert.equal(adjacentMeasureTick(measures, 960, 1, 1100), 1100);
 });
 
 test("follows a recording playhead after it reaches the visible timeline anchor", () => {
