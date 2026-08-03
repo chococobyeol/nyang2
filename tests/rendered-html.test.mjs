@@ -188,6 +188,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /title="Alt\+휠로 확대·축소"/);
   assert.match(studio, /const minMidi = Math\.min\(12, \.\.\.visibleMidi\)/);
   assert.match(studio, /const maxMidi = Math\.max\(108, \.\.\.visibleMidi\)/);
+  assert.match(studio, /const PIANO_PITCH_ROW_HEIGHT = 12/);
+  assert.match(studio, /const pianoHeight = \(maxMidi - minMidi \+ 1\) \* pixelsPerPitch/);
+  assert.match(studio, /roll\.scrollTop = Math\.max\(0,/);
   assert.match(studio, /aria-label="타임라인 축소"/);
   assert.match(studio, /aria-label="타임라인 확대"/);
   assert.match(studio, /aria-label=\{expanded \? "작곡창 축소" : "작곡창 전체화면"\}/);

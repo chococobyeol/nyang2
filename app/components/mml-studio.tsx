@@ -79,6 +79,8 @@ type LiveRecordingNote = {
   color: string;
 };
 
+const PIANO_PITCH_ROW_HEIGHT = 12;
+
 type ParsedTrack = ReturnType<typeof parseTrack>;
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -241,6 +243,7 @@ export default function MmlStudio({
   const [importPayload, setImportPayload] = useState<string[] | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
+  const pianoRollCenteredRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
@@ -1138,15 +1141,29 @@ export default function MmlStudio({
     const rect = event.currentTarget.getBoundingClientRect();
     changeTimelineZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left);
   };
-  const pianoHeight = 390;
-  const visibleNotes = displayTracks.flatMap((track: any, trackIndex: number) => {
+  const visibleNotes = useMemo(() => displayTracks.flatMap((track: any, trackIndex: number) => {
     if (!project.tracks[trackIndex]?.pianoRollVisible) return [];
     return track.notes.map((note: any) => ({ ...note, trackIndex }));
-  });
-  const visibleMidi = [...visibleNotes.map((note: any) => note.midi), ...liveRecordingNotes.map((note) => note.midi)];
+  }), [displayTracks, project.tracks]);
+  const visibleMidi = useMemo(
+    () => [...visibleNotes.map((note: any) => note.midi), ...liveRecordingNotes.map((note) => note.midi)],
+    [liveRecordingNotes, visibleNotes],
+  );
   const minMidi = Math.min(12, ...visibleMidi);
   const maxMidi = Math.max(108, ...visibleMidi);
-  const pixelsPerPitch = pianoHeight / (maxMidi - minMidi + 1);
+  const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT;
+  const pianoHeight = (maxMidi - minMidi + 1) * pixelsPerPitch;
+
+  useEffect(() => {
+    if (!hydrated || pianoRollCenteredRef.current) return;
+    const roll = pianoRollRef.current;
+    if (!roll) return;
+    const lowestVisible = visibleMidi.length ? Math.min(...visibleMidi) : 60;
+    const highestVisible = visibleMidi.length ? Math.max(...visibleMidi) : 60;
+    const focusMidi = Math.max(minMidi, Math.min(maxMidi, (lowestVisible + highestVisible) / 2));
+    roll.scrollTop = Math.max(0, (maxMidi - focusMidi + 0.5) * pixelsPerPitch - roll.clientHeight / 2);
+    pianoRollCenteredRef.current = true;
+  }, [hydrated, maxMidi, minMidi, pixelsPerPitch, visibleMidi]);
 
   useEffect(() => {
     if (recordState !== "recording") return;
