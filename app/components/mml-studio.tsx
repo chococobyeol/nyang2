@@ -1673,8 +1673,6 @@ export default function MmlStudio({
             <div className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""} ${batchTrackIds.includes(track.id) ? "is-batch-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id}>
               <label className="mml-track-batch-checkbox" title="여러 트랙을 함께 바꿀 때 선택">
                 <input type="checkbox" checked={batchTrackIds.includes(track.id)} onChange={() => toggleBatchTrack(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 선택`} />
-                <span aria-hidden="true" />
-                <i style={{ background: track.color }} aria-hidden="true" />
               </label>
               <button type="button" className="mml-track-select" onClick={() => selectTrack(track.id)} onDoubleClick={() => { selectTrack(track.id); setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }} aria-pressed={track.id === selectedTrack.id} aria-label={`${track.name || `Track ${index + 1}`} 선택, 두 번 누르면 트랙 설정`} title="두 번 누르면 트랙 설정">
                 <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
