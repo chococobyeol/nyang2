@@ -1326,6 +1326,13 @@ button {
   opacity: 0.95;
 }
 
+.mml-note-block.is-live-recording {
+  z-index: 6;
+  border: 1px solid color-mix(in srgb, var(--ink) 70%, transparent);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
 .mml-playhead {
   position: absolute;
   z-index: 8;

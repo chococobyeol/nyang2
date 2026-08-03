@@ -22,6 +22,37 @@ export function snapTickToGrid(tick, division = "1/8") {
   return grid ? Math.round(safeTick / grid) * grid : Math.round(safeTick);
 }
 
+export function liveInputTicks(input, endedAt, bpm, origin = 0, startTick = 0) {
+  const ticksPerSecond = (TICKS_PER_QUARTER * bpm) / 60;
+  const tick = startTick + Math.max(0, (input.startedAt - origin) * ticksPerSecond);
+  const duration = Math.max(1, (Math.max(input.startedAt, endedAt) - input.startedAt) * ticksPerSecond);
+  return { tick, duration };
+}
+
+export function nextMetronomeBeatAt(clock, now) {
+  if (!clock || !(clock.beatSeconds > 0)) return now;
+  if (now <= clock.startAt) return clock.startAt;
+  return clock.startAt + Math.ceil((now - clock.startAt) / clock.beatSeconds) * clock.beatSeconds;
+}
+
+export function recordingStartPlan({ mode, countIn, now, bpm, timeSignature, metronomeClock = null }) {
+  if (mode === "append") return { plannedStart: now, waitsForStart: false };
+  const beatSeconds = metronomeClock?.beatSeconds ?? (60 / bpm) * (4 / timeSignature.denominator);
+  const countBeats = Math.max(0, countIn) * timeSignature.numerator;
+  const firstBeat = metronomeClock ? nextMetronomeBeatAt(metronomeClock, now + 0.02) : now;
+  const plannedStart = firstBeat + countBeats * beatSeconds;
+  return { plannedStart, waitsForStart: plannedStart > now + 0.01 };
+}
+
+export function armedInputStartAt(mode, plannedStart, pressedAt) {
+  return mode === "append" ? 0 : Math.max(plannedStart, pressedAt);
+}
+
+export function recordingInputEndAt(mode, wallEndedAt, appendCursor = 0, appendWallStart = null) {
+  if (mode !== "append") return wallEndedAt;
+  return appendCursor + Math.max(0, wallEndedAt - (appendWallStart ?? wallEndedAt));
+}
+
 const AUTO_GRIDS = [96, 48, 32, 24, 16, 12];
 
 function autoQuantizeTick(value) {

@@ -1,16 +1,50 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
-import { allocateInputs, closeShortLegatoOverlaps, quantizationGridTicks, quantizeInputs, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
+import { allocateInputs, armedInputStartAt, closeShortLegatoOverlaps, liveInputTicks, nextMetronomeBeatAt, quantizationGridTicks, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
 import { buildTimelineGrid, followTimelineScroll } from "../app/mml/timeline.js";
 
 test("uses append recording by default and migrates the previous default", () => {
   assert.equal(createProject().recording.mode, "append");
+  assert.equal(createProject().recording.metronome, false);
   const legacy = createProject();
   legacy.version = 1;
   legacy.recording.mode = "realtime";
+  legacy.recording.metronome = true;
   assert.equal(sanitizeProject(legacy).recording.mode, "append");
+  assert.equal(sanitizeProject(legacy).recording.metronome, false);
+});
+
+test("grows an active note graphic continuously before note-off", () => {
+  const input = { startedAt: 10.25 };
+  assert.deepEqual(liveInputTicks(input, 10.75, 120, 10, 96), { tick: 144, duration: 96 });
+  assert.deepEqual(liveInputTicks(input, 11, 120, 10, 96), { tick: 144, duration: 144 });
+});
+
+test("starts append immediately while real-time recording can arm for the next metronome beat", () => {
+  const clock = { startAt: 10, beatSeconds: 0.5 };
+  assert.equal(nextMetronomeBeatAt(clock, 10.2), 10.5);
+  assert.deepEqual(recordingStartPlan({
+    mode: "append",
+    countIn: 2,
+    now: 10.2,
+    bpm: 120,
+    timeSignature: { numerator: 4, denominator: 4 },
+    metronomeClock: clock,
+  }), { plannedStart: 10.2, waitsForStart: false });
+  assert.deepEqual(recordingStartPlan({
+    mode: "realtime",
+    countIn: 0,
+    now: 10.2,
+    bpm: 120,
+    timeSignature: { numerator: 4, denominator: 4 },
+    metronomeClock: clock,
+  }), { plannedStart: 10.5, waitsForStart: true });
+  assert.equal(armedInputStartAt("realtime", 10.5, 10.45), 10.5);
+  assert.equal(armedInputStartAt("realtime", 10.5, 10.55), 10.55);
+  assert.equal(recordingInputEndAt("append", 21.25, 3, 20.5), 3.75);
+  assert.equal(recordingInputEndAt("realtime", 21.25, 3, 20.5), 21.25);
 });
 
 test("parses Mabinogi-style notes, commands, dotted lengths, ties and absolute notes", () => {

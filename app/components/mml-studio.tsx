@@ -25,7 +25,7 @@ import {
   TICKS_PER_QUARTER,
 } from "../mml/core.js";
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
-import { quantizationGridTicks, quantizeInputs, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
+import { armedInputStartAt, liveInputTicks, quantizationGridTicks, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
 
@@ -64,9 +64,18 @@ type RecordingInput = {
   endedAt: number;
 };
 
+type LiveRecordingNote = {
+  id: string;
+  midi: number;
+  tick: number;
+  duration: number;
+  color: string;
+};
+
 type ParsedTrack = ReturnType<typeof parseTrack>;
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+const PIANO_PIXELS_PER_TICK = 190 / (TICKS_PER_QUARTER * 4);
 
 function saveBlob(name: string, type: string, content: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -206,6 +215,7 @@ export default function MmlStudio({
   const [playing, setPlaying] = useState(false);
   const [recordState, setRecordState] = useState<"idle" | "count-in" | "recording">("idle");
   const [recordingMessage, setRecordingMessage] = useState("");
+  const [liveRecordingNotes, setLiveRecordingNotes] = useState<LiveRecordingNote[]>([]);
   const [droppedCount, setDroppedCount] = useState(0);
   const [settingsView, setSettingsView] = useState(false);
   const [trackSettingsView, setTrackSettingsView] = useState(false);
@@ -222,10 +232,12 @@ export default function MmlStudio({
   const playStartedRef = useRef({ audioStartedAt: 0, tick: 0 });
   const countInTimerRef = useRef<number | null>(null);
   const metronomeTimerRef = useRef<number | null>(null);
+  const metronomeClockRef = useRef<{ startAt: number; beatSeconds: number } | null>(null);
   const recordingStartRef = useRef(0);
   const recordingStartTickRef = useRef(0);
   const recordingTempoRef = useRef(120);
   const recordingBaseProjectRef = useRef<any | null>(null);
+  const recordingArmedRef = useRef(false);
   const recordingActiveRef = useRef(false);
   const recordingRafRef = useRef(0);
   const playheadRef = useRef(0);
@@ -476,16 +488,28 @@ export default function MmlStudio({
     return preview;
   }, []);
 
-  const startRecordingMetronome = useCallback((startAt: number, bpm: number, current: any) => {
-    const beatSeconds = (60 / bpm) * (4 / current.timeSignature.denominator);
+  const stopMetronomeClock = useCallback(() => {
+    if (metronomeTimerRef.current !== null) window.clearTimeout(metronomeTimerRef.current);
+    metronomeTimerRef.current = null;
+    metronomeClockRef.current = null;
+  }, []);
+
+  const startMetronomeClock = useCallback((startAt: number, bpm: number, numerator: number, denominator: number) => {
+    stopMetronomeClock();
+    const beatSeconds = (60 / bpm) * (4 / denominator);
+    metronomeClockRef.current = { startAt, beatSeconds };
     let beat = 0;
     let nextAt = startAt;
     const schedule = () => {
-      if (!recordingActiveRef.current) return;
+      if (!projectRef.current.recording.metronome) {
+        metronomeTimerRef.current = null;
+        metronomeClockRef.current = null;
+        return;
+      }
       const now = performance.now() / 1000;
       while (nextAt <= now + 0.28) {
         if (nextAt >= now - 0.04) {
-          clickMetronome(beat % current.timeSignature.numerator === 0, current.recording.metronomeVolume, Math.max(0, nextAt - now));
+          clickMetronome(beat % numerator === 0, projectRef.current.recording.metronomeVolume, Math.max(0, nextAt - now));
         }
         beat += 1;
         nextAt = startAt + beat * beatSeconds;
@@ -493,34 +517,56 @@ export default function MmlStudio({
       metronomeTimerRef.current = window.setTimeout(schedule, 70);
     };
     schedule();
-  }, [clickMetronome]);
+  }, [clickMetronome, stopMetronomeClock]);
+
+  useEffect(() => {
+    if (!hydrated || !project.recording.metronome) {
+      stopMetronomeClock();
+      return;
+    }
+    startMetronomeClock(performance.now() / 1000 + 0.04, recordTempo, project.timeSignature.numerator, project.timeSignature.denominator);
+    return stopMetronomeClock;
+  }, [hydrated, project.recording.metronome, project.timeSignature.denominator, project.timeSignature.numerator, recordTempo, startMetronomeClock, stopMetronomeClock]);
+
+  const toggleMetronome = useCallback(() => {
+    setProject((current: any) => {
+      const next = clone(current);
+      next.recording.metronome = !current.recording.metronome;
+      projectRef.current = next;
+      if (recordingBaseProjectRef.current) recordingBaseProjectRef.current.recording.metronome = next.recording.metronome;
+      return next;
+    });
+  }, []);
 
   const finishRecording = useCallback(() => {
     if (countInTimerRef.current !== null) window.clearTimeout(countInTimerRef.current);
-    if (metronomeTimerRef.current !== null) window.clearTimeout(metronomeTimerRef.current);
     countInTimerRef.current = null;
-    metronomeTimerRef.current = null;
     window.cancelAnimationFrame(recordingRafRef.current);
+    recordingArmedRef.current = false;
     const base = recordingBaseProjectRef.current;
     if (!base || !recordingActiveRef.current) {
       recordingActiveRef.current = false;
+      activeRecordingRef.current.clear();
       recordingBaseProjectRef.current = null;
+      setLiveRecordingNotes([]);
       setRecordState("idle");
       setRecordingMessage("녹음을 취소했습니다.");
       return;
     }
-    const endedAt = performance.now() / 1000;
+    const wallEndedAt = performance.now() / 1000;
     activeRecordingRef.current.forEach((input) => {
+      const endedAt = recordingInputEndAt(base.recording.mode, wallEndedAt, appendCursorRef.current, appendWallStartRef.current);
       recordingInputsRef.current.push({ ...input, endedAt });
     });
     activeRecordingRef.current.clear();
+    setLiveRecordingNotes([]);
     recordingActiveRef.current = false;
     const origin = base.recording.mode === "realtime" ? recordingStartRef.current : 0;
     const preview = renderRecordingProject(base, recordingInputsRef.current, explicitRestsRef.current, {
       bpm: recordingTempoRef.current,
       origin,
       startTick: recordingStartTickRef.current,
-      sessionEndedAt: endedAt,
+      sessionEndedAt: wallEndedAt,
     });
     const hasRecording = recordingInputsRef.current.length > 0
       || explicitRestsRef.current.length > 0
@@ -544,6 +590,7 @@ export default function MmlStudio({
     recordingInputsRef.current = [];
     explicitRestsRef.current = [];
     restStartedRef.current = null;
+    appendWallStartRef.current = null;
   }, []);
 
   const beginRecording = useCallback(() => {
@@ -563,46 +610,69 @@ export default function MmlStudio({
     setPlayhead(startTick);
     appendWallStartRef.current = null;
     recordingActiveRef.current = false;
+    recordingArmedRef.current = false;
+    setLiveRecordingNotes([]);
     setDroppedCount(0);
 
     const begin = (plannedStart: number) => {
       recordingStartRef.current = plannedStart;
+      activeRecordingRef.current.forEach((input, inputId) => {
+        activeRecordingRef.current.set(inputId, {
+          ...input,
+          startedAt: armedInputStartAt(current.recording.mode, plannedStart, input.startedAt),
+        });
+      });
+      if (current.recording.mode === "append" && activeRecordingRef.current.size > 0) appendWallStartRef.current = plannedStart;
+      recordingArmedRef.current = false;
       recordingActiveRef.current = true;
       setRecordState("recording");
       setRecordingMessage(`${current.recording.mode === "realtime" ? "실시간" : "이어붙이기"} 녹음 중 · ${bpm} BPM`);
-      if (current.recording.metronome) startRecordingMetronome(plannedStart, bpm, current);
       const follow = () => {
         if (!recordingActiveRef.current) return;
+        const now = performance.now() / 1000;
         let elapsed = appendCursorRef.current;
-        if (current.recording.mode === "realtime") elapsed = Math.max(0, performance.now() / 1000 - recordingStartRef.current);
-        else if (appendWallStartRef.current !== null) elapsed += Math.max(0, performance.now() / 1000 - appendWallStartRef.current);
+        if (current.recording.mode === "realtime") elapsed = Math.max(0, now - recordingStartRef.current);
+        else if (appendWallStartRef.current !== null) elapsed += Math.max(0, now - appendWallStartRef.current);
         const tick = recordingStartTickRef.current + Math.round(elapsed * TICKS_PER_QUARTER * bpm / 60);
         playheadRef.current = tick;
         setPlayhead(tick);
+        const timelineNow = current.recording.mode === "realtime" ? now : elapsed;
+        const origin = current.recording.mode === "realtime" ? recordingStartRef.current : 0;
+        const activeInputs = [...activeRecordingRef.current.values()];
+        const nextLiveNotes = activeInputs.map((input) => {
+          const range = liveInputTicks(input, timelineNow, bpm, origin, recordingStartTickRef.current);
+          const trackId = current.routing[input.side]?.[0];
+          const track = current.tracks.find((item: any) => item.id === trackId) ?? current.tracks[0];
+          return { id: input.id, midi: input.midi, tick: range.tick, duration: range.duration, color: track?.color ?? "#ef6b5a" };
+        });
+        setLiveRecordingNotes((notes) => nextLiveNotes.length || notes.length ? nextLiveNotes : notes);
         recordingRafRef.current = window.requestAnimationFrame(follow);
       };
       recordingRafRef.current = window.requestAnimationFrame(follow);
     };
 
-    if (current.recording.countIn > 0) {
+    const now = performance.now() / 1000;
+    const plan = recordingStartPlan({
+      mode: current.recording.mode,
+      countIn: current.recording.countIn,
+      now,
+      bpm,
+      timeSignature: current.timeSignature,
+      metronomeClock: current.recording.metronome ? metronomeClockRef.current : null,
+    });
+    if (plan.waitsForStart) {
+      recordingArmedRef.current = true;
       setRecordState("count-in");
-      setRecordingMessage(`${current.recording.countIn}마디 카운트인 · ${bpm} BPM`);
-      const beatSeconds = (60 / bpm) * (4 / current.timeSignature.denominator);
-      const beats = current.recording.countIn * current.timeSignature.numerator;
-      const countStart = performance.now() / 1000 + 0.04;
-      for (let beat = 0; beat < beats; beat += 1) {
-        clickMetronome(beat % current.timeSignature.numerator === 0, current.recording.metronomeVolume, 0.04 + beat * beatSeconds);
-      }
-      const plannedStart = countStart + beats * beatSeconds;
-      countInTimerRef.current = window.setTimeout(() => begin(plannedStart), Math.max(0, (plannedStart - performance.now() / 1000) * 1000));
+      setRecordingMessage(current.recording.countIn > 0 ? `${current.recording.countIn}마디 카운트인 · ${bpm} BPM` : `다음 박자 대기 · ${bpm} BPM`);
+      countInTimerRef.current = window.setTimeout(() => begin(plan.plannedStart), Math.max(0, (plan.plannedStart - performance.now() / 1000) * 1000));
     } else {
-      begin(performance.now() / 1000);
+      begin(plan.plannedStart);
     }
-  }, [allTempoEvents, clearPlayback, clickMetronome, parseError, startRecordingMetronome, tempoConflict]);
+  }, [allTempoEvents, clearPlayback, parseError, tempoConflict]);
 
   const sink = useMemo<MmlInputSink>(() => ({
     noteOn(inputId, side, midi, at) {
-      if (!recordingActiveRef.current || activeRecordingRef.current.has(inputId)) return;
+      if ((!recordingActiveRef.current && !recordingArmedRef.current) || activeRecordingRef.current.has(inputId)) return;
       const current = projectRef.current;
       const routedTracks = new Set([
         ...current.routing[side],
@@ -614,7 +684,7 @@ export default function MmlStudio({
         setRecordingMessage("동시에 누른 음보다 연결된 트랙이 적습니다.");
       }
       let startedAt = at;
-      if (current.recording.mode === "append") {
+      if (recordingActiveRef.current && current.recording.mode === "append") {
         if (appendWallStartRef.current === null) appendWallStartRef.current = at;
         startedAt = appendCursorRef.current + (at - appendWallStartRef.current);
       }
@@ -629,6 +699,10 @@ export default function MmlStudio({
     noteOff(inputId, at) {
       const active = activeRecordingRef.current.get(inputId);
       if (!active) return;
+      if (recordingArmedRef.current && !recordingActiveRef.current) {
+        activeRecordingRef.current.delete(inputId);
+        return;
+      }
       const current = projectRef.current;
       let endedAt = at;
       if (current.recording.mode === "append") {
@@ -640,6 +714,7 @@ export default function MmlStudio({
         appendCursorRef.current = endedAt;
         appendWallStartRef.current = null;
       }
+      setLiveRecordingNotes((notes) => notes.filter((note) => note.id !== active.id));
       updateRecordingPreview();
     },
   }), [updateRecordingPreview]);
@@ -713,10 +788,12 @@ export default function MmlStudio({
   useEffect(() => () => {
     clearPlayback();
     recordingActiveRef.current = false;
+    recordingArmedRef.current = false;
+    activeRecordingRef.current.clear();
     window.cancelAnimationFrame(recordingRafRef.current);
     if (countInTimerRef.current !== null) window.clearTimeout(countInTimerRef.current);
-    if (metronomeTimerRef.current !== null) window.clearTimeout(metronomeTimerRef.current);
-  }, [clearPlayback]);
+    stopMetronomeClock();
+  }, [clearPlayback, stopMetronomeClock]);
 
   const updateTrack = (id: string, patch: Record<string, unknown>) => commit((draft: any) => {
     const track = draft.tracks.find((item: any) => item.id === id);
@@ -864,7 +941,7 @@ export default function MmlStudio({
     saveBlob(`${name}.mml`, "text/plain;charset=utf-8", combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true }));
   };
 
-  const pianoPixelsPerTick = 190 / (TICKS_PER_QUARTER * 4);
+  const pianoPixelsPerTick = PIANO_PIXELS_PER_TICK;
   const pianoTimelineDuration = Math.max(
     songDuration,
     TICKS_PER_QUARTER * 16,
@@ -887,8 +964,9 @@ export default function MmlStudio({
     if (!project.tracks[trackIndex]?.pianoRollVisible) return [];
     return track.notes.map((note: any) => ({ ...note, trackIndex }));
   });
-  const minMidi = Math.min(36, ...visibleNotes.map((note: any) => note.midi));
-  const maxMidi = Math.max(84, ...visibleNotes.map((note: any) => note.midi));
+  const visibleMidi = [...visibleNotes.map((note: any) => note.midi), ...liveRecordingNotes.map((note) => note.midi)];
+  const minMidi = Math.min(36, ...visibleMidi);
+  const maxMidi = Math.max(84, ...visibleMidi);
   const pixelsPerPitch = pianoHeight / (maxMidi - minMidi + 1);
 
   useEffect(() => {
@@ -899,7 +977,7 @@ export default function MmlStudio({
       roll.scrollLeft,
       roll.clientWidth,
       roll.scrollWidth,
-      tickToPianoX(playhead),
+      playhead * PIANO_PIXELS_PER_TICK,
     );
   }, [playhead, recordState]);
 
@@ -949,7 +1027,7 @@ export default function MmlStudio({
           <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><b>●</b><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         </div>
         <div className="mml-transport-toggles">
-          <button type="button" className={project.recording.metronome ? "is-active" : ""} aria-pressed={project.recording.metronome} disabled={recordState !== "idle"} onClick={() => commit((draft: any) => { draft.recording.metronome = !draft.recording.metronome; return draft; })}><b>♩</b><span>메트로놈</span></button>
+          <button type="button" className={project.recording.metronome ? "is-active" : ""} aria-pressed={project.recording.metronome} onClick={toggleMetronome}><b>♩</b><span>메트로놈</span></button>
           <button type="button" className={project.view.loop ? "is-active" : ""} aria-pressed={project.view.loop} onClick={() => commit((draft: any) => { draft.view.loop = !draft.view.loop; return draft; })}><b>↻</b><span>반복</span></button>
         </div>
         <div className="mml-transport-tools">
@@ -1000,7 +1078,7 @@ export default function MmlStudio({
             commit((draft: any) => { draft.timeSignature = { numerator, denominator }; draft.timeSignatureMap = [{ tick: 0, numerator, denominator }, ...draft.timeSignatureMap.filter((item: any) => item.tick !== 0)]; return draft; });
           }}>{["2/4", "3/4", "4/4", "6/8", "9/8", "12/8"].map((value) => <option value={value} key={value}>{value}</option>)}<option value="custom">직접 입력</option></select></label>
           <label>박자<input type="number" min="1" value={project.timeSignature.numerator} onChange={(event) => commit((draft: any) => { draft.timeSignature.numerator = Math.max(1, Number(event.target.value)); draft.timeSignatureMap = [{ tick: 0, ...draft.timeSignature }, ...draft.timeSignatureMap.filter((item: any) => item.tick !== 0)]; return draft; })} /><span>/</span><input type="number" min="1" value={project.timeSignature.denominator} onChange={(event) => commit((draft: any) => { draft.timeSignature.denominator = Math.max(1, Number(event.target.value)); draft.timeSignatureMap = [{ tick: 0, ...draft.timeSignature }, ...draft.timeSignatureMap.filter((item: any) => item.tick !== 0)]; return draft; })} /></label>
-          <label>카운트인<select value={project.recording.countIn} onChange={(event) => commit((draft: any) => { draft.recording.countIn = Number(event.target.value); return draft; })}><option value="0">없음</option><option value="1">1마디</option><option value="2">2마디</option></select></label>
+          {project.recording.mode === "realtime" && <label>카운트인<select value={project.recording.countIn} onChange={(event) => commit((draft: any) => { draft.recording.countIn = Number(event.target.value); return draft; })}><option value="0">없음</option><option value="1">1마디</option><option value="2">2마디</option></select></label>}
           <label>메트로놈 음량<input type="range" min="0" max="1" step="0.05" value={project.recording.metronomeVolume} onChange={(event) => commit((draft: any) => { draft.recording.metronomeVolume = Number(event.target.value); return draft; })} /></label>
           {project.recording.mode === "append" && <label>쉼표 키<input value={project.recording.restKey.replace(/^Key/, "")} readOnly onKeyDown={(event) => { event.preventDefault(); commit((draft: any) => { draft.recording.restKey = event.code; return draft; }); }} /></label>}
           {(["play", "record", "stop"] as const).map((action) => <label key={action}>{action === "play" ? "재생 키" : action === "record" ? "녹음 키" : "정지 키"}<input value={shortcutLabel(recordingShortcuts[action])} readOnly onKeyDown={(event) => captureShortcut(action, event)} /></label>)}
@@ -1071,6 +1149,7 @@ export default function MmlStudio({
                 const selected = track.id === selectedTrack.id;
                 return <button type="button" className={`mml-note-block ${selected ? "is-selected" : ""}`} style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: track.color }} key={`${track.id}-${note.sourceStart}-${note.tick}`} onClick={() => selectPianoNote(note.trackIndex, note)} title={`${track.name} · ${noteLabel(note.midi)}`} />;
               })}
+              {liveRecordingNotes.map((note) => <i aria-hidden="true" className="mml-note-block is-live-recording" style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: note.color }} key={`live-${note.id}`} />)}
               <i className="mml-playhead" style={{ left: `${tickToPianoX(playhead)}px` }} />
             </div>
           </div>
