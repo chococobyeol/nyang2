@@ -91,6 +91,25 @@ button {
   grid-template-columns: minmax(0, 54fr) minmax(0, 46fr);
 }
 
+.mml-open.mml-expanded .app-stage {
+  display: block;
+}
+
+.mml-expanded .mml-studio {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  width: 100%;
+  border-right: 0;
+}
+
+.mml-expanded .performance-surface {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .top-bar {
   position: relative;
   z-index: 20;
@@ -960,6 +979,7 @@ button {
   50% { opacity: 0.35; }
 }
 
+.mml-expand,
 .mml-close {
   display: grid;
   width: 32px;
@@ -1414,7 +1434,7 @@ button {
 }
 
 .mml-studio-header {
-  grid-template-columns: minmax(0, 1fr) auto 32px;
+  grid-template-columns: minmax(0, 1fr) auto 34px 34px;
   gap: 8px;
   padding: 6px 10px 6px 12px;
 }
@@ -1499,10 +1519,22 @@ button {
   box-shadow: 0 0 0 3px rgba(255, 213, 139, 0.22);
 }
 
+.mml-expand,
 .mml-close {
   width: 34px;
   height: 34px;
   font-size: 21px;
+}
+
+.mml-expand {
+  display: grid;
+  place-items: center;
+  border: 1px solid #59605e;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 17px;
 }
 
 .mml-transport {
@@ -1815,12 +1847,12 @@ button {
 .mml-track-card {
   display: grid;
   width: 100%;
-  min-height: 60px;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
+  min-height: 68px;
+  grid-template-columns: minmax(0, 1fr) 47px;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin: 0 0 5px;
-  padding: 6px;
+  padding: 5px;
   border: 1px solid var(--line);
   border-left: 0;
   border-radius: 8px;
@@ -1829,13 +1861,28 @@ button {
   text-align: left;
 }
 
-.mml-track-card > i {
+.mml-track-select {
+  display: grid;
+  min-width: 0;
+  height: 100%;
+  grid-template-columns: 8px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mml-track-select > i {
   width: 8px;
   height: 28px;
   border-radius: 4px;
 }
 
-.mml-track-card > span {
+.mml-track-select > span {
   display: grid;
   min-width: 0;
   gap: 2px;
@@ -1857,11 +1904,33 @@ button {
   font-size: 9px;
 }
 
-.mml-track-card em {
-  color: var(--track-color);
-  font-size: 9px;
-  font-style: normal;
+.mml-track-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 14px);
+  gap: 2px;
+}
+
+.mml-track-actions button {
+  display: grid;
+  width: 14px;
+  height: 14px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #f4eee5;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8px;
   font-weight: 900;
+  line-height: 1;
+}
+
+.mml-track-actions button.is-on {
+  border-color: var(--ink);
+  background: var(--track-color);
+  color: var(--ink);
 }
 
 .mml-track-card.is-selected {
@@ -1869,7 +1938,7 @@ button {
   box-shadow: 2px 2px 0 var(--ink);
 }
 
-.mml-track-settings-button {
+.mml-track-add-button {
   width: 100%;
   height: 36px;
   margin-top: 3px;
@@ -1882,7 +1951,46 @@ button {
 }
 
 .mml-work-area {
+  position: relative;
   grid-template-rows: minmax(180px, 1.45fr) 38px minmax(118px, 0.85fr) 26px;
+}
+
+.mml-zoom-controls {
+  position: absolute;
+  z-index: 14;
+  top: 7px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, 0.94);
+  box-shadow: 0 2px 7px rgba(31, 37, 36, 0.12);
+}
+
+.mml-zoom-controls button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fffdf7;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.mml-zoom-controls output {
+  min-width: 38px;
+  color: var(--muted);
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9px;
+  font-weight: 900;
 }
 
 .mml-editor-head {
@@ -1952,7 +2060,7 @@ button {
   }
 
   .mml-studio-header {
-    grid-template-columns: minmax(0, 1fr) auto 28px;
+    grid-template-columns: minmax(0, 1fr) auto 26px 26px;
     padding: 5px 7px 5px 9px;
   }
 
@@ -1969,6 +2077,7 @@ button {
     font-size: 9px;
   }
 
+  .mml-expand,
   .mml-close {
     width: 24px;
     height: 24px;
@@ -2034,15 +2143,20 @@ button {
   }
 
   .mml-track-card {
-    flex: 0 0 92px;
-    width: 92px;
-    min-height: 36px;
-    grid-template-columns: 6px minmax(0, 1fr) auto;
+    flex: 0 0 128px;
+    width: 128px;
+    min-height: 38px;
+    grid-template-columns: minmax(0, 1fr) 47px;
     margin: 0;
-    padding: 4px 5px;
+    padding: 3px 4px;
   }
 
-  .mml-track-card > i {
+  .mml-track-select {
+    grid-template-columns: 6px minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .mml-track-select > i {
     width: 6px;
     height: 24px;
   }
@@ -2055,20 +2169,13 @@ button {
     font-size: 8px;
   }
 
-  .mml-track-settings-button {
-    flex: 0 0 28px;
-    width: 28px;
+  .mml-track-add-button {
+    flex: 0 0 64px;
+    width: 64px;
     height: 30px;
     margin: 0;
-    overflow: hidden;
-    color: transparent;
-    font-size: 0;
-  }
-
-  .mml-track-settings-button::before {
-    content: "⚙";
-    color: var(--ink);
-    font-size: 10px;
+    padding: 0 4px;
+    font-size: 8px;
   }
 
   .mml-work-area {
@@ -3492,6 +3599,11 @@ summary:focus-visible {
   .settings-content {
     height: calc(100% - 62px);
   }
+}
+
+.mml-open.mml-expanded .app-stage {
+  display: block;
+  grid-template-columns: none;
 }
 
 @media (orientation: portrait) and (max-width: 600px) {

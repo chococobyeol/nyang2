@@ -1,5 +1,9 @@
 import { TICKS_PER_QUARTER } from "./core.js";
 
+export function clampTimelineZoom(value) {
+  return Math.max(0.5, Math.min(4, Number(value) || 1));
+}
+
 function validSignature(signature, fallback) {
   return {
     numerator: Math.max(1, Number(signature?.numerator) || fallback.numerator),

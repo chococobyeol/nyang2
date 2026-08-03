@@ -176,6 +176,33 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.match(studio, /is-live-recording/);
 });
 
+test("provides direct track controls, timeline zoom, and full-screen composing", async () => {
+  const [page, studio, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /onWheel=\{zoomTimelineWithWheel\}/);
+  assert.match(studio, /event\.ctrlKey && !event\.metaKey/);
+  assert.match(studio, /aria-label="타임라인 축소"/);
+  assert.match(studio, /aria-label="타임라인 확대"/);
+  assert.match(studio, /aria-label=\{expanded \? "작곡창 축소" : "작곡창 전체화면"\}/);
+  assert.match(studio, /onDoubleClick=\{\(\) => \{ selectTrack\(track\.id\); setTrackSettingsView\(true\)/);
+  assert.match(studio, /className="mml-track-actions"/);
+  assert.match(studio, /aria-label="왼쪽 건반 연결"/);
+  assert.match(studio, /aria-label="오른쪽 건반 연결"/);
+  assert.match(studio, /aria-label="음소거"/);
+  assert.match(studio, /aria-label="솔로"/);
+  assert.match(studio, /className="mml-track-add-button"/);
+  assert.doesNotMatch(studio, /<span>건반 연결<\/span>/);
+  assert.doesNotMatch(studio, /<span>재생<\/span>/);
+  assert.match(page, /event\.altKey \|\| event\.ctrlKey \|\| event\.metaKey/);
+  assert.match(page, /mmlExpanded \? "mml-expanded"/);
+  assert.match(page, /expanded=\{mmlExpanded\}/);
+  assert.match(css, /\.mml-expanded \.performance-surface \{[^}]*visibility: hidden;[^}]*pointer-events: none;/s);
+  assert.match(css, /\.mml-zoom-controls/);
+});
+
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

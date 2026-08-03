@@ -12,6 +12,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type WheelEvent as ReactWheelEvent,
 } from "react";
 import {
   combineTracks,
@@ -27,7 +28,7 @@ import {
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, buildTimelineGrid, followTimelineScroll } from "../mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll } from "../mml/timeline.js";
 
 type KeyboardSide = "left" | "right";
 
@@ -49,6 +50,8 @@ type Props = {
   themes: ThemeOption[];
   settingsRequested?: boolean;
   onSettingsRequestHandled?: () => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
   registerInputSink: (sink: MmlInputSink | null) => void;
   playMidi: (sourceId: string, midi: number, themeId: string, volume: number) => void;
@@ -205,6 +208,8 @@ export default function MmlStudio({
   themes,
   settingsRequested = false,
   onSettingsRequestHandled,
+  expanded,
+  onExpandedChange,
   onClose,
   registerInputSink,
   playMidi,
@@ -222,6 +227,7 @@ export default function MmlStudio({
   const [parsedTracks, setParsedTracks] = useState<ParsedTrack[]>([]);
   const [lastValidTracks, setLastValidTracks] = useState<ParsedTrack[]>([]);
   const [playhead, setPlayhead] = useState(0);
+  const [timelineZoom, setTimelineZoom] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [recordState, setRecordState] = useState<"idle" | "count-in" | "recording">("idle");
   const [recordingMessage, setRecordingMessage] = useState("");
@@ -1089,7 +1095,7 @@ export default function MmlStudio({
     saveBlob(`${name}.mml`, "text/plain;charset=utf-8", combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true }));
   };
 
-  const pianoPixelsPerTick = PIANO_PIXELS_PER_TICK;
+  const pianoPixelsPerTick = PIANO_PIXELS_PER_TICK * timelineZoom;
   const pianoTimelineDuration = Math.max(
     songDuration,
     TICKS_PER_QUARTER * 16,
@@ -1113,6 +1119,25 @@ export default function MmlStudio({
     playheadRef.current = nextTick;
     setPlayhead(nextTick);
   };
+  const changeTimelineZoom = (factor: number, anchorOffset?: number) => {
+    const roll = pianoRollRef.current;
+    setTimelineZoom((current) => {
+      const next = clampTimelineZoom(current * factor);
+      if (!roll || next === current) return next;
+      const offset = anchorOffset ?? roll.clientWidth / 2;
+      const contentX = roll.scrollLeft + offset;
+      window.requestAnimationFrame(() => {
+        roll.scrollLeft = Math.max(0, contentX * (next / current) - offset);
+      });
+      return next;
+    });
+  };
+  const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    changeTimelineZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left);
+  };
   const pianoHeight = 390;
   const visibleNotes = displayTracks.flatMap((track: any, trackIndex: number) => {
     if (!project.tracks[trackIndex]?.pianoRollVisible) return [];
@@ -1131,9 +1156,9 @@ export default function MmlStudio({
       roll.scrollLeft,
       roll.clientWidth,
       roll.scrollWidth,
-      playhead * PIANO_PIXELS_PER_TICK,
+      playhead * pianoPixelsPerTick,
     );
-  }, [playhead, recordState]);
+  }, [pianoPixelsPerTick, playhead, recordState]);
 
   const timelineContext = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -1185,6 +1210,7 @@ export default function MmlStudio({
             </div>
           </div>
         </div>
+        <button type="button" className="mml-expand" onClick={() => onExpandedChange(!expanded)} aria-label={expanded ? "작곡창 축소" : "작곡창 전체화면"} title={expanded ? "작곡창 축소" : "작곡창 전체화면"}>{expanded ? "▣" : "⛶"}</button>
         <button type="button" className="mml-close" onClick={onClose} aria-label="MML 닫기" disabled={recordState !== "idle"}>×</button>
       </header>
 
@@ -1264,27 +1290,38 @@ export default function MmlStudio({
           <label>음색<select value={selectedTrack.themeId} onChange={(event) => updateTrack(selectedTrack.id, { themeId: event.target.value })}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
           <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
           <label className="mml-track-volume-field">재생 음량<input aria-label={`${selectedTrack.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={selectedTrack.mixerVolume} onChange={(event) => updateTrack(selectedTrack.id, { mixerVolume: Number(event.target.value) })} /></label>
-          <div className="mml-track-setting-group"><span>건반 연결</span><button type="button" className={project.routing.left.includes(selectedTrack.id) ? "is-on" : ""} aria-pressed={project.routing.left.includes(selectedTrack.id)} onClick={() => toggleRoute("left", selectedTrack.id)}>왼쪽</button><button type="button" className={project.routing.right.includes(selectedTrack.id) ? "is-on" : ""} aria-pressed={project.routing.right.includes(selectedTrack.id)} onClick={() => toggleRoute("right", selectedTrack.id)}>오른쪽</button></div>
-          <div className="mml-track-setting-group"><span>재생</span><button type="button" className={selectedTrack.muted ? "is-on" : ""} aria-pressed={selectedTrack.muted} onClick={() => updateTrack(selectedTrack.id, { muted: !selectedTrack.muted })}>음소거</button><button type="button" className={selectedTrack.solo ? "is-on" : ""} aria-pressed={selectedTrack.solo} onClick={() => updateTrack(selectedTrack.id, { solo: !selectedTrack.solo })}>혼자 듣기</button><button type="button" className={!selectedTrack.pianoRollVisible ? "is-on" : ""} aria-pressed={!selectedTrack.pianoRollVisible} onClick={() => updateTrack(selectedTrack.id, { pianoRollVisible: !selectedTrack.pianoRollVisible })}>롤 숨김</button></div>
           <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
         </div>
       )}
 
       <div className="mml-main-grid">
         <aside className="mml-track-list">
-          <div className="mml-track-list-title"><strong>트랙</strong><button type="button" onClick={addTrack} disabled={recordState !== "idle"}>＋</button></div>
+          <div className="mml-track-list-title"><strong>트랙</strong></div>
           {project.tracks.map((track: any, index: number) => (
-            <button type="button" className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id} onClick={() => selectTrack(track.id)} aria-pressed={track.id === selectedTrack.id}>
-              <i style={{ background: track.color }} />
-              <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
-              <em>{project.routing.left.includes(track.id) ? "L" : ""}{project.routing.right.includes(track.id) ? "R" : ""}{track.muted ? " M" : ""}{track.solo ? " S" : ""}</em>
-            </button>
+            <div className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id}>
+              <button type="button" className="mml-track-select" onClick={() => selectTrack(track.id)} onDoubleClick={() => { selectTrack(track.id); setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }} aria-pressed={track.id === selectedTrack.id} aria-label={`${track.name || `Track ${index + 1}`} 선택, 두 번 누르면 트랙 설정`} title="두 번 누르면 트랙 설정">
+                <i style={{ background: track.color }} />
+                <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
+              </button>
+              <div className="mml-track-actions" aria-label={`${track.name || `Track ${index + 1}`} 빠른 설정`}>
+                <button type="button" className={project.routing.left.includes(track.id) ? "is-on" : ""} aria-pressed={project.routing.left.includes(track.id)} aria-label="왼쪽 건반 연결" title="왼쪽 건반 연결" onClick={() => toggleRoute("left", track.id)}>L</button>
+                <button type="button" className={project.routing.right.includes(track.id) ? "is-on" : ""} aria-pressed={project.routing.right.includes(track.id)} aria-label="오른쪽 건반 연결" title="오른쪽 건반 연결" onClick={() => toggleRoute("right", track.id)}>R</button>
+                <button type="button" className={track.muted ? "is-on" : ""} aria-pressed={track.muted} aria-label="음소거" title="음소거" onClick={() => updateTrack(track.id, { muted: !track.muted })}>M</button>
+                <button type="button" className={track.solo ? "is-on" : ""} aria-pressed={track.solo} aria-label="솔로" title="솔로" onClick={() => updateTrack(track.id, { solo: !track.solo })}>S</button>
+                <button type="button" className={!track.pianoRollVisible ? "is-on" : ""} aria-pressed={!track.pianoRollVisible} aria-label={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} title={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} onClick={() => updateTrack(track.id, { pianoRollVisible: !track.pianoRollVisible })}>{track.pianoRollVisible ? "◉" : "◌"}</button>
+              </div>
+            </div>
           ))}
-          <button type="button" className="mml-track-settings-button" disabled={recordState !== "idle"} onClick={() => { setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }}>선택 트랙 설정</button>
+          <button type="button" className="mml-track-add-button" onClick={addTrack} disabled={recordState !== "idle"}>＋ 트랙 추가</button>
         </aside>
 
         <div className="mml-work-area">
-          <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onContextMenu={timelineContext} onClick={(event) => {
+          <div className="mml-zoom-controls" aria-label="타임라인 확대 축소">
+            <button type="button" onClick={() => changeTimelineZoom(1 / 1.25)} aria-label="타임라인 축소" title="타임라인 축소">−</button>
+            <output aria-live="polite">{Math.round(timelineZoom * 100)}%</output>
+            <button type="button" onClick={() => changeTimelineZoom(1.25)} aria-label="타임라인 확대" title="타임라인 확대">＋</button>
+          </div>
+          <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onWheel={zoomTimelineWithWheel} onContextMenu={timelineContext} onClick={(event) => {
             if ((event.target as HTMLElement).closest(".mml-note-block")) return;
             const rect = event.currentTarget.getBoundingClientRect();
             const rawTick = Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick);
@@ -1332,7 +1369,6 @@ export default function MmlStudio({
               <button type="button" aria-label="한 마디 다음" title="한 마디 다음" disabled={recordState !== "idle"} onClick={() => seekPlayhead(adjacentMeasureTick(timelineGrid.measures, playheadRef.current, 1, songDuration))}><b>+1</b><span>마디</span></button>
               <button type="button" aria-label="맨뒤로 이동" title="맨뒤로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(songDuration)}><b>▶|</b></button>
             </nav>
-            <button type="button" onClick={() => { setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }}>트랙 설정</button>
             <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>
           </div>
           <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onPaste={(event) => {

@@ -604,6 +604,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"keyboard" | "mml">("keyboard");
   const [mmlOpen, setMmlOpen] = useState(false);
+  const [mmlExpanded, setMmlExpanded] = useState(false);
   const [mmlSettingsRequested, setMmlSettingsRequested] = useState(false);
   const [leftOctave, setLeftOctave] = useState(4);
   const [rightOctave, setRightOctave] = useState(5);
@@ -1139,6 +1140,7 @@ export default function Home() {
         return;
       }
       if (isTypingTarget(event.target) || event.repeat) return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
       const current = settingsRef.current;
       const octaveShortcutIndex = current.octaveShortcuts.indexOf(event.code);
       if (octaveShortcutIndex >= 0) {
@@ -1415,7 +1417,10 @@ export default function Home() {
       const typing = Boolean((event.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable='true']"));
       if (typing) return;
       event.preventDefault();
-      if (mmlOpen) setMmlOpen(false);
+      if (mmlOpen) {
+        setMmlExpanded(false);
+        setMmlOpen(false);
+      }
       else openMml();
     };
     window.addEventListener("keydown", handleMmlShortcut);
@@ -1542,7 +1547,7 @@ export default function Home() {
   );
 
   return (
-    <main className={`app-viewport ${settings.mobileLandscape ? "force-mobile-landscape" : ""} ${mmlOpen ? "mml-open" : ""}`} style={appStyle} onContextMenu={(event) => event.preventDefault()}>
+    <main className={`app-viewport ${settings.mobileLandscape ? "force-mobile-landscape" : ""} ${mmlOpen ? "mml-open" : ""} ${mmlExpanded ? "mml-expanded" : ""}`} style={appStyle} onContextMenu={(event) => event.preventDefault()}>
       <div className="app-stage">
         {mmlOpen && (
           <MmlStudio
@@ -1550,7 +1555,9 @@ export default function Home() {
             themes={THEMES.map(({ id, name, accent }) => ({ id, name, accent }))}
             settingsRequested={mmlSettingsRequested}
             onSettingsRequestHandled={() => setMmlSettingsRequested(false)}
-            onClose={() => setMmlOpen(false)}
+            expanded={mmlExpanded}
+            onExpandedChange={setMmlExpanded}
+            onClose={() => { setMmlExpanded(false); setMmlOpen(false); }}
             registerInputSink={registerMmlInputSink}
             playMidi={playMmlMidi}
             releaseMidi={releaseMmlMidi}
@@ -1563,7 +1570,7 @@ export default function Home() {
         <div className="performance-surface">
         <header className={`top-bar ${settings.keyboardCount === 2 ? "has-double-keyboard" : ""}`}>
           <div className="brand-block">
-            <button type="button" className="brand-mark" onClick={() => mmlOpen ? setMmlOpen(false) : openMml()} aria-label={mmlOpen ? "MML 닫기" : "MML 열기"} title="MML 열기 · Alt+M"><img src={theme.visuals.pawPad} alt="" /></button>
+            <button type="button" className="brand-mark" onClick={() => { if (mmlOpen) { setMmlExpanded(false); setMmlOpen(false); } else openMml(); }} aria-label={mmlOpen ? "MML 닫기" : "MML 열기"} title="MML 열기 · Alt+M"><img src={theme.visuals.pawPad} alt="" /></button>
             <div>
               <h1>냥냥</h1>
             </div>
