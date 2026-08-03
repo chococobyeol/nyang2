@@ -301,21 +301,119 @@ export function serializeTrackEvents(events, { velocity = 15, initialOctave = 4,
   return result;
 }
 
-export function serializeTempoEvents(events = []) {
+function normalizedTempoEvents(events = []) {
   const byTick = new Map();
   for (const event of [...events].sort((a, b) => a.tick - b.tick)) {
     const tick = Math.max(0, Math.round(Number(event.tick) || 0));
     byTick.set(tick, Math.max(1, Math.round(Number(event.bpm) || 120)));
   }
-  let cursor = 0;
+  return [...byTick].map(([tick, bpm]) => ({ tick, bpm })).sort((a, b) => a.tick - b.tick);
+}
+
+export function serializeTrackWithTempos(source, tempoEvents) {
+  const parsed = typeof source === "string" ? parseTrack(source) : source;
+  const tempos = normalizedTempoEvents(tempoEvents);
+  const tempoByTick = new Map(tempos.map((event) => [event.tick, event.bpm]));
+  const tempoTicks = tempos.map((event) => event.tick);
+  const emittedTempos = new Set();
+  const items = [...parsed.notes.map((item) => ({ ...item, kind: "note" })), ...parsed.rests.map((item) => ({ ...item, kind: "rest" }))]
+    .sort((a, b) => a.tick - b.tick || a.sourceStart - b.sourceStart);
   let result = "";
-  for (const [tick, bpm] of byTick) {
-    const gap = Math.max(0, tick - cursor);
-    if (gap > 0) result += encodeDuration(gap).map((length) => `r${length}`).join("");
-    result += `t${bpm}`;
-    cursor = tick;
+  let cursor = 0;
+  let currentVelocity = null;
+  let currentOctave = 4;
+
+  const emitTempo = (tick) => {
+    if (!tempoByTick.has(tick) || emittedTempos.has(tick)) return;
+    result += `t${tempoByTick.get(tick)}`;
+    emittedTempos.add(tick);
+  };
+  const boundaries = (start, end) => [
+    ...tempoTicks.filter((tick) => tick > start && tick < end),
+    end,
+  ];
+  const emitRest = (start, end) => {
+    let position = start;
+    emitTempo(position);
+    for (const boundary of boundaries(start, end)) {
+      const duration = boundary - position;
+      if (duration > 0) result += encodeDuration(duration).map((length) => `r${length}`).join("");
+      position = boundary;
+      if (position < end) emitTempo(position);
+    }
+  };
+  const emitNote = (item) => {
+    const end = item.tick + item.duration;
+    let position = item.tick;
+    let hasPiece = false;
+    emitTempo(position);
+    const velocity = Math.max(0, Math.min(15, Math.round(item.velocity ?? 15)));
+    for (const boundary of boundaries(item.tick, end)) {
+      if (hasPiece) {
+        result += "&";
+        emitTempo(position);
+      }
+      if (!hasPiece && currentVelocity !== velocity) {
+        result += `v${velocity}`;
+        currentVelocity = velocity;
+      }
+      const encoded = encodeEvent(item.midi, boundary - position, currentOctave);
+      result += encoded.text;
+      currentOctave = encoded.octave;
+      hasPiece = true;
+      position = boundary;
+    }
+  };
+
+  for (const item of items) {
+    if (item.tick > cursor) emitRest(cursor, item.tick);
+    if (item.kind === "note") emitNote(item);
+    else emitRest(item.tick, item.tick + item.duration);
+    cursor = Math.max(cursor, item.tick + item.duration);
+  }
+  const finalTempoTick = tempoTicks.at(-1) ?? 0;
+  if (finalTempoTick > cursor) {
+    emitRest(cursor, finalTempoTick);
+    cursor = finalTempoTick;
+  }
+  emitTempo(cursor);
+  return result;
+}
+
+export function upsertTempoCommand(source, tick, bpm) {
+  const safeTick = Math.max(0, Math.round(Number(tick) || 0));
+  const safeBpm = Math.max(1, Math.round(Number(bpm) || 120));
+  const parsed = parseTrack(source);
+  const existing = parsed.tempos.filter((event) => event.tick === safeTick);
+  if (existing.length) {
+    let result = source;
+    for (const event of [...existing].sort((a, b) => b.sourceStart - a.sourceStart)) {
+      result = `${result.slice(0, event.sourceStart)}t${safeBpm}${result.slice(event.sourceEnd)}`;
+    }
+    return result;
+  }
+  const items = [...parsed.notes, ...parsed.rests].sort((a, b) => a.tick - b.tick || a.sourceStart - b.sourceStart);
+  const boundary = items.find((item) => item.tick === safeTick);
+  if (boundary) return `${source.slice(0, boundary.sourceStart)}t${safeBpm}${source.slice(boundary.sourceStart)}`;
+  if (safeTick === parsed.duration) return `${source}t${safeBpm}`;
+  return serializeTrackWithTempos(parsed, [...parsed.tempos, { tick: safeTick, bpm: safeBpm }]);
+}
+
+export function deleteTempoCommand(source, tick) {
+  const safeTick = Math.max(0, Math.round(Number(tick) || 0));
+  const parsed = parseTrack(source);
+  let result = source;
+  for (const event of parsed.tempos.filter((item) => item.tick === safeTick).sort((a, b) => b.sourceStart - a.sourceStart)) {
+    result = `${result.slice(0, event.sourceStart)}${result.slice(event.sourceEnd)}`;
   }
   return result;
+}
+
+export function mergeTempoCommands(source, events = []) {
+  return normalizedTempoEvents(events).reduce(
+    (result, event) => upsertTempoCommand(result, event.tick, event.bpm),
+    source,
+  );
 }
 
 export function tempoAtTick(tick, tempoEvents, defaultTempo = 120) {

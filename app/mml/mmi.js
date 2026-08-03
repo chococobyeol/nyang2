@@ -1,4 +1,4 @@
-import { encodeDuration, parseMmlDocument, parseTrack, serializeTempoEvents } from "./core.js";
+import { encodeDuration, mergeTempoCommands, parseMmlDocument, parseTrack } from "./core.js";
 import { createProject, createTrack } from "./project.js";
 
 const TRACK_FIELDS = new Set([
@@ -191,14 +191,7 @@ export function createProjectFromMmi(source, themeId = "nyang-voice", fallbackTi
   }
   const missingTempos = (imported.tempoEvents?.length ? imported.tempoEvents : [{ tick: 0, bpm: imported.tempo }])
     .filter((event) => codeTempos.get(event.tick) !== event.bpm);
-  if (missingTempos.length) {
-    const conductor = createTrack(project.tracks.length, themeId);
-    conductor.name = "Tempo";
-    conductor.sourceText = serializeTempoEvents(missingTempos);
-    conductor.pianoRollVisible = false;
-    conductor.mmlRole = "tempo";
-    project.tracks.push(conductor);
-  }
+  if (missingTempos.length && project.tracks[0]) project.tracks[0].sourceText = mergeTempoCommands(project.tracks[0].sourceText, missingTempos);
   project.routing = {
     left: project.tracks[0] ? [project.tracks[0].id] : [],
     right: project.tracks[1] ? [project.tracks[1].id] : [],

@@ -1,4 +1,4 @@
-import { parseTrack, serializeTempoEvents } from "./core.js";
+import { mergeTempoCommands, parseTrack } from "./core.js";
 
 export const PROJECT_STORAGE_KEY = "nyangnyang-mml-project-v1";
 
@@ -23,7 +23,7 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 9,
+    version: 10,
     title: "",
     tracks,
     timeSignature: { numerator: 4, denominator: 4 },
@@ -62,31 +62,30 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     name: typeof track.name === "string" ? track.name : `Track ${index + 1}`,
     sourceText: typeof track.sourceText === "string" ? track.sourceText : "",
   }));
+  const tempoTrackIds = new Set(tracks.filter((track) => track.mmlRole === "tempo").map((track) => track.id));
+  const migratedTempoEvents = tracks
+    .filter((track) => tempoTrackIds.has(track.id))
+    .flatMap((track) => {
+      try { return parseTrack(track.sourceText).tempos.map(({ tick, bpm }) => ({ tick, bpm })); } catch { return []; }
+    });
   if (Number(value.version) < 9 && Array.isArray(value.tempoMap)) {
-    const codeTempos = new Map();
-    for (const track of tracks) {
-      try {
-        for (const event of parseTrack(track.sourceText).tempos) {
-          if (!codeTempos.has(event.tick)) codeTempos.set(event.tick, event.bpm);
-        }
-      } catch {
-        // Keep invalid source untouched; it can be repaired in the editor.
-      }
-    }
-    const missing = value.tempoMap
+    migratedTempoEvents.push(...value.tempoMap
       .map((marker) => ({
         tick: Math.max(0, Number(marker.tick) || 0),
         bpm: Math.max(1, Number(marker.bpm) || Number(value.tempo) || 120),
-      }))
-      .filter((marker) => codeTempos.get(marker.tick) !== marker.bpm);
-    if (missing.length) {
-      const tempoTrack = createTrack(tracks.length, themeId);
-      tempoTrack.name = "Tempo";
-      tempoTrack.sourceText = serializeTempoEvents(missing);
-      tempoTrack.pianoRollVisible = false;
-      tempoTrack.mmlRole = "tempo";
-      tracks.push(tempoTrack);
+      })));
+  }
+  if (tempoTrackIds.size) {
+    for (let index = tracks.length - 1; index >= 0; index -= 1) {
+      if (tempoTrackIds.has(tracks[index].id)) tracks.splice(index, 1);
     }
+  }
+  if (migratedTempoEvents.length) {
+    const preferred = tracks.find((track) => track.id === value.view?.selectedTrackId) ?? tracks[0];
+    const target = [preferred, ...tracks].find((track, index, list) => track && list.indexOf(track) === index && (() => {
+      try { parseTrack(track.sourceText); return true; } catch { return false; }
+    })());
+    if (target) target.sourceText = mergeTempoCommands(target.sourceText, migratedTempoEvents);
   }
   const ids = new Set(tracks.map((track) => track.id));
   const route = (side) => Array.isArray(value.routing?.[side]) ? value.routing[side].filter((id) => ids.has(id)) : [];
@@ -123,7 +122,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     ...fallback,
     ...projectValue,
     format: "nyangmml",
-    version: 9,
+    version: 10,
     tracks,
     routing: { left: leftRouting, right: rightRouting },
     recording,

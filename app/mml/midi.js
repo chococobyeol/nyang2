@@ -1,5 +1,5 @@
 import { BasicMIDI, MIDIBuilder, MIDIMessageTypes } from "spessasynth_core";
-import { parseTrack, serializeTempoEvents, serializeTrackEvents, TICKS_PER_QUARTER } from "./core.js";
+import { mergeTempoCommands, parseTrack, serializeTrackEvents, TICKS_PER_QUARTER } from "./core.js";
 import { createProject, createTrack } from "./project.js";
 
 const textDecoder = new TextDecoder("utf-8");
@@ -140,17 +140,10 @@ export function createProjectFromMidi(arrayBuffer, themeId = "nyang-voice", fall
   }
   if (!importedTracks.length) throw new Error("연주 음표가 들어 있는 MIDI 트랙을 찾지 못했습니다.");
 
-  let tracks = importedTracks;
-  if (tempos.length > 1) {
-    const conductor = createTrack(0, themeId);
-    conductor.name = "Tempo";
-    conductor.sourceText = serializeTempoEvents(tempos);
-    conductor.pianoRollVisible = false;
-    conductor.mmlRole = "tempo";
-    tracks = [conductor, ...importedTracks];
-  }
+  const tracks = importedTracks;
+  if (tempos.length > 1) tracks[0].sourceText = mergeTempoCommands(tracks[0].sourceText, tempos);
   const project = createProject(themeId);
-  const firstMusicIndex = tempos.length > 1 ? 1 : 0;
+  const firstMusicIndex = 0;
   project.title = midi.getName?.("utf-8") || fallbackTitle;
   project.tracks = tracks;
   project.timeSignature = { numerator: meterMap[0].numerator, denominator: meterMap[0].denominator };
