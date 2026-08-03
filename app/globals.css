@@ -2011,7 +2011,6 @@ button {
   margin: 0 0 5px;
   padding: 5px;
   border: 1px solid var(--line);
-  border-left: 0;
   border-radius: 8px;
   background: #fffdf7;
   color: var(--ink);

@@ -338,6 +338,11 @@ test("uses one line-icon family for playback, recording, metronome, and loop con
   assert.doesNotMatch(studio, /<b>(?:■|●|♩|↻)<\/b>/);
 });
 
+test("keeps the complete outline visible around every track card", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.doesNotMatch(css, /\.mml-track-card \{[^}]*border-left:\s*0;/s);
+});
+
 test("places timeline navigation beside playback controls instead of the text editor", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   const transportStart = studio.indexOf('<div className="mml-transport"');
