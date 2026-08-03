@@ -1139,6 +1139,7 @@ export default function Home() {
         setMappingError("");
         return;
       }
+      if (mmlOpen && event.code === "Space") return;
       if (isTypingTarget(event.target) || event.repeat) return;
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const current = settingsRef.current;
@@ -1178,6 +1179,7 @@ export default function Home() {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (mmlOpen && event.code === "Space") return;
       if (event.code === "Space") {
         event.preventDefault();
         setSustain(false);
@@ -1200,7 +1202,7 @@ export default function Home() {
       window.removeEventListener("blur", handleBlur);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [allNotesOff, releaseInput, setSustain, sideAndOffsetForCode, startNote, updateSettings]);
+  }, [allNotesOff, mmlOpen, releaseInput, setSustain, sideAndOffsetForCode, startNote, updateSettings]);
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, side: KeyboardSide, offset: number) => {
@@ -1408,8 +1410,9 @@ export default function Home() {
       if (!window.confirm("불어서 연주를 끄고 MML을 열까요?")) return;
       void toggleBreath(false);
     }
+    setSustain(false);
     setMmlOpen(true);
-  }, [toggleBreath]);
+  }, [setSustain, toggleBreath]);
 
   useEffect(() => {
     const handleMmlShortcut = (event: KeyboardEvent) => {
@@ -1701,7 +1704,7 @@ export default function Home() {
 
         <footer className="performance-footer">
           <span className={audioReady ? "is-ready" : ""}>{audioReady ? "● AUDIO READY" : "첫 건반을 누르면 오디오가 시작됩니다"}</span>
-          <span className={sustainPressed ? "sustain-on" : ""}>SPACE · SUSTAIN {sustainPressed ? "ON" : ""}</span>
+          <span className={sustainPressed ? "sustain-on" : ""}>{mmlOpen ? "SPACE · 재생/정지" : `SPACE · SUSTAIN ${sustainPressed ? "ON" : ""}`}</span>
           <button type="button" onClick={allNotesOff}>모든 음 끄기</button>
         </footer>
         </div>

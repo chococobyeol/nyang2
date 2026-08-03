@@ -28,7 +28,8 @@ import {
 import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, limitWheelZoom } from "../mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
+import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
 
 type KeyboardSide = "left" | "right";
 
@@ -242,10 +243,10 @@ export default function MmlStudio({
   const [trackSettingsView, setTrackSettingsView] = useState(false);
   const [fileMenuView, setFileMenuView] = useState(false);
   const [importPayload, setImportPayload] = useState<string[] | null>(null);
+  const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
-  const wheelZoomStateRef = useRef({ lastEventAt: -Infinity, lastAppliedAt: -Infinity, direction: 0 });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
@@ -348,6 +349,51 @@ export default function MmlStudio({
     });
   }, []);
 
+  const applyDurationResult = useCallback((trackId: string, result: { source: string; selectionStart: number; selectionEnd: number; changed: number }) => {
+    if (!result.changed) {
+      setRecordingMessage("선택 영역에 길이를 바꿀 음표나 쉼표가 없습니다.");
+      setDurationMenu(null);
+      return false;
+    }
+    commit((draft: any) => {
+      const track = draft.tracks.find((item: any) => item.id === trackId);
+      if (track) track.sourceText = result.source;
+      return draft;
+    });
+    setDurationMenu(null);
+    window.requestAnimationFrame(() => {
+      editorRef.current?.focus();
+      editorRef.current?.setSelectionRange(result.selectionStart, result.selectionEnd);
+    });
+    return true;
+  }, [commit]);
+
+  const setSelectionDuration = useCallback((denominator: number, dots: number) => {
+    if (!durationMenu) return;
+    const track = projectRef.current.tracks.find((item: any) => item.id === durationMenu.trackId);
+    if (!track) return;
+    applyDurationResult(track.id, setSelectedMmlLength(track.sourceText, durationMenu.start, durationMenu.end, denominator, dots));
+  }, [applyDurationResult, durationMenu]);
+
+  const shiftEditorSelectionDuration = useCallback((direction: number) => {
+    const editor = editorRef.current;
+    if (!editor || editor.selectionStart === editor.selectionEnd) return false;
+    const trackId = projectRef.current.view.selectedTrackId;
+    const track = projectRef.current.tracks.find((item: any) => item.id === trackId);
+    if (!track) return false;
+    return applyDurationResult(track.id, shiftSelectedMmlLength(track.sourceText, editor.selectionStart, editor.selectionEnd, direction));
+  }, [applyDurationResult]);
+
+  useEffect(() => {
+    if (!durationMenu) return;
+    const close = (event: PointerEvent) => {
+      if ((event.target as HTMLElement | null)?.closest(".mml-duration-menu")) return;
+      setDurationMenu(null);
+    };
+    window.addEventListener("pointerdown", close);
+    return () => window.removeEventListener("pointerdown", close);
+  }, [durationMenu]);
+
   const undo = useCallback(() => {
     setPast((items) => {
       if (!items.length) return items;
@@ -439,9 +485,14 @@ export default function MmlStudio({
   const startPlayback = useCallback((fromTick = playhead) => {
     if (parseError || tempoConflict || !displayTracks.length) return;
     clearPlayback();
-    const startTick = Math.max(0, Math.min(fromTick, songDuration));
+    const requestedStartTick = Math.max(0, Math.min(fromTick, songDuration));
+    const loopStartTick = Math.max(0, Math.min(project.view.loopStart, songDuration));
+    const loopEndTick = project.view.loopEnd > loopStartTick ? Math.min(project.view.loopEnd, songDuration) : songDuration;
+    const startTick = project.view.loop && (requestedStartTick < loopStartTick || requestedStartTick >= loopEndTick)
+      ? loopStartTick
+      : requestedStartTick;
     const startSeconds = tickToSeconds(startTick, allTempoEvents, project.tempo);
-    const endTick = project.view.loop ? Math.max(project.view.loopEnd, startTick + 1) : songDuration;
+    const endTick = project.view.loop ? Math.max(loopEndTick, startTick + 1) : songDuration;
     const endSeconds = tickToSeconds(endTick, allTempoEvents, project.tempo);
     const soloed = project.tracks.some((track: any) => track.solo);
     const now = performance.now() / 1000;
@@ -485,7 +536,7 @@ export default function MmlStudio({
 
     const finishDelay = Math.max(20, (playbackWait + endSeconds - startSeconds) * 1000);
     playTimersRef.current.push(window.setTimeout(() => {
-      if (projectRef.current.view.loop) startPlaybackRef.current(projectRef.current.view.loopStart);
+      if (projectRef.current.view.loop) startPlaybackRef.current(Math.max(0, projectRef.current.view.loopStart));
       else {
         clearPlayback();
         setPlayhead(endTick);
@@ -900,6 +951,19 @@ export default function MmlStudio({
         if (event.shiftKey) redo(); else undo();
         return;
       }
+      if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && (event.code === "Comma" || event.code === "Period")) {
+        if (event.target === editorRef.current && editorRef.current.selectionStart !== editorRef.current.selectionEnd) {
+          event.preventDefault();
+          shiftEditorSelectionDuration(event.code === "Comma" ? -1 : 1);
+        }
+        return;
+      }
+      if (!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.code === "Space") {
+        event.preventDefault();
+        if (event.repeat || recordState !== "idle") return;
+        if (playing) clearPlayback(); else startPlayback();
+        return;
+      }
       const shortcuts = Object.assign({
         play: "Alt+KeyP",
         record: "Alt+KeyR",
@@ -940,7 +1004,7 @@ export default function MmlStudio({
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [beginRecording, beginRestInput, clearPlayback, finishRecording, finishRestInput, playing, recordState, redo, startPlayback, undo]);
+  }, [beginRecording, beginRestInput, clearPlayback, finishRecording, finishRestInput, playing, recordState, redo, shiftEditorSelectionDuration, startPlayback, undo]);
 
   useEffect(() => () => {
     clearPlayback();
@@ -1108,6 +1172,11 @@ export default function MmlStudio({
   );
   const pianoWidth = pianoTimelineDuration * pianoPixelsPerTick;
   const timelineGrid = buildTimelineGrid(pianoTimelineDuration, project.timeSignatureMap, project.timeSignature);
+  const songMeasures = timelineGrid.measures.filter((measure: any) => measure.tick < songDuration);
+  const loopStartMeasure = Math.max(1, songMeasures.findLastIndex((measure: any) => measure.tick <= project.view.loopStart) + 1);
+  const effectiveLoopEnd = project.view.loopEnd > project.view.loopStart ? Math.min(project.view.loopEnd, songDuration) : songDuration;
+  const loopEndBoundary = timelineGrid.measures.findIndex((measure: any) => measure.tick >= effectiveLoopEnd);
+  const loopEndMeasure = Math.max(loopStartMeasure, loopEndBoundary > 0 ? loopEndBoundary : songMeasures.length);
   const tickToPianoX = (tick: number) => tick * pianoPixelsPerTick;
   const quantizeGridTicks = quantizationGridTicks(project.recording.quantize);
   const structuralTicks = new Set([
@@ -1178,10 +1247,13 @@ export default function MmlStudio({
     if (!event.altKey) return;
     event.preventDefault();
     const delta = event.deltaY || event.deltaX;
-    const decision = limitWheelZoom(wheelZoomStateRef.current, window.performance.now(), delta);
-    wheelZoomStateRef.current = decision.state;
-    if (!decision.apply) return;
-    const factor = decision.direction < 0 ? 1.08 : 1 / 1.08;
+    const nativeEvent = event.nativeEvent as WheelEvent & { wheelDelta?: number; wheelDeltaY?: number };
+    const windowsWheelDelta = /Windows/i.test(window.navigator.userAgent)
+      ? nativeEvent.wheelDeltaY ?? nativeEvent.wheelDelta
+      : null;
+    const steps = normalizedWheelSteps(delta, event.deltaMode, event.currentTarget.clientHeight, windowsWheelDelta);
+    if (!steps) return;
+    const factor = Math.pow(1.08, -Math.max(-4, Math.min(4, steps)));
     if (event.shiftKey) {
       changePitchZoom(factor);
       return;
@@ -1269,7 +1341,7 @@ export default function MmlStudio({
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
         <div className="mml-transport-primary">
-          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}><b>{playing ? "Ⅱ" : "▶"}</b><span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
+          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}><b>{playing ? "Ⅱ" : "▶"}</b><span>{playing ? "일시정지" : "재생"}</span><kbd>Space</kbd></button>
           <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}><b>■</b><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
           <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><b>●</b><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         </div>
@@ -1329,8 +1401,8 @@ export default function MmlStudio({
           <label>메트로놈 음량<input type="range" min="0" max="1" step="0.05" value={project.recording.metronomeVolume} onChange={(event) => commit((draft: any) => { draft.recording.metronomeVolume = Number(event.target.value); return draft; })} /></label>
           {project.recording.mode === "append" && <label>쉼표 키<input value={project.recording.restKey.replace(/^Key/, "")} readOnly onKeyDown={(event) => { event.preventDefault(); commit((draft: any) => { draft.recording.restKey = event.code; return draft; }); }} /></label>}
           {(["play", "record", "stop"] as const).map((action) => <label key={action}>{action === "play" ? "재생 키" : action === "record" ? "녹음 키" : "정지 키"}<input value={shortcutLabel(recordingShortcuts[action])} readOnly onKeyDown={(event) => captureShortcut(action, event)} /></label>)}
-          <label>반복 시작<input type="number" min="0" value={project.view.loopStart} onChange={(event) => commit((draft: any) => { draft.view.loopStart = Math.max(0, Number(event.target.value)); return draft; })} /></label>
-          <label>반복 끝<input type="number" min="1" value={project.view.loopEnd} onChange={(event) => commit((draft: any) => { draft.view.loopEnd = Math.max(1, Number(event.target.value)); return draft; })} /></label>
+          <label>반복 시작 마디<input type="number" min="1" max={songMeasures.length} value={loopStartMeasure} onChange={(event) => commit((draft: any) => { const measure = Math.max(1, Math.min(songMeasures.length, Number(event.target.value) || 1)); draft.view.loopStart = songMeasures[measure - 1]?.tick ?? 0; if (draft.view.loopEnd > 0 && draft.view.loopEnd <= draft.view.loopStart) draft.view.loopEnd = songMeasures[measure]?.tick ?? 0; return draft; })} /></label>
+          <label>반복 끝 마디<input type="number" min={loopStartMeasure} max={songMeasures.length} value={loopEndMeasure} onChange={(event) => commit((draft: any) => { const measure = Math.max(loopStartMeasure, Math.min(songMeasures.length, Number(event.target.value) || songMeasures.length)); draft.view.loopEnd = measure >= songMeasures.length ? 0 : songMeasures[measure]?.tick ?? 0; return draft; })} /></label>
           <button type="button" onClick={() => window.alert(parseError ? parseError.message : tempoConflict || "냥냥에서 재생할 수 있는 MML입니다.")}>호환성 검사</button>
         </div>
       )}
@@ -1344,6 +1416,20 @@ export default function MmlStudio({
           <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
           <label className="mml-track-volume-field">재생 음량<input aria-label={`${selectedTrack.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={selectedTrack.mixerVolume} onChange={(event) => updateTrack(selectedTrack.id, { mixerVolume: Number(event.target.value) })} /></label>
           <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
+        </div>
+      )}
+
+      {durationMenu && (
+        <div className="mml-duration-menu" role="menu" aria-label="선택한 음표 길이 변경" style={{ left: durationMenu.x, top: durationMenu.y }} onContextMenu={(event) => event.preventDefault()}>
+          <header><strong>선택 음가 변경</strong><button type="button" onClick={() => setDurationMenu(null)} aria-label="닫기">×</button></header>
+          <div className="mml-duration-grid">
+            {[0, 1].flatMap((dots) => MML_NOTE_LENGTHS.map((length) => (
+              <button type="button" role="menuitem" onClick={() => setSelectionDuration(length, dots)} key={`${length}-${dots}`}>
+                <b>{length}{dots ? "." : ""}</b><span>{dots ? "점" : ""}{length}분음표</span>
+              </button>
+            )))}
+          </div>
+          <small><kbd>Alt</kbd>+<kbd>,</kbd> 길게 · <kbd>Alt</kbd>+<kbd>.</kbd> 짧게</small>
         </div>
       )}
 
@@ -1437,7 +1523,21 @@ export default function MmlStudio({
             </nav>
             <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>
           </div>
-          <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onPaste={(event) => {
+          <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onContextMenu={(event) => {
+            const editor = event.currentTarget;
+            if (editor.selectionStart === editor.selectionEnd) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const studio = editor.closest(".mml-studio")?.getBoundingClientRect();
+            if (!studio) return;
+            setDurationMenu({
+              x: Math.max(8, Math.min(studio.width - 224, event.clientX - studio.left)),
+              y: Math.max(8, Math.min(studio.height - 292, event.clientY - studio.top)),
+              trackId: selectedTrack.id,
+              start: editor.selectionStart,
+              end: editor.selectionEnd,
+            });
+          }} onPaste={(event) => {
             const text = event.clipboardData.getData("text");
             if (!/^\s*MML@/i.test(text)) return;
             event.preventDefault();

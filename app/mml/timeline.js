@@ -4,22 +4,12 @@ export function clampTimelineZoom(value) {
   return Math.max(0.5, Math.min(4, Number(value) || 1));
 }
 
-export function limitWheelZoom(previous, now, delta, interval = 120, gestureGap = 180) {
-  const timestamp = Math.max(0, Number(now) || 0);
-  const direction = Math.sign(Number(delta) || 0);
-  const state = previous ?? { lastEventAt: -Infinity, lastAppliedAt: -Infinity, direction: 0 };
-  if (!direction) return { apply: false, direction: 0, state };
-  const newGesture = direction !== state.direction || timestamp - state.lastEventAt > gestureGap;
-  const apply = newGesture || timestamp - state.lastAppliedAt >= interval;
-  return {
-    apply,
-    direction,
-    state: {
-      lastEventAt: timestamp,
-      lastAppliedAt: apply ? timestamp : state.lastAppliedAt,
-      direction,
-    },
-  };
+export function normalizedWheelSteps(delta, deltaMode = 0, viewportSize = 800, windowsWheelDelta = null) {
+  const legacyDelta = Number(windowsWheelDelta);
+  if (Number.isFinite(legacyDelta) && legacyDelta !== 0) return -legacyDelta / 120;
+  const rawDelta = Number(delta) || 0;
+  const unit = deltaMode === 1 ? 40 : deltaMode === 2 ? Math.max(1, Number(viewportSize) || 800) : 1;
+  return rawDelta * unit / 120;
 }
 
 function validSignature(signature, fallback) {

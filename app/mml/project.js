@@ -21,7 +21,7 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 4,
+    version: 5,
     title: "",
     tracks,
     tempo: 120,
@@ -44,7 +44,7 @@ export function createProject(themeId = "nyang-voice") {
         stop: "Alt+KeyS",
       },
     },
-    view: { selectedTrackId: tracks[0].id, loop: false, loopStart: 0, loopEnd: 384 },
+    view: { selectedTrackId: tracks[0].id, loop: false, loopStart: 0, loopEnd: 0 },
   };
 }
 
@@ -81,11 +81,17 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
   };
   if (Number(value.version) < 2) recording.mode = "append";
   if (Number(value.version) < 3) recording.metronome = false;
+  const view = {
+    ...fallback.view,
+    ...value.view,
+    selectedTrackId: ids.has(value.view?.selectedTrackId) ? value.view.selectedTrackId : tracks[0].id,
+  };
+  if (Number(value.version) < 5 && Number(view.loopStart) === 0 && Number(view.loopEnd) === 384) view.loopEnd = 0;
   return {
     ...fallback,
     ...value,
     format: "nyangmml",
-    version: 4,
+    version: 5,
     tracks,
     routing: { left: leftRouting, right: rightRouting },
     recording,
@@ -102,11 +108,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
         }))
         .sort((a, b) => a.tick - b.tick)
       : [{ tick: 0, numerator: Math.max(1, Number(value.timeSignature?.numerator) || 4), denominator: Math.max(1, Number(value.timeSignature?.denominator) || 4) }],
-    view: {
-      ...fallback.view,
-      ...value.view,
-      selectedTrackId: ids.has(value.view?.selectedTrackId) ? value.view.selectedTrackId : tracks[0].id,
-    },
+    view,
   };
 }
 

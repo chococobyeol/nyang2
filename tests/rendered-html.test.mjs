@@ -187,10 +187,10 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   ]);
   assert.match(studio, /onWheel=\{zoomTimelineWithWheel\}/);
   assert.match(studio, /if \(!event\.altKey\) return/);
-  assert.match(studio, /limitWheelZoom\(wheelZoomStateRef\.current, window\.performance\.now\(\), delta\)/);
-  assert.match(studio, /decision\.direction < 0 \? 1\.08 : 1 \/ 1\.08/);
+  assert.match(studio, /nativeEvent\.wheelDeltaY \?\? nativeEvent\.wheelDelta/);
+  assert.match(studio, /normalizedWheelSteps\(delta, event\.deltaMode, event\.currentTarget\.clientHeight, windowsWheelDelta\)/);
+  assert.match(studio, /Math\.pow\(1\.08, -Math\.max\(-4, Math\.min\(4, steps\)\)\)/);
   assert.match(studio, /if \(event\.shiftKey\)[\s\S]*?changePitchZoom/);
-  assert.doesNotMatch(studio, /event\.ctrlKey && !event\.metaKey/);
   assert.match(studio, /title="Alt\+휠 시간축 · Alt\+Shift\+휠 음정 간격"/);
   assert.match(studio, /const minMidi = Math\.min\(12, \.\.\.visibleMidi\)/);
   assert.match(studio, /const maxMidi = Math\.max\(108, \.\.\.visibleMidi\)/);
@@ -224,6 +224,30 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(css, /\.mml-track-play-actions \{\s*grid-template-columns: repeat\(3, 18px\);/s);
   assert.match(css, /\.mml-track-visibility span \{[^}]*width: 14px;[^}]*height: 9px;/s);
   assert.match(css, /\.mml-track-visibility\.is-hidden::after/);
+});
+
+test("defaults repeat to the whole song and presents repeat positions as measures", async () => {
+  const [studio, project] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mml/project.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(project, /loopStart: 0, loopEnd: 0/);
+  assert.match(project, /Number\(value\.version\) < 5[\s\S]*?view\.loopEnd = 0/);
+  assert.match(studio, /반복 시작 마디/);
+  assert.match(studio, /반복 끝 마디/);
+  assert.match(studio, /project\.view\.loopEnd > loopStartTick[\s\S]*?: songDuration/);
+});
+
+test("supports selection-based MML duration editing and Space playback", async () => {
+  const [page, studio] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /onContextMenu=\{\(event\) => \{/);
+  assert.match(studio, /setSelectedMmlLength/);
+  assert.match(studio, /event\.code === "Comma" \|\| event\.code === "Period"/);
+  assert.match(studio, /event\.code === "Space"/);
+  assert.match(page, /mmlOpen && event\.code === "Space"/);
 });
 
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {

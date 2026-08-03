@@ -3,7 +3,8 @@ import test from "node:test";
 import { combineTracks, parseMmlDocument, parseTrack, serializeTrackEvents, stripComments, tempoAtTick, tickToSeconds } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { createProject, sanitizeProject } from "../app/mml/project.js";
-import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, limitWheelZoom } from "../app/mml/timeline.js";
+import { adjacentMeasureTick, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
+import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 
 test("clamps timeline zoom to a useful range", () => {
   assert.equal(clampTimelineZoom(0.1), 0.5);
@@ -11,21 +12,27 @@ test("clamps timeline zoom to a useful range", () => {
   assert.equal(clampTimelineZoom(9), 4);
 });
 
-test("limits bursty and free-spinning mouse wheel zoom events", () => {
-  const initial = { lastEventAt: -Infinity, lastAppliedAt: -Infinity, direction: 0 };
-  const first = limitWheelZoom(initial, 1000, -1200);
-  assert.equal(first.apply, true);
-  assert.equal(first.direction, -1);
+test("normalizes Windows and high-resolution wheel movement by physical delta", () => {
+  assert.equal(normalizedWheelSteps(999, 0, 800, -120), 1);
+  assert.equal(normalizedWheelSteps(999, 0, 800, -12), 0.1);
+  assert.equal(normalizedWheelSteps(120, 0), 1);
+  assert.equal(normalizedWheelSteps(3, 1), 1);
+  assert.equal(normalizedWheelSteps(1, 2, 600), 5);
+});
 
-  const burst = limitWheelZoom(first.state, 1015, -1200);
-  assert.equal(burst.apply, false);
+test("changes note and rest lengths only inside the selected MML text", () => {
+  const source = "l8 c d+4. r16 n61 // c2";
+  const result = setSelectedMmlLength(source, 3, source.indexOf(" n61"), 4, 0);
+  assert.equal(result.source, "l8 c4 d+4 r4 n61 // c2");
+  assert.equal(result.changed, 3);
+  assert.equal(result.source.slice(result.selectionStart, result.selectionEnd), "c4 d+4 r4");
+});
 
-  const throttled = limitWheelZoom(burst.state, 1125, -1200);
-  assert.equal(throttled.apply, true);
-
-  const reversed = limitWheelZoom(throttled.state, 1130, 1200);
-  assert.equal(reversed.apply, true);
-  assert.equal(reversed.direction, 1);
+test("steps mixed selected MML lengths while preserving dots", () => {
+  const shorter = shiftSelectedMmlLength("l4c8.d4r", 2, 8, 1);
+  assert.equal(shorter.source, "l4c16.d8r8");
+  const longer = shiftSelectedMmlLength(shorter.source, 2, shorter.source.length, -1);
+  assert.equal(longer.source, "l4c8.d4r4");
 });
 
 test("uses append recording by default and migrates the previous default", () => {
@@ -39,6 +46,24 @@ test("uses append recording by default and migrates the previous default", () =>
   legacy.recording.metronome = true;
   assert.equal(sanitizeProject(legacy).recording.mode, "append");
   assert.equal(sanitizeProject(legacy).recording.metronome, false);
+});
+
+test("uses the whole song as the default repeat range and migrates the old one-measure default", () => {
+  const project = createProject();
+  assert.equal(project.view.loopStart, 0);
+  assert.equal(project.view.loopEnd, 0);
+
+  const legacyDefault = createProject();
+  legacyDefault.version = 4;
+  legacyDefault.view.loopStart = 0;
+  legacyDefault.view.loopEnd = 384;
+  assert.equal(sanitizeProject(legacyDefault).view.loopEnd, 0);
+
+  const legacyCustom = createProject();
+  legacyCustom.version = 4;
+  legacyCustom.view.loopStart = 384;
+  legacyCustom.view.loopEnd = 768;
+  assert.deepEqual(sanitizeProject(legacyCustom).view, legacyCustom.view);
 });
 
 test("migrates only the previous untouched default track routing", () => {

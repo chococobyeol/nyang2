@@ -1786,6 +1786,87 @@ button {
   font-size: 10px;
 }
 
+.mml-duration-menu {
+  position: absolute;
+  z-index: 82;
+  display: grid;
+  width: 216px;
+  gap: 7px;
+  padding: 9px;
+  border: 2px solid var(--ink);
+  border-radius: 11px;
+  background: #f0e8dc;
+  box-shadow: 5px 5px 0 rgba(31, 37, 36, 0.22);
+}
+
+.mml-duration-menu header {
+  display: flex;
+  min-height: 25px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.mml-duration-menu header button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdf7;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.mml-duration-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.mml-duration-grid button {
+  display: grid;
+  min-width: 0;
+  min-height: 45px;
+  place-items: center;
+  gap: 1px;
+  padding: 4px 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fffdf7;
+  cursor: pointer;
+}
+
+.mml-duration-grid button:hover,
+.mml-duration-grid button:focus-visible {
+  border-color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.mml-duration-grid b {
+  font-size: 13px;
+}
+
+.mml-duration-grid span,
+.mml-duration-menu > small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.mml-duration-menu > small {
+  text-align: center;
+}
+
+.mml-duration-menu kbd {
+  padding: 1px 3px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fffdf7;
+  color: var(--ink);
+  font-family: inherit;
+}
+
 .mml-import-dialog {
   position: absolute;
   z-index: 90;
