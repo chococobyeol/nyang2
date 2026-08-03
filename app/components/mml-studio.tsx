@@ -609,8 +609,19 @@ export default function MmlStudio({
         if (startsIn > 0.35) break;
         const duration = Math.max(0.01, tickToSeconds(item.noteEnd, allTempoEvents, baseTempo) - tickToSeconds(item.noteStart, allTempoEvents, baseTempo));
         const delaySeconds = Math.max(0, startsIn);
-        playMidi(item.sourceId, item.note.midi, item.track.themeId, item.track.mixerVolume * item.note.velocity / 15, delaySeconds);
-        playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), (delaySeconds + duration) * 1000));
+        const volume = item.track.mixerVolume * item.note.velocity / 15;
+        if (item.track.themeId.startsWith("soundpack:") && delaySeconds > 0) {
+          // SpessaSynth queues future MIDI events inside its AudioWorklet and does
+          // not expose a way to remove them. Keep the start timer on the main
+          // thread so pause/stop can cancel it before the note reaches the worklet.
+          playTimersRef.current.push(window.setTimeout(() => {
+            playMidi(item.sourceId, item.note.midi, item.track.themeId, volume, 0);
+            playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), duration * 1000));
+          }, delaySeconds * 1000));
+        } else {
+          playMidi(item.sourceId, item.note.midi, item.track.themeId, volume, delaySeconds);
+          playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), (delaySeconds + duration) * 1000));
+        }
         scheduleCursor += 1;
       }
       while (beatCursor < scheduledBeats.length) {

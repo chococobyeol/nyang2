@@ -239,6 +239,19 @@ test("pre-schedules playback notes on the same audio clock as the metronome", as
   assert.match(page, /oscillator\.onended = disconnect/);
 });
 
+test("cancels pending and active playback audio immediately on pause or stop", async () => {
+  const [studio, page] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /item\.track\.themeId\.startsWith\("soundpack:"\) && delaySeconds > 0/);
+  assert.match(studio, /playTimersRef\.current\.push\(window\.setTimeout\(\(\) => \{\s*playMidi\([\s\S]*?volume, 0\)/);
+  assert.match(studio, /playTimersRef\.current\.forEach\(\(timer\) => window\.clearTimeout\(timer\)\)/);
+  assert.match(page, /const cancelBeforeStart = immediate && voice\.scheduledStartAt > now \+ 0\.003/);
+  assert.match(page, /source\.stop\(cancelBeforeStart \? now : now \+ \(immediate \? 0\.012 : 0\.2\)\)/);
+  assert.match(page, /immediate \? graph\.context\.currentTime : Math\.max\(graph\.context\.currentTime, scheduledStartAt\) \+ 0\.001/);
+});
+
 test("provides direct track controls, timeline zoom, and full-screen composing", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

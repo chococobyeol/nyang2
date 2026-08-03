@@ -103,6 +103,7 @@ type Voice = {
   pitchClass: number;
   gain?: GainNode;
   sources: AudioScheduledSourceNode[];
+  scheduledStartAt: number;
   sampleState?: SampleVoiceState;
   soundPackState?: {
     synth: WorkletSynthesizer;
@@ -979,7 +980,9 @@ export default function Home() {
       const graph = audioRef.current;
       if (voice.soundPackState) {
         const { synth, channel, midi, scheduledStartAt } = voice.soundPackState;
-        const releaseAt = graph ? Math.max(graph.context.currentTime, scheduledStartAt) + 0.001 : undefined;
+        const releaseAt = graph
+          ? immediate ? graph.context.currentTime : Math.max(graph.context.currentTime, scheduledStartAt) + 0.001
+          : undefined;
         synth.noteOff(channel, midi, releaseAt === undefined ? undefined : { time: releaseAt });
         voicesRef.current.delete(voice.id);
         refreshVoiceUI();
@@ -987,6 +990,7 @@ export default function Home() {
       }
       if (!graph || !voice.gain) return;
       const now = graph.context.currentTime;
+      const cancelBeforeStart = immediate && voice.scheduledStartAt > now + 0.003;
       const sampleState = voice.sampleState;
       if (sampleState?.holdTimer !== null && sampleState?.holdTimer !== undefined) {
         window.clearTimeout(sampleState.holdTimer);
@@ -1002,11 +1006,15 @@ export default function Home() {
         sampleState.tailGain.gain.linearRampToValueAtTime(0, now + (immediate ? 0.02 : 0.12));
       }
       voice.gain.gain.cancelScheduledValues(now);
-      voice.gain.gain.setValueAtTime(Math.max(0.0001, voice.gain.gain.value), now);
-      voice.gain.gain.exponentialRampToValueAtTime(0.0001, now + (immediate ? 0.025 : 0.16));
+      if (cancelBeforeStart) {
+        voice.gain.gain.setValueAtTime(0.0001, now);
+      } else {
+        voice.gain.gain.setValueAtTime(Math.max(0.0001, voice.gain.gain.value), now);
+        voice.gain.gain.exponentialRampToValueAtTime(0.0001, now + (immediate ? 0.008 : 0.16));
+      }
       voice.sources.forEach((source) => {
         try {
-          source.stop(now + (immediate ? 0.04 : 0.2));
+          source.stop(cancelBeforeStart ? now : now + (immediate ? 0.012 : 0.2));
         } catch {
           // The source may already be stopped.
         }
@@ -1100,6 +1108,7 @@ export default function Home() {
             baseMidi,
             pitchClass: mod(baseMidi, 12),
             sources: [],
+            scheduledStartAt: now,
             soundPackState: { synth: loaded.synth, channel, midi, scheduledStartAt: now },
             released: false,
             stopped: false,
@@ -1189,6 +1198,7 @@ export default function Home() {
         pitchClass: mod(baseMidi, 12),
         gain,
         sources,
+        scheduledStartAt: now,
         sampleState: sampleSource && sampleBuffer
           ? {
               buffer: sampleBuffer,
