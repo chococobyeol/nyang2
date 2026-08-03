@@ -2017,14 +2017,27 @@ button {
   z-index: 14;
   top: 7px;
   right: 20px;
-  display: flex;
-  align-items: center;
+  display: grid;
   gap: 3px;
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 253, 247, 0.94);
   box-shadow: 0 2px 7px rgba(31, 37, 36, 0.12);
+}
+
+.mml-zoom-group {
+  display: grid;
+  grid-template-columns: 15px 24px 38px 24px;
+  align-items: center;
+  gap: 3px;
+}
+
+.mml-zoom-group > span {
+  color: var(--muted);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .mml-zoom-controls button {

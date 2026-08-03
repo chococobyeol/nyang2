@@ -230,6 +230,7 @@ export default function MmlStudio({
   const [lastValidTracks, setLastValidTracks] = useState<ParsedTrack[]>([]);
   const [playhead, setPlayhead] = useState(0);
   const [timelineZoom, setTimelineZoom] = useState(1);
+  const [pitchZoom, setPitchZoom] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [recordState, setRecordState] = useState<"idle" | "count-in" | "recording">("idle");
   const [recordingMessage, setRecordingMessage] = useState("");
@@ -1145,12 +1146,6 @@ export default function MmlStudio({
       return next;
     });
   };
-  const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-    if (!event.altKey) return;
-    event.preventDefault();
-    const rect = event.currentTarget.getBoundingClientRect();
-    changeTimelineZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left);
-  };
   const visibleNotes = useMemo(() => displayTracks.flatMap((track: any, trackIndex: number) => {
     if (!project.tracks[trackIndex]?.pianoRollVisible) return [];
     return track.notes.map((note: any) => ({ ...note, trackIndex }));
@@ -1161,8 +1156,33 @@ export default function MmlStudio({
   );
   const minMidi = Math.min(12, ...visibleMidi);
   const maxMidi = Math.max(108, ...visibleMidi);
-  const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT;
+  const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT * pitchZoom;
   const pianoHeight = (maxMidi - minMidi + 1) * pixelsPerPitch;
+
+  const changePitchZoom = (factor: number) => {
+    const roll = pianoRollRef.current;
+    setPitchZoom((current) => {
+      const next = Math.max(0.5, Math.min(3, current * factor));
+      if (!roll || next === current) return next;
+      const currentCenterY = roll.scrollTop + roll.clientHeight / 2;
+      const centerMidi = maxMidi + 0.5 - currentCenterY / (PIANO_PITCH_ROW_HEIGHT * current);
+      window.requestAnimationFrame(() => {
+        roll.scrollTop = Math.max(0, (maxMidi - centerMidi + 0.5) * PIANO_PITCH_ROW_HEIGHT * next - roll.clientHeight / 2);
+      });
+      return next;
+    });
+  };
+
+  const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!event.altKey) return;
+    event.preventDefault();
+    if (event.shiftKey) {
+      changePitchZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15);
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    changeTimelineZoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left);
+  };
 
   useEffect(() => {
     if (!hydrated || pianoRollCenteredRef.current) return;
@@ -1347,10 +1367,19 @@ export default function MmlStudio({
         </aside>
 
         <div className="mml-work-area">
-          <div className="mml-zoom-controls" aria-label="타임라인 확대 축소" title="Alt+휠로 확대·축소">
-            <button type="button" onClick={() => changeTimelineZoom(1 / 1.25)} aria-label="타임라인 축소" title="타임라인 축소">−</button>
-            <output aria-live="polite">{Math.round(timelineZoom * 100)}%</output>
-            <button type="button" onClick={() => changeTimelineZoom(1.25)} aria-label="타임라인 확대" title="타임라인 확대">＋</button>
+          <div className="mml-zoom-controls" aria-label="피아노롤 확대 축소" title="Alt+휠 시간축 · Alt+Shift+휠 음정 간격">
+            <div className="mml-zoom-group" aria-label="시간축 확대 축소">
+              <span aria-hidden="true">↔</span>
+              <button type="button" onClick={() => changeTimelineZoom(1 / 1.25)} aria-label="타임라인 축소" title="타임라인 축소">−</button>
+              <output aria-live="polite">{Math.round(timelineZoom * 100)}%</output>
+              <button type="button" onClick={() => changeTimelineZoom(1.25)} aria-label="타임라인 확대" title="타임라인 확대">＋</button>
+            </div>
+            <div className="mml-zoom-group" aria-label="음정 간격 확대 축소">
+              <span aria-hidden="true">↕</span>
+              <button type="button" onClick={() => changePitchZoom(1 / 1.2)} aria-label="음정 간격 축소" title="음정 간격 축소">−</button>
+              <output aria-live="polite">{Math.round(pitchZoom * 100)}%</output>
+              <button type="button" onClick={() => changePitchZoom(1.2)} aria-label="음정 간격 확대" title="음정 간격 확대">＋</button>
+            </div>
           </div>
           <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onWheel={zoomTimelineWithWheel} onContextMenu={timelineContext} onClick={(event) => {
             if ((event.target as HTMLElement).closest(".mml-note-block")) return;
