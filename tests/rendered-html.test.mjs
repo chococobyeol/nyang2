@@ -192,6 +192,18 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.match(studio, /is-live-recording/);
 });
 
+test("pre-schedules playback notes on the same audio clock as the metronome", async () => {
+  const [studio, page] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /playMidi\(item\.sourceId,[\s\S]*?delaySeconds\)/);
+  assert.doesNotMatch(studio, /setTimeout\(\(\) => playMidi/);
+  assert.match(page, /audioDelaySeconds\?: number/);
+  assert.match(page, /scheduledStartAt = graph\.context\.currentTime \+ Math\.max\(0, options\.audioDelaySeconds \?\? 0\)/);
+  assert.match(page, /const now = Math\.max\(graph\.context\.currentTime, scheduledStartAt\)/);
+});
+
 test("provides direct track controls, timeline zoom, and full-screen composing", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

@@ -109,6 +109,7 @@ type NoteStartOptions = {
   keyId?: string;
   skipRecording?: boolean;
   recordingAt?: number;
+  audioDelaySeconds?: number;
 };
 
 function inputEventSeconds(event: { timeStamp: number }) {
@@ -942,6 +943,7 @@ export default function Home() {
         pendingNoteRef.current.delete(inputId);
         return;
       }
+      const scheduledStartAt = graph.context.currentTime + Math.max(0, options.audioDelaySeconds ?? 0);
 
       const octave = side === "left" ? leftOctaveRef.current : rightOctaveRef.current;
       const baseMidi = options.soundingMidi ?? 12 * (octave + 1) + offset;
@@ -971,7 +973,7 @@ export default function Home() {
       const gain = graph.context.createGain();
       gain.gain.value = 0.0001;
       gain.connect(graph.breath);
-      const now = graph.context.currentTime;
+      const now = Math.max(graph.context.currentTime, scheduledStartAt);
       const sources: AudioScheduledSourceNode[] = [];
       let sampleSource: AudioBufferSourceNode | null = null;
       let samplePlaybackRate = 1;
@@ -1045,9 +1047,10 @@ export default function Home() {
           if (voice.sampleState) voice.sampleState.dryEnded = true;
           if (!voice.sampleState?.tailStarted && voice.released) finishSampleVoice(voice);
         };
+        const scheduledDelayMs = Math.max(0, now - graph.context.currentTime) * 1000;
         voice.sampleState.holdTimer = window.setTimeout(() => {
           if (!voice.released) triggerSampleTail(voice);
-        }, NYANG_LONG_PRESS_MS);
+        }, scheduledDelayMs + NYANG_LONG_PRESS_MS);
         if (sustainRef.current) triggerSampleTail(voice);
       }
       refreshVoiceUI();
@@ -1377,13 +1380,14 @@ export default function Home() {
     mmlInputSinkRef.current = sink;
   }, []);
 
-  const playMmlMidi = useCallback((sourceId: string, midi: number, themeId: string, volume: number) => {
+  const playMmlMidi = useCallback((sourceId: string, midi: number, themeId: string, volume: number, delaySeconds = 0) => {
     void startNote(sourceId, "left", 0, {
       soundingMidi: midi,
       themeId,
       volume,
       keyId: `mml:${midi}`,
       skipRecording: true,
+      audioDelaySeconds: delaySeconds,
     });
   }, [startNote]);
 

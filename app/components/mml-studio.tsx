@@ -56,7 +56,7 @@ type Props = {
   onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
   registerInputSink: (sink: MmlInputSink | null) => void;
-  playMidi: (sourceId: string, midi: number, themeId: string, volume: number) => void;
+  playMidi: (sourceId: string, midi: number, themeId: string, volume: number, delaySeconds?: number) => void;
   releaseMidi: (sourceId: string) => void;
   stopMmlAudio: () => void;
   clickMetronome: (accent: boolean, volume: number, delaySeconds?: number, preparing?: boolean) => void;
@@ -533,9 +533,9 @@ export default function MmlStudio({
         const startsIn = tickToSeconds(item.noteStart, allTempoEvents, project.tempo) - startSeconds - elapsed;
         if (startsIn > 0.35) break;
         const duration = Math.max(0.01, tickToSeconds(item.noteEnd, allTempoEvents, project.tempo) - tickToSeconds(item.noteStart, allTempoEvents, project.tempo));
-        const delay = Math.max(0, startsIn) * 1000;
-        playTimersRef.current.push(window.setTimeout(() => playMidi(item.sourceId, item.note.midi, item.track.themeId, item.track.mixerVolume * item.note.velocity / 15), delay));
-        playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), delay + duration * 1000));
+        const delaySeconds = Math.max(0, startsIn);
+        playMidi(item.sourceId, item.note.midi, item.track.themeId, item.track.mixerVolume * item.note.velocity / 15, delaySeconds);
+        playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), (delaySeconds + duration) * 1000));
         scheduleCursor += 1;
       }
       if (scheduleCursor >= scheduledNotes.length && playSchedulerRef.current !== null) {
