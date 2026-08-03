@@ -2579,7 +2579,7 @@ button {
   grid-column: 2 / 4;
   grid-row: 2;
   justify-self: end;
-  width: min(410px, 100%);
+  width: min(300px, 100%);
   margin-top: 0;
 }
 
@@ -2642,13 +2642,15 @@ button {
 }
 
 .mml-open .performance-surface .transpose-panel {
-  grid-template-columns: 64px minmax(220px, 1fr) 56px;
+  grid-template-columns: 64px minmax(150px, 1fr) 64px;
   gap: 6px;
   height: 64px;
   margin-top: 0;
 }
 
 .mml-open .performance-surface .transpose-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   height: 64px;
   gap: 5px;
 }
@@ -3967,6 +3969,8 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .transpose-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
     height: 36px;
     gap: 2px;
   }

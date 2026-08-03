@@ -141,6 +141,9 @@ test("aligns compact octave, key, and settings controls", async () => {
   assert.match(css, /\.transpose-panel \{[^}]*height: 64px;[^}]*margin-top: 15px;/s);
   assert.match(css, /\.transpose-panel \{[^}]*height: 64px/s);
   assert.match(css, /\.settings-button \{[^}]*height: 64px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar \.transpose-panel \{[^}]*width: min\(300px, 100%\);/s);
+  assert.match(css, /\.mml-open \.performance-surface \.transpose-panel \{\s*grid-template-columns: 64px minmax\(150px, 1fr\) 64px;/s);
+  assert.match(css, /\.mml-open \.performance-surface \.transpose-grid \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);/s);
   assert.match(css, /\.transpose-panel \{[^}]*height: 42px/s);
   assert.match(css, /\.transpose-grid \{\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);[^}]*height: 42px/s);
   assert.match(css, /\.settings-button \{[^}]*height: 42px/s);
