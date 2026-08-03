@@ -2943,9 +2943,11 @@ button {
 }
 
 .sound-pack-setting {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
 }
 
 .sound-pack-heading {
