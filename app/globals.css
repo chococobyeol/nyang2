@@ -227,7 +227,7 @@ button {
   height: 20px;
   margin: 0;
   padding: 0 6px;
-  border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  border: 2px solid var(--ink);
   border-radius: 7px;
   background: color-mix(in srgb, var(--accent) 10%, var(--paper));
   color: var(--ink);
@@ -636,7 +636,7 @@ button {
   min-width: 22px;
   height: 20px;
   padding: 0 6px;
-  border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  border: 2px solid var(--ink);
   border-radius: 7px;
   background: color-mix(in srgb, var(--accent) 10%, var(--paper));
   color: var(--ink);
