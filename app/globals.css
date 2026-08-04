@@ -4474,27 +4474,23 @@ summary:focus-visible {
   }
 
   .mml-studio .mml-transport {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
     min-width: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 5px;
+    overflow: hidden;
+    gap: 3px;
     padding: 5px 6px;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
-    touch-action: pan-x;
-    -webkit-overflow-scrolling: touch;
   }
 
   .mml-studio .mml-transport-primary,
   .mml-studio .mml-transport-navigation,
   .mml-studio .mml-transport-toggles,
   .mml-studio .mml-transport-tools {
-    flex: 0 0 auto;
+    display: contents;
   }
 
   .mml-studio .mml-transport-tools {
-    padding-right: 2px;
+    padding-right: 0;
   }
 
   .mml-studio .mml-transport-tools button:nth-child(-n + 2) {
@@ -4502,9 +4498,9 @@ summary:focus-visible {
   }
 
   .mml-studio .mml-transport button {
-    width: 32px;
+    width: 100%;
     height: 34px;
-    min-width: 32px;
+    min-width: 0;
     padding: 0;
   }
 
@@ -4558,6 +4554,7 @@ summary:focus-visible {
     height: 24px;
   }
 
+  .mml-studio .mml-quick-settings,
   .mml-studio .mml-track-settings {
     top: 96px;
     right: 8px;
@@ -4567,9 +4564,9 @@ summary:focus-visible {
     transform: none;
   }
 
-  .mml-studio .mml-quick-settings {
-    top: 90px;
-    max-height: calc(100% - 96px);
+  .mml-studio .mml-action-menu {
+    top: 96px;
+    right: 8px;
   }
 }
 
@@ -4589,6 +4586,7 @@ summary:focus-visible {
     margin-bottom: 0;
   }
 
+  .mml-studio .mml-quick-settings,
   .mml-studio .mml-track-settings {
     top: 144px;
     right: 8px;
@@ -4596,6 +4594,13 @@ summary:focus-visible {
     width: auto;
     max-height: calc(100% - 152px);
     transform: none;
+  }
+
+  .mml-studio .mml-action-menu {
+    top: 144px;
+    right: 8px;
+    max-height: calc(100% - 152px);
+    overflow: auto;
   }
 }
 
