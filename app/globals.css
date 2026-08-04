@@ -334,7 +334,7 @@ button {
 
 .transpose-panel {
   display: grid;
-  grid-template-columns: 64px minmax(132px, 1fr) 54px;
+  grid-template-columns: 64px minmax(132px, 1fr) 64px;
   gap: 8px;
   min-width: 0;
   height: var(--top-control-height);
@@ -4045,7 +4045,7 @@ summary:focus-visible {
   }
 
   .transpose-panel {
-    grid-template-columns: 42px minmax(110px, 1fr) 38px;
+    grid-template-columns: 42px minmax(110px, 1fr) 42px;
     gap: 4px;
     height: var(--top-control-height);
     margin-top: var(--top-control-offset);
@@ -4326,7 +4326,7 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .transpose-panel {
-    grid-template-columns: 32px minmax(62px, 1fr) 28px;
+    grid-template-columns: 32px minmax(62px, 1fr) 42px;
     height: var(--top-control-height);
     margin-top: 0;
   }
