@@ -258,9 +258,10 @@ export default function MmlStudio({
   const [fileMenuView, setFileMenuView] = useState(false);
   const [importPayload, setImportPayload] = useState<string[] | null>(null);
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
-  const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string } | null>(null);
+  const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string; x?: number; y?: number } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
+  const timelineEditorRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
   const timelineZoomRef = useRef(1);
   const pitchZoomRef = useRef(1);
@@ -1431,7 +1432,7 @@ export default function MmlStudio({
     const beat = Math.max(1, Math.floor((tick - measure.tick) / beatTicks) + 1);
     return `${measure.number}마디 ${beat}박`;
   };
-  const openTimelineEditor = (tick: number) => {
+  const openTimelineEditor = (tick: number, anchor?: { x: number; y: number }) => {
     const safeTick = Math.max(0, Math.min(pianoTimelineDuration, Math.round(tick)));
     const selectedIndex = project.tracks.findIndex((track: any) => track.id === selectedTrack.id);
     const tempo = trackTempoEvents.find((marker: any) => marker.tick === safeTick && marker.trackIndex === selectedIndex)
@@ -1446,8 +1447,20 @@ export default function MmlStudio({
       numerator: meter.numerator,
       denominator: meter.denominator,
       tempoTrackId,
+      ...(anchor ?? (timelineEditor?.x !== undefined && timelineEditor?.y !== undefined ? { x: timelineEditor.x, y: timelineEditor.y } : {})),
     });
   };
+
+  useLayoutEffect(() => {
+    if (!timelineEditor || timelineEditor.x === undefined || timelineEditor.y === undefined) return;
+    const dialog = timelineEditorRef.current;
+    const parent = dialog?.offsetParent as HTMLElement | null;
+    if (!dialog || !parent) return;
+    const x = Math.max(8, Math.min(timelineEditor.x, parent.clientWidth - dialog.offsetWidth - 8));
+    const y = Math.max(8, Math.min(timelineEditor.y, parent.clientHeight - dialog.offsetHeight - 8));
+    if (x === timelineEditor.x && y === timelineEditor.y) return;
+    setTimelineEditor((current) => current ? { ...current, x, y } : current);
+  }, [timelineEditor]);
   const saveTimelineTempo = () => {
     if (!timelineEditor) return;
     const marker = { tick: timelineEditor.tick, bpm: Math.max(1, Math.round(timelineEditor.bpm || 1)) };
@@ -1636,7 +1649,12 @@ export default function MmlStudio({
     const rect = event.currentTarget.getBoundingClientRect();
     const rawTick = Math.max(0, Math.min(pianoTimelineDuration, Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick)));
     const tick = snapTickToGrid(rawTick, project.recording.quantize);
-    openTimelineEditor(tick);
+    const workArea = event.currentTarget.parentElement;
+    const workRect = workArea?.getBoundingClientRect();
+    const anchor = workArea && workRect && workArea.clientWidth > 680
+      ? { x: event.clientX - workRect.left + 10, y: event.clientY - workRect.top + 10 }
+      : undefined;
+    openTimelineEditor(tick, anchor);
   };
   const timelineTempoTrack = timelineEditor
     ? project.tracks.find((track: any) => track.id === timelineEditor.tempoTrackId)
@@ -1831,10 +1849,15 @@ export default function MmlStudio({
               <output aria-live="polite">{Math.round(pitchZoom * 100)}%</output>
               <button type="button" onClick={() => changePitchZoom(1.2)} aria-label="음정 간격 확대" title="음정 간격 확대">＋</button>
             </div>
-            <button type="button" className="mml-open-timeline-editor" onClick={() => openTimelineEditor(playheadRef.current)}>박자·템포 변경</button>
           </div>
           {timelineEditor && (
-            <div className="mml-timeline-editor" role="dialog" aria-label="박자와 템포 변경">
+            <div
+              ref={timelineEditorRef}
+              className="mml-timeline-editor"
+              role="dialog"
+              aria-label="박자와 템포 변경"
+              style={timelineEditor.x !== undefined && timelineEditor.y !== undefined ? { left: `${timelineEditor.x}px`, top: `${timelineEditor.y}px`, right: "auto", transform: "none" } : undefined}
+            >
               <header>
                 <span><strong>박자·템포 변경</strong><small>{timelinePositionLabel(timelineEditor.tick)} · {Math.round(timelineEditor.tick)} tick · {timelineTempoTrack?.name ?? selectedTrack.name}</small></span>
                 <button type="button" onClick={() => setTimelineEditor(null)} aria-label="닫기">×</button>

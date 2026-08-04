@@ -252,6 +252,23 @@ test("cancels pending and active playback audio immediately on pause or stop", a
   assert.match(page, /immediate \? graph\.context\.currentTime : Math\.max\(graph\.context\.currentTime, scheduledStartAt\) \+ 0\.001/);
 });
 
+test("uses the piano-roll context action instead of a redundant meter and tempo button", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  const zoomStart = studio.indexOf('<div className="mml-zoom-controls"');
+  const zoomEnd = studio.indexOf("{timelineEditor && (", zoomStart);
+  assert.doesNotMatch(studio, /현재 위치의 박자와 템포 변경/);
+  assert.doesNotMatch(studio.slice(zoomStart, zoomEnd), /openTimelineEditor/);
+  assert.match(studio, /className=\{`mml-piano-roll[\s\S]*?onContextMenu=\{timelineContext\}/);
+  assert.match(studio, /className="mml-change-marker"[\s\S]*?openTimelineEditor\(tick\)/);
+  assert.match(studio, /workArea\.clientWidth > 680[\s\S]*?openTimelineEditor\(tick, anchor\)/);
+  assert.match(studio, /timelineEditorRef[\s\S]*?parent\.clientWidth - dialog\.offsetWidth[\s\S]*?parent\.clientHeight - dialog\.offsetHeight/);
+  assert.match(css, /\.mml-timeline-editor \{[^}]*left: 50%;[^}]*transform: translateX\(-50%\);/s);
+  assert.match(css, /\.mml-track-settings \{[^}]*left: 50%;[^}]*transform: translateX\(-50%\);/s);
+});
+
 test("provides direct track controls, timeline zoom, and full-screen composing", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
