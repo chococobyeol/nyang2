@@ -153,18 +153,18 @@ test("aligns compact octave, key, and settings controls", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(css, /\.octave-buttons \{[^}]*repeat\(4, minmax\(0, 64px\)\)/s);
+  assert.match(css, /\.top-bar \{[^}]*--octave-label-height: 20px;[^}]*--octave-row-gap: 6px;[^}]*--octave-button-size: 64px;[^}]*--top-control-offset: calc\(var\(--octave-label-height\) \/ 2\);[^}]*--top-control-height:/s);
+  assert.match(css, /\.octave-buttons \{[^}]*repeat\(4, minmax\(0, var\(--octave-button-size\)\)\)/s);
   assert.match(css, /\.octave-button \{[^}]*aspect-ratio: 1;/s);
-  assert.match(css, /\.octave-panel \{[^}]*grid-template-rows: auto 64px;[^}]*gap: 6px;/s);
-  assert.match(css, /\.transpose-panel \{[^}]*height: 64px;[^}]*margin-top: 15px;/s);
-  assert.match(css, /\.transpose-panel \{[^}]*height: 64px/s);
-  assert.match(css, /\.settings-button \{[^}]*height: 64px/s);
+  assert.match(css, /\.octave-panel \{[^}]*grid-template-rows: var\(--octave-label-height\) var\(--octave-button-size\);[^}]*gap: var\(--octave-row-gap\);/s);
+  assert.match(css, /\.transpose-panel \{[^}]*height: var\(--top-control-height\);[^}]*margin-top: var\(--top-control-offset\);/s);
+  assert.match(css, /\.header-actions \{[^}]*height: var\(--top-control-height\);[^}]*margin-top: var\(--top-control-offset\);/s);
+  assert.match(css, /\.settings-button \{[^}]*height: 100%;/s);
   assert.match(css, /\.mml-open \.performance-surface \.top-bar \.transpose-panel \{[^}]*width: min\(300px, 100%\);/s);
   assert.match(css, /\.mml-open \.performance-surface \.transpose-panel \{\s*grid-template-columns: 64px minmax\(150px, 1fr\) 64px;/s);
   assert.match(css, /\.mml-open \.performance-surface \.transpose-grid \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);/s);
-  assert.match(css, /\.transpose-panel \{[^}]*height: 42px/s);
-  assert.match(css, /\.transpose-grid \{\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);[^}]*height: 42px/s);
-  assert.match(css, /\.settings-button \{[^}]*height: 42px/s);
+  assert.match(css, /--octave-label-height: 17px;\s*--octave-row-gap: 3px;\s*--octave-button-size: 42px;/s);
+  assert.match(css, /\.transpose-grid \{\s*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);[^}]*height: 100%;/s);
   assert.match(css, /\.transpose-status \{\s*min-height: 0;\s*height: 100%/);
   assert.match(css, /\.transpose-grid button \{\s*display: flex;\s*align-items: center;\s*justify-content: center;/);
   assert.match(page, /const panelTitle = side === "left" \? "OCT L" : "OCT R"/);
@@ -482,8 +482,10 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(studio, /setRestInputActive\(true\)/);
   assert.match(studio, /className=\{`mml-beat-visual/);
   assert.match(page, /preparing \? \(accented \? 1760 : 1480\)/);
-  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 64px;[^}]*grid-template-rows: 78px 68px/s);
-  assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 64px;[^}]*height: 64px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 64px;[^}]*grid-template-rows: calc\(var\(--octave-label-height\) \+ var\(--octave-row-gap\) \+ var\(--octave-button-size\)\) 68px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar\.has-double-keyboard \{[^}]*--octave-button-size: 54px;/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar\.has-double-keyboard \{[^}]*--octave-button-size: 36px;/s);
+  assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 0;[^}]*height: 100%/s);
   assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 42%;[^}]*height: auto/s);
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
   assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;/s);

@@ -111,6 +111,11 @@ button {
 }
 
 .top-bar {
+  --octave-label-height: 20px;
+  --octave-row-gap: 6px;
+  --octave-button-size: 64px;
+  --top-control-offset: calc(var(--octave-label-height) / 2);
+  --top-control-height: calc(var(--octave-button-size) + var(--octave-row-gap) + (var(--octave-label-height) / 2));
   position: relative;
   z-index: 20;
   display: grid;
@@ -208,12 +213,12 @@ button {
 .octave-panel {
   position: relative;
   display: grid;
-  grid-template-rows: auto 64px;
+  grid-template-rows: var(--octave-label-height) var(--octave-button-size);
   justify-content: center;
   justify-self: center;
   width: fit-content;
   max-width: 100%;
-  gap: 6px;
+  gap: var(--octave-row-gap);
   padding: 0;
   min-width: 0;
 }
@@ -224,7 +229,7 @@ button {
   justify-content: center;
   justify-self: start;
   min-width: 22px;
-  height: 20px;
+  height: var(--octave-label-height);
   margin: 0;
   padding: 0 6px;
   border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
@@ -239,7 +244,7 @@ button {
 
 .octave-buttons {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 64px));
+  grid-template-columns: repeat(4, minmax(0, var(--octave-button-size)));
   justify-content: center;
   gap: 9px;
 }
@@ -331,8 +336,8 @@ button {
   grid-template-columns: 64px minmax(132px, 1fr) 54px;
   gap: 8px;
   min-width: 0;
-  height: 64px;
-  margin-top: 15px;
+  height: var(--top-control-height);
+  margin-top: var(--top-control-offset);
 }
 
 .transpose-status {
@@ -367,7 +372,7 @@ button {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  height: 64px;
+  height: 100%;
 }
 
 .transpose-grid button {
@@ -427,8 +432,9 @@ button {
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
-  min-height: 64px;
-  margin-top: 15px;
+  min-height: var(--top-control-height);
+  height: var(--top-control-height);
+  margin-top: var(--top-control-offset);
 }
 
 .settings-button,
@@ -448,8 +454,8 @@ button {
   justify-content: center;
   flex-direction: column;
   gap: 1px;
-  min-height: 64px;
-  height: 64px;
+  min-height: 0;
+  height: 100%;
   border: 2px solid var(--ink);
   background: #fffdf7;
 }
@@ -2814,8 +2820,11 @@ button {
 }
 
 .mml-open .performance-surface .top-bar {
+  --octave-label-height: 20px;
+  --octave-row-gap: 3px;
+  --octave-button-size: 60px;
   grid-template-columns: 88px minmax(0, 1fr) 64px;
-  grid-template-rows: 78px 68px;
+  grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 68px;
   column-gap: 6px;
   row-gap: 5px;
   padding: 8px 8px 5px;
@@ -2878,17 +2887,17 @@ button {
 }
 
 .mml-open .performance-surface .octave-panel {
-  grid-template-rows: auto 60px;
-  gap: 3px;
+  grid-template-rows: var(--octave-label-height) var(--octave-button-size);
+  gap: var(--octave-row-gap);
 }
 
 .mml-open .performance-surface .octave-buttons {
-  grid-template-columns: repeat(4, minmax(0, 64px));
+  grid-template-columns: repeat(4, minmax(0, var(--octave-button-size)));
   gap: 3px;
 }
 
-.mml-open .performance-surface .top-bar.has-double-keyboard .octave-buttons {
-  grid-template-columns: repeat(4, minmax(0, 54px));
+.mml-open .performance-surface .top-bar.has-double-keyboard {
+  --octave-button-size: 54px;
 }
 
 .mml-open .performance-surface .octave-button {
@@ -2900,14 +2909,14 @@ button {
 .mml-open .performance-surface .transpose-panel {
   grid-template-columns: 64px minmax(150px, 1fr) 64px;
   gap: 6px;
-  height: 64px;
+  height: 68px;
   margin-top: 0;
 }
 
 .mml-open .performance-surface .transpose-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  height: 64px;
+  height: 100%;
   gap: 5px;
 }
 
@@ -2917,14 +2926,14 @@ button {
 }
 
 .mml-open .performance-surface .header-actions {
-  min-height: 64px;
-  height: 64px;
-  margin-top: 12px;
+  min-height: var(--top-control-height);
+  height: var(--top-control-height);
+  margin-top: var(--top-control-offset);
 }
 
 .mml-open .performance-surface .settings-button {
-  min-height: 64px;
-  height: 64px;
+  min-height: 0;
+  height: 100%;
   border-radius: 15px;
   font-size: 10px;
 }
@@ -3946,6 +3955,9 @@ summary:focus-visible {
   }
 
   .top-bar {
+    --octave-label-height: 17px;
+    --octave-row-gap: 3px;
+    --octave-button-size: 42px;
     grid-template-columns: 82px minmax(200px, 1fr) 210px 42px;
     gap: 8px;
     padding: 8px 10px 4px;
@@ -4008,8 +4020,8 @@ summary:focus-visible {
   }
 
   .octave-panel {
-    grid-template-rows: auto 42px;
-    gap: 3px;
+    grid-template-rows: var(--octave-label-height) var(--octave-button-size);
+    gap: var(--octave-row-gap);
   }
 
   .octave-button {
@@ -4036,8 +4048,8 @@ summary:focus-visible {
   .transpose-panel {
     grid-template-columns: 42px minmax(110px, 1fr) 38px;
     gap: 4px;
-    height: 42px;
-    margin-top: 0;
+    height: var(--top-control-height);
+    margin-top: var(--top-control-offset);
   }
 
   .transpose-status {
@@ -4053,7 +4065,7 @@ summary:focus-visible {
   .transpose-grid {
     grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 4px;
-    height: 42px;
+    height: 100%;
   }
 
   .transpose-grid button {
@@ -4094,14 +4106,16 @@ summary:focus-visible {
   }
 
   .settings-button {
-    min-height: 42px;
-    height: 42px;
+    min-height: 0;
+    height: 100%;
     border-radius: 10px;
     font-size: 9px;
   }
 
   .header-actions {
-    margin-top: 0;
+    min-height: var(--top-control-height);
+    height: var(--top-control-height);
+    margin-top: var(--top-control-offset);
   }
 
   .settings-button span {
@@ -4250,11 +4264,18 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .top-bar {
+    --octave-label-height: 17px;
+    --octave-row-gap: 2px;
+    --octave-button-size: 36px;
     grid-template-columns: 40px minmax(0, 1fr) 31px;
-    grid-template-rows: 48px 36px;
+    grid-template-rows: 55px 36px;
     column-gap: 3px;
     row-gap: 3px;
     padding: 7px 5px 3px;
+  }
+
+  .mml-open .performance-surface .top-bar.has-double-keyboard {
+    --octave-button-size: 36px;
   }
 
   .mml-open .performance-surface .brand-block {
@@ -4271,8 +4292,8 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .octave-panel {
-    grid-template-rows: auto 36px;
-    gap: 2px;
+    grid-template-rows: var(--octave-label-height) var(--octave-button-size);
+    gap: var(--octave-row-gap);
   }
 
   .mml-open .performance-surface .panel-eyebrow,
@@ -4314,15 +4335,15 @@ summary:focus-visible {
 
   .mml-open .performance-surface .header-actions {
     width: 31px;
-    height: 36px;
-    min-height: 36px;
-    margin-top: 0;
+    height: var(--top-control-height);
+    min-height: var(--top-control-height);
+    margin-top: var(--top-control-offset);
   }
 
   .mml-open .performance-surface .settings-button {
     width: 31px;
-    height: 36px;
-    min-height: 36px;
+    height: 100%;
+    min-height: 0;
     font-size: 0;
   }
 
