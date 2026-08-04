@@ -8,7 +8,7 @@ import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTime
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../app/mml/midi.js";
-import { createMmlRestorePoint, optimizeMmlText, restoreMmlText } from "../app/mml/optimization.js";
+import { expandMmlText, optimizeMmlText } from "../app/mml/optimization.js";
 import { MIDIBuilder, MIDIMessageTypes } from "spessasynth_core";
 
 test("clamps timeline zoom to a useful range", () => {
@@ -285,7 +285,7 @@ test("optimizes MML text with the shortest useful default lengths without changi
   const source = `/* intro */ T120 O4 L8 V15
     C D E F G A B > C T120 V15 O5 R8 R8`;
   const result = optimizeMmlText(source);
-  assert.equal(result.source, "t120o4v15l8cdefgab>crr");
+  assert.ok(result.source.length <= "t120o4v15l8cdefgab>crr".length);
   assert.ok(result.afterLength < result.beforeLength);
   const before = parseTrack(source);
   const after = parseTrack(result.source);
@@ -296,12 +296,41 @@ test("optimizes MML text with the shortest useful default lengths without changi
   assert.deepEqual(after.rests.map(({ tick, duration }) => ({ tick, duration })), before.rests.map(({ tick, duration }) => ({ tick, duration })));
 });
 
-test("keeps absolute notes correct while optimizing default lengths and restores the exact original text", () => {
+test("optimizes absolute notes and restores compact MML as readable named notes", () => {
   const original = "// memo\nl16 n61 n63 l4. c4. r4.";
   const optimized = optimizeMmlText(original);
   assert.deepEqual(parseTrack(optimized.source).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })), parseTrack(original).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })));
-  const restorePoint = createMmlRestorePoint(original, optimized.source);
-  assert.equal(restoreMmlText(restorePoint), original);
+  const restored = expandMmlText(optimized.source);
+  assert.equal(/n[0-9]/.test(restored.source), false);
+  assert.equal(restored.source.includes(" "), true);
+  assert.deepEqual(
+    parseTrack(restored.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+    parseTrack(optimized.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+  );
+  assert.equal(parseTrack(restored.source).duration, parseTrack(optimized.source).duration);
+});
+
+test("chooses absolute notes when they are shorter than repeated octave jumps", () => {
+  const source = "l8o1co8co1co8co1co8c";
+  const optimized = optimizeMmlText(source);
+  assert.match(optimized.source, /n[0-9]/);
+  assert.ok(optimized.source.length < source.length);
+  assert.deepEqual(
+    parseTrack(optimized.source).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })),
+    parseTrack(source).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })),
+  );
+});
+
+test("never makes an already compact real-world MML track longer", () => {
+  const document = parseMmlDocument(readFileSync(new URL("./fixtures/complex-three-track.mml", import.meta.url), "utf8"));
+  for (const track of document.tracks) {
+    const optimized = optimizeMmlText(track.source);
+    assert.ok(optimized.afterLength <= optimized.beforeLength);
+    assert.deepEqual(
+      parseTrack(optimized.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+      track.notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+    );
+  }
 });
 
 test("imports MabiIcco MMI score metadata and expands populated parts into nyangnyang tracks", () => {

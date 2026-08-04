@@ -10,7 +10,6 @@ export function createTrack(index, themeId = "nyang-voice") {
     name: `Track ${index + 1}`,
     color: TRACK_COLORS[index % TRACK_COLORS.length],
     sourceText: index === 0 ? "t120o4l4v15" : "o4l4v15",
-    optimizationRestore: null,
     themeId,
     mixerVolume: 1,
     recordVelocity: 15,
@@ -24,7 +23,7 @@ export function createProject(themeId = "nyang-voice") {
   const tracks = [createTrack(0, themeId), createTrack(1, themeId), createTrack(2, themeId)];
   return {
     format: "nyangmml",
-    version: 11,
+    version: 12,
     title: "",
     tracks,
     timeSignature: { numerator: 4, denominator: 4 },
@@ -56,18 +55,17 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     return createProject(themeId);
   }
   const fallback = createProject(themeId);
-  const tracks = value.tracks.map((track, index) => ({
-    ...createTrack(index, themeId),
-    ...track,
-    id: typeof track.id === "string" ? track.id : createTrack(index, themeId).id,
-    name: typeof track.name === "string" ? track.name : `Track ${index + 1}`,
-    sourceText: typeof track.sourceText === "string" ? track.sourceText : "",
-    optimizationRestore: track.optimizationRestore?.version === 1
-      && typeof track.optimizationRestore.original === "string"
-      && typeof track.optimizationRestore.optimized === "string"
-      ? track.optimizationRestore
-      : null,
-  }));
+  const tracks = value.tracks.map((track, index) => {
+    const normalized = {
+      ...createTrack(index, themeId),
+      ...track,
+      id: typeof track.id === "string" ? track.id : createTrack(index, themeId).id,
+      name: typeof track.name === "string" ? track.name : `Track ${index + 1}`,
+      sourceText: typeof track.sourceText === "string" ? track.sourceText : "",
+    };
+    delete normalized.optimizationRestore;
+    return normalized;
+  });
   const tempoTrackIds = new Set(tracks.filter((track) => track.mmlRole === "tempo").map((track) => track.id));
   const migratedTempoEvents = tracks
     .filter((track) => tempoTrackIds.has(track.id))
@@ -128,7 +126,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
     ...fallback,
     ...projectValue,
     format: "nyangmml",
-    version: 11,
+    version: 12,
     tracks,
     routing: { left: leftRouting, right: rightRouting },
     recording,

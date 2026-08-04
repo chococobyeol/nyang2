@@ -37,7 +37,7 @@ import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecon
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
-import { createMmlRestorePoint, optimizeMmlText, restoreMmlText } from "../mml/optimization.js";
+import { expandMmlText, optimizeMmlText } from "../mml/optimization.js";
 import { createProjectFromMmi } from "../mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../mml/midi.js";
 
@@ -1230,7 +1230,6 @@ export default function MmlStudio({
       commit((draft: any) => {
         const track = draft.tracks.find((item: any) => item.id === selectedTrack.id);
         if (!track) return draft;
-        track.optimizationRestore = createMmlRestorePoint(track.sourceText, result.source);
         track.sourceText = result.source;
         return draft;
       });
@@ -1241,21 +1240,20 @@ export default function MmlStudio({
     }
   };
 
-  const restoreSelectedTrack = () => {
-    const restorePoint = selectedTrack.optimizationRestore;
-    if (!restorePoint) return;
-    if (selectedTrack.sourceText !== restorePoint.optimized
-      && !window.confirm("최적화한 뒤 편집한 내용이 있습니다. 최적화 직전 텍스트로 복원할까요?")) return;
+  const expandSelectedTrack = () => {
     try {
-      const restored = restoreMmlText(restorePoint);
+      const result = expandMmlText(selectedTrack.sourceText);
+      if (!result.changed) {
+        setRecordingMessage("이미 읽기 좋은 MML입니다.");
+        return;
+      }
       commit((draft: any) => {
         const track = draft.tracks.find((item: any) => item.id === selectedTrack.id);
         if (!track) return draft;
-        track.sourceText = restored;
-        track.optimizationRestore = null;
+        track.sourceText = result.source;
         return draft;
       });
-      setRecordingMessage("최적화 직전 텍스트로 복원했습니다.");
+      setRecordingMessage("음이름과 음가를 읽기 좋게 풀어썼습니다.");
       window.requestAnimationFrame(() => editorRef.current?.focus());
     } catch (error) {
       setRecordingMessage((error as Error).message);
@@ -2018,7 +2016,7 @@ export default function MmlStudio({
             <small>{project.recording.mode === "realtime" ? "실시간" : "이어붙이기"} · {project.recording.editMode === "overwrite" ? "수정" : "삽입"} · {project.recording.quantize === "off" ? "보정 없음" : `${project.recording.quantize} 보정`}</small>
             <div className="mml-editor-actions">
               <button type="button" onClick={optimizeSelectedTrack} disabled={playing || recordState !== "idle"} title="연주를 그대로 유지하면서 MML 코드를 짧게 정리">최적화</button>
-              <button type="button" onClick={restoreSelectedTrack} disabled={playing || recordState !== "idle" || !selectedTrack.optimizationRestore} title="마지막 최적화 직전 텍스트로 복원">복원</button>
+              <button type="button" onClick={expandSelectedTrack} disabled={playing || recordState !== "idle"} title="n코드와 생략된 음가를 음이름·명시적 음가로 풀어쓰기">풀어쓰기</button>
               <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>
             </div>
           </div>
