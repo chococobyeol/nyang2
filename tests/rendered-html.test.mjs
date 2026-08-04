@@ -167,7 +167,7 @@ test("aligns compact octave, key, and settings controls", async () => {
   assert.match(css, /\.settings-button \{[^}]*height: 42px/s);
   assert.match(css, /\.transpose-status \{\s*min-height: 0;\s*height: 100%/);
   assert.match(css, /\.transpose-grid button \{\s*display: flex;\s*align-items: center;\s*justify-content: center;/);
-  assert.match(page, /const panelTitle = side === "left" \? "L" : "R"/);
+  assert.match(page, /const panelTitle = side === "left" \? "OCT L" : "OCT R"/);
   assert.doesNotMatch(page, /"왼쪽 옥타브"|"오른쪽 옥타브"/);
 });
 
@@ -182,6 +182,8 @@ test("renders the optional lower B and upper C at accidental-key scale", async (
   assert.match(css, /\.paw-note-natural\.is-edge-note:first-child \{\s*--edge-note-shift: 14%;/);
   assert.match(css, /\.paw-note-natural\.is-edge-note:last-child \{\s*--edge-note-shift: -14%;/);
   assert.match(css, /\.paw-note-natural\.is-edge-note\.is-active \{\s*transform: translateX\(var\(--edge-note-shift\)\) translateY\(5px\) scale\(0\.64\);/);
+  assert.match(css, /\.paw-note-accidental \.key-labels \{[^}]*width: 72%;[^}]*gap: clamp\(1px, 0\.18vw, 3px\);/s);
+  assert.match(css, /\.paw-note-accidental \.mapping-label \{[^}]*width: clamp\(15px, 1vw, 18px\);[^}]*min-width: clamp\(15px, 1vw, 18px\);/s);
 });
 
 test("keeps the selected left octave and opens the second keyboard on octave five", async () => {
@@ -313,11 +315,12 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /className="mml-track-add-button"/);
   assert.match(page, /showSideLabel\n\s+settings=\{settings\}/);
   assert.match(page, /showSideLabel && \([\s\S]*?className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
-  assert.match(page, /const panelTitle = side === "left" \? "L" : "R"/);
+  assert.match(page, /const panelTitle = side === "left" \? "OCT L" : "OCT R"/);
   assert.doesNotMatch(page, /panelTitle = mmlOpen/);
-  assert.match(css, /\.keyboard-side-code \{[^}]*top: -25px;[^}]*left: 50%;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;[^}]*transform: translateX\(-50%\)/s);
+  assert.match(css, /\.keyboard-side-code \{[^}]*top: -25px;[^}]*left: 0;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);
   assert.doesNotMatch(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\)/s);
-  assert.match(css, /\.panel-eyebrow \{[^}]*justify-self: center;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);
+  assert.match(css, /\.octave-panel \{[^}]*justify-self: center;[^}]*width: fit-content;[^}]*max-width: 100%;/s);
+  assert.match(css, /\.panel-eyebrow \{[^}]*justify-self: start;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);
   assert.doesNotMatch(studio, /<span>건반 연결<\/span>/);
   assert.doesNotMatch(studio, /<span>재생<\/span>/);
   assert.match(page, /event\.altKey \|\| event\.ctrlKey \|\| event\.metaKey/);

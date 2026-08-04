@@ -1731,7 +1731,7 @@ export default function Home() {
     const setter = side === "left" ? setLeftOctave : setRightOctave;
     const presets = side === "left" ? settings.leftOctavePresets : settings.rightOctavePresets;
     const shortcutOffset = side === "left" ? 0 : 4;
-    const panelTitle = side === "left" ? "L" : "R";
+    const panelTitle = side === "left" ? "OCT L" : "OCT R";
     return (
       <section className="octave-panel" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} 옥타브 선택`}>
         <div className="panel-eyebrow">{panelTitle}</div>
