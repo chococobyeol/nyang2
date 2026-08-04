@@ -482,7 +482,7 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(studio, /setRestInputActive\(true\)/);
   assert.match(studio, /className=\{`mml-beat-visual/);
   assert.match(page, /preparing \? \(accented \? 1760 : 1480\)/);
-  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 64px;[^}]*grid-template-rows: calc\(var\(--octave-label-height\) \+ var\(--octave-row-gap\) \+ var\(--octave-button-size\)\) 68px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 68px;[^}]*grid-template-rows: calc\(var\(--octave-label-height\) \+ var\(--octave-row-gap\) \+ var\(--octave-button-size\)\) 68px/s);
   assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*--octave-label-height: 20px;[^}]*--octave-row-gap: 3px;[^}]*--top-control-height: 64px;/s);
   assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 0;[^}]*height: 100%/s);
   assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 42%;[^}]*height: auto/s);

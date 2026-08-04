@@ -2824,7 +2824,7 @@ button {
   --octave-label-height: 20px;
   --octave-row-gap: 3px;
   --top-control-height: 64px;
-  grid-template-columns: 88px minmax(0, 1fr) 64px;
+  grid-template-columns: 88px minmax(0, 1fr) 68px;
   grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 68px;
   column-gap: 6px;
   row-gap: 5px;
@@ -2931,8 +2931,8 @@ button {
 .mml-open .performance-surface .settings-button {
   min-height: 0;
   height: 100%;
-  border-radius: 15px;
-  font-size: 10px;
+  border-radius: 16px;
+  font-size: 11px;
 }
 
 .mml-open .performance-surface .mml-rest-button {
@@ -4265,9 +4265,9 @@ summary:focus-visible {
   .mml-open .performance-surface .top-bar {
     --octave-label-height: 16px;
     --octave-row-gap: 2px;
-    --top-control-height: 36px;
-    grid-template-columns: 40px minmax(0, 1fr) 31px;
-    grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 36px;
+    --top-control-height: 42px;
+    grid-template-columns: 40px minmax(0, 1fr) 42px;
+    grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 42px;
     column-gap: 3px;
     row-gap: 3px;
     padding: 2px 10px 3px;
@@ -4327,14 +4327,14 @@ summary:focus-visible {
 
   .mml-open .performance-surface .transpose-panel {
     grid-template-columns: 32px minmax(62px, 1fr) 28px;
-    height: 36px;
+    height: var(--top-control-height);
     margin-top: 0;
   }
 
   .mml-open .performance-surface .transpose-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr));
-    height: 36px;
+    height: var(--top-control-height);
     gap: 2px;
   }
 
@@ -4344,21 +4344,21 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .header-actions {
-    width: 31px;
+    width: 42px;
     height: var(--top-control-height);
     min-height: var(--top-control-height);
     margin-top: var(--top-control-offset);
   }
 
   .mml-open .performance-surface .settings-button {
-    width: 31px;
+    width: 42px;
     height: 100%;
     min-height: 0;
-    font-size: 0;
+    font-size: 9px;
   }
 
   .mml-open .performance-surface .settings-button span {
-    font-size: 12px;
+    font-size: 15px;
   }
 
   .mml-open .performance-surface .mml-rest-button {
