@@ -1487,8 +1487,14 @@ button {
   font-size: 10px;
 }
 
-.mml-editor-head button {
+.mml-editor-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
   margin-left: auto;
+}
+
+.mml-editor-head button {
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -2591,13 +2597,9 @@ button {
   background: #fffdf7;
 }
 
-.mml-editor-head button:first-of-type {
-  margin-left: auto;
-}
-
-.mml-editor-head > button:first-of-type {
-  min-width: 31px;
-  margin-left: 0;
+.mml-editor-head button:disabled {
+  cursor: default;
+  opacity: 0.42;
 }
 
 @container mml-studio (max-width: 900px) {

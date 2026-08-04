@@ -8,6 +8,7 @@ import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTime
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../app/mml/midi.js";
+import { createMmlRestorePoint, optimizeMmlText, restoreMmlText } from "../app/mml/optimization.js";
 import { MIDIBuilder, MIDIMessageTypes } from "spessasynth_core";
 
 test("clamps timeline zoom to a useful range", () => {
@@ -278,6 +279,29 @@ test("preserves source positions and splits combined MML tracks", () => {
 
 test("combines tracks and removes comments only for raw MML export", () => {
   assert.equal(combineTracks(["o4c4 // memo", "o3e4"], { removeComments: true }), "MML@o4c4,o3e4;");
+});
+
+test("optimizes MML text with the shortest useful default lengths without changing the performance", () => {
+  const source = `/* intro */ T120 O4 L8 V15
+    C D E F G A B > C T120 V15 O5 R8 R8`;
+  const result = optimizeMmlText(source);
+  assert.equal(result.source, "t120o4v15l8cdefgab>crr");
+  assert.ok(result.afterLength < result.beforeLength);
+  const before = parseTrack(source);
+  const after = parseTrack(result.source);
+  assert.deepEqual(
+    after.notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+    before.notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+  );
+  assert.deepEqual(after.rests.map(({ tick, duration }) => ({ tick, duration })), before.rests.map(({ tick, duration }) => ({ tick, duration })));
+});
+
+test("keeps absolute notes correct while optimizing default lengths and restores the exact original text", () => {
+  const original = "// memo\nl16 n61 n63 l4. c4. r4.";
+  const optimized = optimizeMmlText(original);
+  assert.deepEqual(parseTrack(optimized.source).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })), parseTrack(original).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })));
+  const restorePoint = createMmlRestorePoint(original, optimized.source);
+  assert.equal(restoreMmlText(restorePoint), original);
 });
 
 test("imports MabiIcco MMI score metadata and expands populated parts into nyangnyang tracks", () => {
