@@ -1174,6 +1174,7 @@ export default function MmlStudio({
         }
         return;
       }
+      if (typing && event.target !== editorRef.current) return;
       const shortcuts = Object.assign({
         play: "Space",
         record: "Alt+KeyR",
