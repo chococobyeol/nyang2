@@ -3,5 +3,5 @@
   "name": "nyang2-test",
   "pages_build_output_dir": ".",
   "compatibility_date": "2026-05-15",
-  "compatibility_flags": []
+  "compatibility_flags": ["nodejs_compat"]
 }
