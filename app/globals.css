@@ -413,8 +413,10 @@ button {
   line-height: 1;
 }
 
-.transpose-reset small {
-  font-size: 7px;
+.transpose-reset small,
+.settings-button small {
+  font-size: 10px;
+  line-height: 1;
   font-weight: 900;
 }
 
@@ -899,6 +901,7 @@ button {
   border-left: 1px solid rgba(255, 255, 255, 0.28);
   background: #fbf7ef;
   box-shadow: -20px 0 60px rgba(20, 21, 19, 0.18);
+  font-size: 14px;
   animation: drawer-in 180ms ease-out;
 }
 
@@ -920,14 +923,14 @@ button {
 
 .settings-header span {
   color: #aeb6b2;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.17em;
 }
 
 .settings-header h2 {
   margin: 5px 0 0;
-  font-size: 22px;
+  font-size: 24px;
 }
 
 .settings-header button {
@@ -2622,6 +2625,16 @@ button {
 }
 
 @container mml-studio (max-width: 900px) {
+  .mml-transport {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .mml-transport::-webkit-scrollbar {
+    display: none;
+  }
+
   .mml-transport-navigation button {
     width: 34px;
     min-width: 34px;
@@ -2629,6 +2642,22 @@ button {
   }
 
   .mml-transport-navigation button span {
+    display: none;
+  }
+
+  .mml-transport-tools {
+    min-width: max-content;
+    justify-content: flex-start;
+  }
+
+  .mml-transport-tools button {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+  }
+
+  .mml-transport-tools button span,
+  .mml-transport-tools button kbd {
     display: none;
   }
 }
@@ -3163,13 +3192,13 @@ button {
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
 }
 
 .settings-section-title h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .toggle-row {
@@ -3178,7 +3207,7 @@ button {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px dashed #ddd4c7;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -3232,7 +3261,7 @@ button {
   justify-content: space-between;
   margin-bottom: 8px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.03em;
 }
@@ -3245,7 +3274,7 @@ button {
   border-radius: 10px;
   background: #fff;
   color: var(--ink);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -3267,7 +3296,7 @@ button {
 .preset-inputs label > span {
   padding-left: 10px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -3299,12 +3328,12 @@ button {
 .side-visibility-grid > div > strong {
   display: block;
   margin-bottom: 3px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .side-visibility-grid .toggle-row {
   min-height: 36px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .side-visibility-grid .toggle {
@@ -3337,7 +3366,7 @@ button {
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
 }
 
@@ -3388,13 +3417,13 @@ button {
 }
 
 .theme-grid button strong {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .theme-grid button small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .sound-pack-setting {
@@ -3419,14 +3448,14 @@ button {
 
 .sound-pack-heading strong,
 .sound-pack-info strong {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .sound-pack-heading small,
 .sound-pack-info small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -3442,7 +3471,7 @@ button {
   color: var(--ink);
   cursor: pointer;
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -3471,7 +3500,7 @@ button {
   display: block;
   margin-bottom: 6px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -3489,14 +3518,14 @@ button {
 .sound-pack-status {
   margin: 9px 0 0;
   color: var(--ink);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
 .setting-note {
   margin: 11px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.55;
 }
 
@@ -3525,7 +3554,7 @@ button {
   background: var(--ink);
   color: #fff;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
 }
 
@@ -3539,7 +3568,7 @@ button {
 .settings-section summary {
   padding: 13px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
 }
 
@@ -3566,13 +3595,13 @@ button {
 
 .mapping-chip span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
 }
 
 .mapping-chip strong {
   overflow: hidden;
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3590,13 +3619,13 @@ button {
 
 .shortcut-group h4 {
   margin: 0;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .shortcut-group > p {
   margin: 4px 0 8px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .shortcut-grid {
@@ -3633,7 +3662,7 @@ button {
 .error-message {
   margin: 9px 0 0;
   color: #bd3d30;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -3645,13 +3674,13 @@ button {
 }
 
 .danger-section strong {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .danger-section p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .danger-section button {
@@ -3661,7 +3690,7 @@ button {
   background: #fff;
   color: #bd3d30;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -3675,7 +3704,7 @@ button {
   align-items: center;
   gap: 7px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 13px;
   text-decoration: none;
 }
 
@@ -3685,7 +3714,7 @@ button {
 
 .settings-legal a strong {
   color: var(--accent);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .privacy-page {
@@ -4126,8 +4155,9 @@ summary:focus-visible {
     font-size: 13px;
   }
 
-  .transpose-reset small {
-    font-size: 7px;
+  .transpose-reset small,
+  .settings-button small {
+    font-size: 8px;
   }
 
   .settings-button {
