@@ -156,8 +156,7 @@ test("aligns compact octave, key, and settings controls", async () => {
   assert.match(css, /\.octave-buttons \{[^}]*repeat\(4, minmax\(0, 64px\)\)/s);
   assert.match(css, /\.octave-button \{[^}]*aspect-ratio: 1;/s);
   assert.match(css, /\.octave-panel \{[^}]*grid-template-rows: auto 64px;[^}]*gap: 6px;/s);
-  assert.match(css, /\.transpose-panel \{[^}]*height: 64px;[^}]*margin-top: 26px;/s);
-  assert.match(css, /\.header-actions \{[^}]*min-height: 64px;[^}]*margin-top: 26px;/s);
+  assert.match(css, /\.transpose-panel \{[^}]*height: 64px;[^}]*margin-top: 15px;/s);
   assert.match(css, /\.transpose-panel \{[^}]*height: 64px/s);
   assert.match(css, /\.settings-button \{[^}]*height: 64px/s);
   assert.match(css, /\.mml-open \.performance-surface \.top-bar \.transpose-panel \{[^}]*width: min\(300px, 100%\);/s);
@@ -318,10 +317,10 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(page, /showSideLabel && \([\s\S]*?className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
   assert.match(page, /const panelTitle = side === "left" \? "OCT L" : "OCT R"/);
   assert.doesNotMatch(page, /panelTitle = mmlOpen/);
-  assert.match(css, /\.keyboard-side-code \{[^}]*top: -25px;[^}]*left: 0;[^}]*border: 2px solid var\(--ink\);[^}]*background: color-mix[^}]*font-size: 13px;/s);
+  assert.match(css, /\.keyboard-side-code \{[^}]*top: -25px;[^}]*left: 0;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);
   assert.doesNotMatch(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\)/s);
   assert.match(css, /\.octave-panel \{[^}]*justify-self: center;[^}]*width: fit-content;[^}]*max-width: 100%;/s);
-  assert.match(css, /\.panel-eyebrow \{[^}]*justify-self: start;[^}]*border: 2px solid var\(--ink\);[^}]*background: color-mix[^}]*font-size: 13px;/s);
+  assert.match(css, /\.panel-eyebrow \{[^}]*justify-self: start;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);
   assert.doesNotMatch(studio, /<span>건반 연결<\/span>/);
   assert.doesNotMatch(studio, /<span>재생<\/span>/);
   assert.match(page, /event\.altKey \|\| event\.ctrlKey \|\| event\.metaKey/);

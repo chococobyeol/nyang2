@@ -227,7 +227,7 @@ button {
   height: 20px;
   margin: 0;
   padding: 0 6px;
-  border: 2px solid var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
   border-radius: 7px;
   background: color-mix(in srgb, var(--accent) 10%, var(--paper));
   color: var(--ink);
@@ -332,7 +332,7 @@ button {
   gap: 8px;
   min-width: 0;
   height: 64px;
-  margin-top: 26px;
+  margin-top: 15px;
 }
 
 .transpose-status {
@@ -428,7 +428,7 @@ button {
   align-items: stretch;
   gap: 8px;
   min-height: 64px;
-  margin-top: 26px;
+  margin-top: 15px;
 }
 
 .settings-button,
@@ -636,7 +636,7 @@ button {
   min-width: 22px;
   height: 20px;
   padding: 0 6px;
-  border: 2px solid var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
   border-radius: 7px;
   background: color-mix(in srgb, var(--accent) 10%, var(--paper));
   color: var(--ink);
@@ -4037,7 +4037,7 @@ summary:focus-visible {
     grid-template-columns: 42px minmax(110px, 1fr) 38px;
     gap: 4px;
     height: 42px;
-    margin-top: 20px;
+    margin-top: 0;
   }
 
   .transpose-status {
@@ -4101,7 +4101,7 @@ summary:focus-visible {
   }
 
   .header-actions {
-    margin-top: 20px;
+    margin-top: 0;
   }
 
   .settings-button span {
