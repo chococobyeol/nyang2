@@ -1494,6 +1494,10 @@ button {
   margin-left: auto;
 }
 
+.mml-editor-done {
+  display: none;
+}
+
 .mml-editor-head button {
   border: 0;
   background: transparent;
@@ -2332,6 +2336,10 @@ button {
   background: #fff;
   font-size: 9px;
   font-weight: 900;
+}
+
+.mml-track-batch-panel.mml-track-batch-floating {
+  display: none;
 }
 
 .mml-track-add-button {
@@ -4525,6 +4533,7 @@ summary:focus-visible {
   .mml-studio .mml-piano-roll,
   .mml-studio .mml-playback-source,
   .mml-studio .mml-work-area textarea {
+    touch-action: auto;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -4535,8 +4544,25 @@ summary:focus-visible {
     overflow: auto;
     overscroll-behavior: contain;
     background: #f0e9dd;
-    touch-action: pan-x pan-y;
+    touch-action: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .mml-studio .mml-track-batch-sidebar {
+    display: none;
+  }
+
+  .mml-studio .mml-track-batch-panel.mml-track-batch-floating {
+    position: absolute;
+    z-index: 73;
+    top: 96px;
+    right: 8px;
+    left: 162px;
+    display: grid;
+    width: auto;
+    max-width: 230px;
+    margin: 0;
+    box-shadow: 4px 4px 0 rgba(31, 37, 36, 0.18);
   }
 
   .mml-studio .mml-track-card {
@@ -4568,6 +4594,18 @@ summary:focus-visible {
     top: 96px;
     right: 8px;
   }
+
+  .mml-studio .mml-quick-settings,
+  .mml-studio .mml-track-settings,
+  .mml-studio .mml-action-menu {
+    overscroll-behavior: contain;
+    touch-action: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mml-studio .mml-editor-done {
+    display: inline-flex;
+  }
 }
 
 @container mml-studio (max-width: 560px) {
@@ -4578,12 +4616,34 @@ summary:focus-visible {
   .mml-studio .mml-track-list {
     overflow-x: auto;
     overflow-y: hidden;
-    touch-action: pan-x;
+    overscroll-behavior: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    touch-action: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .mml-studio .mml-track-card {
     min-height: 42px;
     margin-bottom: 0;
+    scroll-snap-align: center;
+  }
+
+  .mml-studio .mml-track-list::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  .mml-studio .mml-track-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 32%, transparent);
+  }
+
+  .mml-studio .mml-track-batch-panel.mml-track-batch-floating {
+    top: 144px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-width: 220px;
   }
 
   .mml-studio .mml-quick-settings,

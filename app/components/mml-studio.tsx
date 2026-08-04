@@ -1281,12 +1281,18 @@ export default function MmlStudio({
   };
 
   const toggleBatchTrack = (trackId: string) => {
+    setSettingsView(false);
+    setTrackSettingsView(false);
+    setFileMenuView(false);
     setBatchTrackIds((current) => current.includes(trackId)
       ? current.filter((id) => id !== trackId)
       : [...current, trackId]);
   };
 
   const toggleAllBatchTracks = () => {
+    setSettingsView(false);
+    setTrackSettingsView(false);
+    setFileMenuView(false);
     setBatchTrackIds((current) => current.length === project.tracks.length
       ? []
       : project.tracks.map((track: any) => track.id));
@@ -1308,6 +1314,19 @@ export default function MmlStudio({
   };
 
   const updateBatchTheme = (themeId: string) => changeTrackThemes(batchTrackIds, themeId);
+
+  const renderBatchPanel = (placement: "sidebar" | "floating") => batchSelectedTracks.length > 0 && (
+    <div className={`mml-track-batch-panel mml-track-batch-${placement}`} role="dialog" aria-label="선택한 트랙 일괄 변경">
+      <div><strong>{batchSelectedTracks.length}개 트랙 선택</strong><button type="button" onClick={() => setBatchTrackIds([])}>해제</button></div>
+      <label>
+        <span>음색 한 번에 변경</span>
+        <select aria-label="선택한 트랙 음색" value={batchThemeId} onChange={(event) => updateBatchTheme(event.target.value)}>
+          <option value="">{batchThemeId ? "음색 선택" : "서로 다른 음색"}</option>
+          {themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}
+        </select>
+      </label>
+    </div>
+  );
 
   const updateMasterTempo = (value: number) => {
     const bpm = Math.max(1, Math.round(value || 1));
@@ -1885,6 +1904,8 @@ export default function MmlStudio({
         </div>
       )}
 
+      {renderBatchPanel("floating")}
+
       {durationMenu && (
         <div className="mml-duration-menu" role="menu" aria-label="선택한 음표 길이 변경" style={{ left: durationMenu.x, top: durationMenu.y }} onContextMenu={(event) => event.preventDefault()}>
           <header><strong>선택 음가 변경</strong><button type="button" onClick={() => setDurationMenu(null)} aria-label="닫기">×</button></header>
@@ -1908,18 +1929,7 @@ export default function MmlStudio({
               <span>{project.tracks.length > 0 && batchTrackIds.length === project.tracks.length ? "전체 해제" : "전체 선택"}</span>
             </label>
           </div>
-          {batchSelectedTracks.length > 0 && (
-            <div className="mml-track-batch-panel">
-              <div><strong>{batchSelectedTracks.length}개 트랙 선택</strong><button type="button" onClick={() => setBatchTrackIds([])}>해제</button></div>
-              <label>
-                <span>음색 한 번에 변경</span>
-                <select aria-label="선택한 트랙 음색" value={batchThemeId} onChange={(event) => updateBatchTheme(event.target.value)}>
-                  <option value="">{batchThemeId ? "음색 선택" : "서로 다른 음색"}</option>
-                  {themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}
-                </select>
-              </label>
-            </div>
-          )}
+          {renderBatchPanel("sidebar")}
           {project.tracks.map((track: any, index: number) => (
             <div className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""} ${batchTrackIds.includes(track.id) ? "is-batch-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id}>
               <label className="mml-track-batch-checkbox" title="여러 트랙을 함께 바꿀 때 선택">
@@ -2045,6 +2055,7 @@ export default function MmlStudio({
             <strong>{selectedTrack.name}</strong>
             <small>{project.recording.mode === "realtime" ? "실시간" : "이어붙이기"} · {project.recording.editMode === "overwrite" ? "수정" : "삽입"} · {project.recording.quantize === "off" ? "보정 없음" : `${project.recording.quantize} 보정`}</small>
             <div className="mml-editor-actions">
+              <button type="button" className="mml-editor-done" onClick={() => editorRef.current?.blur()}>완료</button>
               <button type="button" onClick={optimizeSelectedTrack} disabled={playing || recordState !== "idle"} title="연주를 그대로 유지하면서 MML 코드를 짧게 정리">최적화</button>
               <button type="button" onClick={expandSelectedTrack} disabled={playing || recordState !== "idle"} title="n코드와 생략된 음가를 음이름·명시적 음가로 풀어쓰기">풀어쓰기</button>
               <button type="button" onClick={() => navigator.clipboard.writeText(selectedTrack.sourceText)}>복사</button>

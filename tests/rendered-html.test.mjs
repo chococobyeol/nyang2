@@ -365,6 +365,8 @@ test("changes the instrument for several selected tracks at once", async () => {
   assert.match(studio, /aria-label="선택한 트랙 음색"/);
   assert.match(studio, /className="mml-track-batch-checkbox"/);
   assert.match(studio, /const toggleAllBatchTracks = \(\) =>/);
+  assert.match(studio, /renderBatchPanel\("sidebar"\)/);
+  assert.match(studio, /renderBatchPanel\("floating"\)/);
   assert.match(studio, /\? "전체 해제" : "전체 선택"/);
   assert.match(css, /\.mml-track-batch-panel/);
   assert.match(css, /\.mml-track-select-all/);
@@ -492,9 +494,13 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-transport-tools button:nth-child\(-n \+ 2\) \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-main-grid \{[^}]*overflow: hidden;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*min-height: 0;[^}]*grid-template-rows: minmax\(104px, 1\.45fr\) 30px minmax\(84px, 0\.85fr\) 22px;[^}]*overflow: hidden;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-list \{[^}]*overflow: auto;[^}]*touch-action: pan-x pan-y;/s);
+  assert.match(studio, /className="mml-editor-done" onClick=\{\(\) => editorRef\.current\?\.blur\(\)\}>완료<\/button>/);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list \{[^}]*overflow: auto;[^}]*touch-action: auto;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-batch-sidebar \{[^}]*display: none;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-batch-panel\.mml-track-batch-floating \{[^}]*position: absolute;[^}]*left: 162px;[^}]*display: grid;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*left: 162px;[^}]*max-height: calc\(100% - 104px\);/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 54px minmax\(0, 1fr\);/s);
+  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*scroll-snap-type: x proximity;[^}]*scrollbar-width: thin;[^}]*touch-action: auto;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: auto;/s);
 });
