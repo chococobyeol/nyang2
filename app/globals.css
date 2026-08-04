@@ -1046,6 +1046,13 @@ button {
   font-size: 22px;
 }
 
+.mml-header-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.25;
+}
+
 .mml-transport {
   display: flex;
   min-width: 0;
@@ -2682,6 +2689,11 @@ button {
   .mml-close {
     width: 24px;
     height: 24px;
+  }
+
+  .mml-header-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .mml-transport {

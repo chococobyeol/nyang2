@@ -16,7 +16,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { ChevronLeft, ChevronRight, Circle, Ellipsis, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Circle, Ellipsis, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
 import {
   combineTracks,
   deleteTempoCommand,
@@ -1888,7 +1888,7 @@ export default function MmlStudio({
           </div>
         </div>
         <button type="button" className="mml-expand" onClick={() => onExpandedChange(!expanded)} aria-label={expanded ? "작곡창 축소" : "작곡창 전체화면"} title={expanded ? "작곡창 축소" : "작곡창 전체화면"}>{expanded ? "▣" : "⛶"}</button>
-        <button type="button" className="mml-close" onClick={closeStudio} aria-label="MML 닫기" disabled={recordState !== "idle"}>×</button>
+        <button type="button" className="mml-close" onClick={closeStudio} aria-label="MML 닫기" disabled={recordState !== "idle"}><X className="mml-header-icon" aria-hidden="true" /></button>
       </header>
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
