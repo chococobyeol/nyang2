@@ -327,10 +327,11 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /aria-label="솔로"/);
   assert.match(studio, /className="mml-track-add-button"/);
   assert.match(page, /showSideLabel\n\s+settings=\{settings\}/);
-  assert.match(page, /showSideLabel && \([\s\S]*?className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
+  assert.match(page, /showSideLabel && \([\s\S]*?className=\{`keyboard-side-code is-\$\{side\}`\}[\s\S]*?side === "left" \? "L" : "R"/);
   assert.match(page, /const panelTitle = side === "left" \? "OCT L" : "OCT R"/);
   assert.doesNotMatch(page, /panelTitle = mmlOpen/);
   assert.match(css, /\.keyboard-side-code \{[^}]*top: -25px;[^}]*left: 0;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);
+  assert.match(css, /\.app-viewport:not\(\.mml-open\) \.keyboard-deck\.is-double \.keyboard-side-code\.is-right \{[^}]*top: 50%;[^}]*left: clamp\(-44px, -7vw, -30px\);[^}]*translateY\(-50%\);/s);
   assert.doesNotMatch(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\)/s);
   assert.match(css, /\.octave-panel \{[^}]*justify-self: center;[^}]*width: fit-content;[^}]*max-width: 100%;/s);
   assert.match(css, /\.panel-eyebrow \{[^}]*justify-self: start;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);

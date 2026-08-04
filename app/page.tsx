@@ -551,7 +551,7 @@ function KeyboardGroup({
   return (
     <div className="paw-keyboard-group" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} O${octave} 발바닥 음판`}>
       {showSideLabel && (
-        <span className="keyboard-side-code" aria-hidden="true">{side === "left" ? "L" : "R"}</span>
+        <span className={`keyboard-side-code is-${side}`} aria-hidden="true">{side === "left" ? "L" : "R"}</span>
       )}
       <div className="paw-row paw-row-natural">
         {visibleWhites.map((offset) => {

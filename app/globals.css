@@ -4168,6 +4168,12 @@ summary:focus-visible {
     top: 0;
   }
 
+  .app-viewport:not(.mml-open) .keyboard-deck.is-double .keyboard-side-code.is-right {
+    top: 50%;
+    left: clamp(-44px, -7vw, -30px);
+    transform: translateY(-50%);
+  }
+
   .keyboard-deck.is-double .paw-row-natural {
     height: 72px;
   }
