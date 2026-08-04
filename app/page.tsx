@@ -508,6 +508,7 @@ type KeyboardGroupProps = {
   restControl?: {
     active: boolean;
     shortcut: string;
+    showNoteLabel: boolean;
     showShortcut: boolean;
     onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
     onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) => void;
@@ -619,10 +620,12 @@ function KeyboardGroup({
             onClick={restControl.onClick}
           >
             <span className="mml-rest-symbol" aria-hidden="true">☾</span>
-            <span className="mml-rest-labels" aria-hidden="true">
-              <span className="mml-rest-note">R</span>
-              {restControl.showShortcut && <kbd className="mml-rest-shortcut">{restControl.shortcut}</kbd>}
-            </span>
+            {(restControl.showNoteLabel || restControl.showShortcut) && (
+              <span className="mml-rest-labels" aria-hidden="true">
+                {restControl.showNoteLabel && <span className="mml-rest-note">R</span>}
+                {restControl.showShortcut && <kbd className="mml-rest-shortcut">{restControl.shortcut}</kbd>}
+              </span>
+            )}
           </button>
         )}
       </div>
@@ -1726,11 +1729,7 @@ export default function Home() {
     const setter = side === "left" ? setLeftOctave : setRightOctave;
     const presets = side === "left" ? settings.leftOctavePresets : settings.rightOctavePresets;
     const shortcutOffset = side === "left" ? 0 : 4;
-    const panelTitle = mmlOpen
-      ? side === "left" ? "L" : "R"
-      : settings.keyboardCount === 1
-        ? "옥타브"
-        : side === "left" ? "왼쪽 옥타브" : "오른쪽 옥타브";
+    const panelTitle = side === "left" ? "L" : "R";
     return (
       <section className="octave-panel" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} 옥타브 선택`}>
         <div className="panel-eyebrow">{panelTitle}</div>
@@ -1948,7 +1947,7 @@ export default function Home() {
           <KeyboardGroup
             side="left"
             octave={leftOctave}
-            showSideLabel={mmlOpen}
+            showSideLabel
             settings={settings}
             mapping={settings.leftMapping}
             transpose={transpose}
@@ -1958,6 +1957,7 @@ export default function Home() {
             restControl={mmlOpen ? {
               active: mmlRestPressed,
               shortcut: codeLabel(mmlRestShortcut),
+              showNoteLabel: settings.noteLabelMode !== "hidden",
               showShortcut: settings.showKeyMapping,
               onPointerDown: (event) => {
                 event.preventDefault();
@@ -1986,7 +1986,7 @@ export default function Home() {
             <KeyboardGroup
               side="right"
               octave={rightOctave}
-              showSideLabel={mmlOpen}
+              showSideLabel
               settings={settings}
               mapping={settings.rightMapping}
               transpose={transpose}

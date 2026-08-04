@@ -167,8 +167,8 @@ test("aligns compact octave, key, and settings controls", async () => {
   assert.match(css, /\.settings-button \{[^}]*height: 42px/s);
   assert.match(css, /\.transpose-status \{\s*min-height: 0;\s*height: 100%/);
   assert.match(css, /\.transpose-grid button \{\s*display: flex;\s*align-items: center;\s*justify-content: center;/);
-  assert.match(page, /settings\.keyboardCount === 1\s*\? "옥타브"/);
-  assert.match(page, /side === "left" \? "왼쪽 옥타브" : "오른쪽 옥타브"/);
+  assert.match(page, /const panelTitle = side === "left" \? "L" : "R"/);
+  assert.doesNotMatch(page, /"왼쪽 옥타브"|"오른쪽 옥타브"/);
 });
 
 test("renders the optional lower B and upper C at accidental-key scale", async () => {
@@ -307,9 +307,10 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /aria-label="음소거"/);
   assert.match(studio, /aria-label="솔로"/);
   assert.match(studio, /className="mml-track-add-button"/);
-  assert.match(page, /showSideLabel=\{mmlOpen\}/);
+  assert.match(page, /showSideLabel\n\s+settings=\{settings\}/);
   assert.match(page, /className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
-  assert.match(page, /const panelTitle = mmlOpen[\s\S]*?side === "left" \? "L" : "R"/);
+  assert.match(page, /const panelTitle = side === "left" \? "L" : "R"/);
+  assert.doesNotMatch(page, /panelTitle = mmlOpen/);
   assert.match(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\);[^}]*color: #fff;/s);
   assert.doesNotMatch(studio, /<span>건반 연결<\/span>/);
   assert.doesNotMatch(studio, /<span>재생<\/span>/);
@@ -460,8 +461,9 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   ]);
   assert.match(page, /className="paw-row paw-row-accidental"[\s\S]*className=\{`mml-rest-button/);
   assert.match(page, /className="mml-rest-symbol"[^>]*>☾<\/span>/);
-  assert.match(page, /className="mml-rest-note">R<\/span>/);
+  assert.match(page, /restControl\.showNoteLabel && <span className="mml-rest-note">R<\/span>/);
   assert.match(page, /className="mml-rest-shortcut"/);
+  assert.match(page, /showNoteLabel: settings\.noteLabelMode !== "hidden"/);
   assert.doesNotMatch(page, /<small>쉼표<\/small>/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOn/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOff/);
@@ -477,8 +479,9 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
   assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;/s);
   assert.match(css, /\.mml-rest-button\.is-active \{[^}]*drop-shadow/s);
-  assert.match(css, /\.mml-rest-labels \{[^}]*border-radius: 999px/s);
-  assert.match(css, /\.key-labels \{[^}]*bottom: 13%;[^}]*background: rgba\(255, 253, 247, 0\.94\);[^}]*transform: translateX\(-50%\);/s);
+  assert.match(css, /\.mml-rest-labels \{[^}]*top: 63%;[^}]*width: 58%;[^}]*transform: translateX\(-50%\);/s);
+  assert.match(css, /\.key-labels \{[^}]*top: 63%;[^}]*width: 52%;[^}]*transform: translateX\(-50%\);/s);
+  assert.doesNotMatch(css, /\.key-labels \{[^}]*background:/s);
   assert.match(css, /\.mml-rest-button \{[^}]*pointer-events: auto/s);
   assert.match(css, /\.keyboard-deck:not\(\.is-double\) \{[^}]*height: 190px;/s);
   assert.match(css, /\.mml-rest-button::before \{[^}]*background: #f4ead9;/s);

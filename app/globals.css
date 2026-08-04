@@ -776,17 +776,14 @@ button {
 .key-labels {
   position: absolute;
   z-index: 2;
-  bottom: 13%;
+  top: 63%;
   left: 50%;
   display: flex;
-  max-width: 72%;
+  width: 52%;
+  height: 17%;
   align-items: center;
   justify-content: center;
   gap: clamp(2px, 0.4vw, 6px);
-  padding: clamp(1px, 0.18vw, 3px) clamp(4px, 0.55vw, 8px);
-  border: 1px solid rgba(31, 37, 36, 0.24);
-  border-radius: 999px;
-  background: rgba(255, 253, 247, 0.94);
   color: var(--ink);
   line-height: 1;
   pointer-events: none;
@@ -814,11 +811,10 @@ button {
 }
 
 .paw-note-accidental .key-labels {
-  bottom: 12%;
-  max-width: 78%;
+  top: 63%;
+  width: 58%;
+  height: 17%;
   gap: 3px;
-  padding: 1px clamp(3px, 0.3vw, 5px);
-  background: rgba(255, 253, 247, 0.78);
   color: var(--ink);
 }
 
@@ -2968,16 +2964,14 @@ button {
 .mml-open .performance-surface .mml-rest-labels {
   position: absolute;
   z-index: 2;
-  bottom: 11%;
+  top: 63%;
   left: 50%;
   display: flex;
+  width: 58%;
+  height: 17%;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 2px 5px;
-  border: 1px solid rgba(31, 37, 36, 0.25);
-  border-radius: 999px;
-  background: rgba(255, 253, 247, 0.94);
   color: var(--ink);
   line-height: 1;
   transform: translateX(-50%);
@@ -4318,7 +4312,6 @@ summary:focus-visible {
 
   .mml-open .performance-surface .mml-rest-labels {
     gap: 2px;
-    padding: 1px 3px;
   }
 
   .mml-open .performance-surface .mml-rest-note {
