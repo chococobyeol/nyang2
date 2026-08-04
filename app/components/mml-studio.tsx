@@ -124,6 +124,16 @@ function secondsToTick(seconds: number, tempoEvents: Array<{ tick: number; bpm: 
   return Math.round((low + high) / 2);
 }
 
+function formatPlaybackTime(seconds: number, roundUp = false) {
+  const totalSeconds = Math.max(0, roundUp ? Math.ceil(seconds) : Math.floor(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainder = totalSeconds % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
+    : `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
 function renderRecordingProject(
   baseProject: any,
   inputs: RecordingInput[],
@@ -550,6 +560,13 @@ export default function MmlStudio({
     () => Math.max(TICKS_PER_QUARTER * 4, ...displayTracks.map((track: any) => track.duration)),
     [displayTracks],
   );
+  const currentPlaybackSeconds = tickToSeconds(
+    Math.max(0, Math.min(playhead, songDuration)),
+    allTempoEvents,
+    baseTempo,
+  );
+  const totalPlaybackSeconds = tickToSeconds(songDuration, allTempoEvents, baseTempo);
+  const selectedTrackCharacterCount = selectedTrack.sourceText.length;
 
   const clearPlayback = useCallback(() => {
     playbackGenerationRef.current += 1;
@@ -1244,7 +1261,7 @@ export default function MmlStudio({
     try {
       const result = expandMmlText(selectedTrack.sourceText);
       if (!result.changed) {
-        setRecordingMessage("이미 읽기 좋은 MML입니다.");
+        setRecordingMessage("");
         return;
       }
       commit((draft: any) => {
@@ -1253,7 +1270,7 @@ export default function MmlStudio({
         track.sourceText = result.source;
         return draft;
       });
-      setRecordingMessage("음이름과 음가를 읽기 좋게 풀어썼습니다.");
+      setRecordingMessage("");
       window.requestAnimationFrame(() => editorRef.current?.focus());
     } catch (error) {
       setRecordingMessage((error as Error).message);
@@ -2051,8 +2068,10 @@ export default function MmlStudio({
             }
           }} aria-label={`${selectedTrack.name} MML 편집`} />}
           <div className="mml-status-line">
-            <span>{parseError ? `Track ${parseError.trackIndex + 1} · ${parseError.line}줄 ${parseError.column}자 · ${parseError.message}` : tempoConflict || `${Math.round(songDuration)} tick · ${baseTempo} BPM · ${project.timeSignature.numerator}/${project.timeSignature.denominator}`}</span>
-            <span>{droppedCount > 0 ? `놓친 음 ${droppedCount}개` : recordingMessage}</span>
+            <span>{`MML ${selectedTrackCharacterCount.toLocaleString()}자 · 재생 ${formatPlaybackTime(currentPlaybackSeconds)} / ${formatPlaybackTime(totalPlaybackSeconds, true)} · ${recordTempo} BPM · ${recordMeter.numerator}/${recordMeter.denominator}`}</span>
+            <span>{parseError
+              ? `Track ${parseError.trackIndex + 1} · ${parseError.line}줄 ${parseError.column}자 · ${parseError.message}`
+              : tempoConflict || (droppedCount > 0 ? `놓친 음 ${droppedCount}개` : recordingMessage)}</span>
           </div>
         </div>
       </div>
