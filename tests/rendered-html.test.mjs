@@ -250,6 +250,10 @@ test("cancels pending and active playback audio immediately on pause or stop", a
   assert.match(page, /const cancelBeforeStart = immediate && voice\.scheduledStartAt > now \+ 0\.003/);
   assert.match(page, /source\.stop\(cancelBeforeStart \? now : now \+ \(immediate \? 0\.012 : 0\.2\)\)/);
   assert.match(page, /immediate \? graph\.context\.currentTime : Math\.max\(graph\.context\.currentTime, scheduledStartAt\) \+ 0\.001/);
+  assert.match(studio, /const file = event\.target\.files\?\.\[0\][\s\S]*?if \(!file\) return;\s*clearPlayback\(\)/);
+  assert.match(studio, /replaceLoadedProject\(imported\)/);
+  assert.match(studio, /setImportPayload\(\{ ranges, replacementTitle: importedMmlTitle\(file\.name\) \}\)/);
+  assert.match(studio, /const next = applyMmlImport\(projectRef\.current, importPayload, mode, currentThemeId\)/);
 });
 
 test("uses the piano-roll context action instead of a redundant meter and tempo button", async () => {
@@ -308,12 +312,12 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /aria-label="솔로"/);
   assert.match(studio, /className="mml-track-add-button"/);
   assert.match(page, /showSideLabel\n\s+settings=\{settings\}/);
-  assert.match(page, /showSideLabel && offset === 0[\s\S]*?className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
+  assert.match(page, /showSideLabel && \([\s\S]*?className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
   assert.match(page, /const panelTitle = side === "left" \? "L" : "R"/);
   assert.doesNotMatch(page, /panelTitle = mmlOpen/);
-  assert.match(css, /\.keyboard-side-code \{[^}]*top: -23px;[^}]*left: 4px;[^}]*border-left: 3px solid[^}]*color: var\(--ink\);[^}]*font-size: 13px;/s);
+  assert.match(css, /\.keyboard-side-code \{[^}]*top: -25px;[^}]*left: 50%;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;[^}]*transform: translateX\(-50%\)/s);
   assert.doesNotMatch(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\)/s);
-  assert.match(css, /\.panel-eyebrow \{[^}]*border-left: 3px solid[^}]*color: var\(--ink\);[^}]*font-size: 13px;/s);
+  assert.match(css, /\.panel-eyebrow \{[^}]*justify-self: center;[^}]*border: 1px solid[^}]*background: color-mix[^}]*font-size: 13px;/s);
   assert.doesNotMatch(studio, /<span>건반 연결<\/span>/);
   assert.doesNotMatch(studio, /<span>재생<\/span>/);
   assert.match(page, /event\.altKey \|\| event\.ctrlKey \|\| event\.metaKey/);
@@ -384,7 +388,7 @@ test("supports selection-based MML duration editing and Space playback", async (
 test("offers MML paste choices and configurable recording start positions", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /onPaste=\{\(event\) => \{/);
-  assert.match(studio, /const ranges = parsed\.tracks\.map[\s\S]*?setImportPayload\(ranges\)/);
+  assert.match(studio, /const ranges = parsed\.tracks\.map[\s\S]*?setImportPayload\(\{ ranges \}\)/);
   assert.match(studio, /MML을 어떻게 넣을까요\?/);
   assert.match(studio, /선택 트랙만 교체/);
   assert.match(studio, /녹음 시작 위치/);

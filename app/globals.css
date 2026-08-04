@@ -218,11 +218,15 @@ button {
 .panel-eyebrow {
   display: inline-flex;
   align-items: center;
-  justify-self: start;
-  min-height: 18px;
-  margin: 0 0 0 3px;
-  padding-left: 7px;
-  border-left: 3px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  justify-content: center;
+  justify-self: center;
+  min-width: 22px;
+  height: 20px;
+  margin: 0;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper));
   color: var(--ink);
   font-size: 13px;
   font-weight: 900;
@@ -621,19 +625,24 @@ button {
 .keyboard-side-code {
   position: absolute;
   z-index: 12;
-  top: -23px;
-  left: 4px;
+  top: -25px;
+  left: 50%;
   display: inline-flex;
   align-items: center;
-  min-height: 18px;
-  padding-left: 7px;
-  border-left: 3px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper));
   color: var(--ink);
   font-size: 13px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.04em;
   pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .paw-row {
@@ -3980,10 +3989,11 @@ summary:focus-visible {
 
   .panel-eyebrow {
     position: static;
-    margin-left: 3px;
-    min-height: 16px;
-    padding-left: 5px;
-    border-left-width: 2px;
+    margin: 0;
+    min-width: 19px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 6px;
     font-size: 11px;
     line-height: 1;
   }
@@ -4261,10 +4271,11 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .keyboard-side-code {
-    top: -20px;
-    min-height: 16px;
-    padding-left: 5px;
-    border-left-width: 2px;
+    top: -22px;
+    min-width: 19px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 6px;
   }
 
   .mml-open .performance-surface .octave-button {

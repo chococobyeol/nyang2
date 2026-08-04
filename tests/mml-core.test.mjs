@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, upsertTempoCommand } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
-import { createProject, sanitizeProject } from "../app/mml/project.js";
+import { applyMmlImport, createProject, importedMmlTitle, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
@@ -14,6 +14,22 @@ test("clamps timeline zoom to a useful range", () => {
   assert.equal(clampTimelineZoom(0.1), 0.5);
   assert.equal(clampTimelineZoom(1.25), 1.25);
   assert.equal(clampTimelineZoom(9), 4);
+});
+
+test("uses an imported MML filename as the replacement project title", () => {
+  assert.equal(importedMmlTitle("고양이 산책.mml"), "고양이 산책");
+  assert.equal(importedMmlTitle("C:\\music\\저녁.TXT"), "저녁");
+  assert.equal(importedMmlTitle("제목 없음"), "제목 없음");
+});
+
+test("changes the project title only when an imported MML file replaces the song", () => {
+  const project = createProject();
+  project.title = "기존 제목";
+  const payload = { ranges: ["t120o4c4"], replacementTitle: "불러온 곡" };
+  assert.equal(applyMmlImport(project, payload, "replace").title, "불러온 곡");
+  assert.equal(applyMmlImport(project, payload, "append").title, "기존 제목");
+  assert.equal(applyMmlImport(project, payload, "tracks").title, "기존 제목");
+  assert.equal(applyMmlImport(project, payload, "selected").title, "기존 제목");
 });
 
 test("normalizes Windows and high-resolution wheel movement by physical delta", () => {

@@ -150,3 +150,40 @@ export function projectFilename(project) {
   const pad = (value) => String(value).padStart(2, "0");
   return `nyangmml-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.nyangmml`;
 }
+
+export function importedMmlTitle(filename) {
+  return String(filename ?? "")
+    .split(/[\\/]/)
+    .at(-1)
+    ?.replace(/\.(?:mml|txt)$/i, "")
+    .trim() ?? "";
+}
+
+export function applyMmlImport(project, payload, mode, themeId = "nyang-voice") {
+  const draft = JSON.parse(JSON.stringify(project));
+  const ranges = Array.isArray(payload?.ranges) ? payload.ranges : [];
+  if (mode === "replace") {
+    draft.tracks = ranges.map((sourceText, index) => ({ ...createTrack(index, themeId), sourceText }));
+    if (payload.replacementTitle !== undefined) draft.title = payload.replacementTitle;
+    draft.routing = {
+      left: draft.tracks[0] ? [draft.tracks[0].id] : [],
+      right: draft.tracks[1] ? [draft.tracks[1].id] : [],
+    };
+    draft.view.selectedTrackId = draft.tracks[0]?.id ?? "";
+    draft.timeSignature = { numerator: 4, denominator: 4 };
+    draft.timeSignatureMap = [{ tick: 0, numerator: 4, denominator: 4 }];
+    draft.view.loopStart = 0;
+    draft.view.loopEnd = 0;
+  } else if (mode === "append") {
+    ranges.forEach((sourceText, index) => {
+      if (!draft.tracks[index]) draft.tracks.push(createTrack(index, themeId));
+      draft.tracks[index].sourceText += sourceText;
+    });
+  } else if (mode === "tracks") {
+    ranges.forEach((sourceText) => draft.tracks.push({ ...createTrack(draft.tracks.length, themeId), sourceText }));
+  } else if (mode === "selected") {
+    const selected = draft.tracks.find((track) => track.id === draft.view.selectedTrackId);
+    if (selected) selected.sourceText = ranges[0] ?? "";
+  }
+  return draft;
+}

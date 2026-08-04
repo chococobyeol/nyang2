@@ -32,7 +32,7 @@ import {
   TICKS_PER_QUARTER,
   upsertTempoCommand,
 } from "../mml/core.js";
-import { createProject, createTrack, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
+import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
@@ -88,6 +88,11 @@ type LiveRecordingNote = {
   tick: number;
   duration: number;
   color: string;
+};
+
+type MmlImportPayload = {
+  ranges: string[];
+  replacementTitle?: string;
 };
 
 const PIANO_PITCH_ROW_HEIGHT = 12;
@@ -257,7 +262,7 @@ export default function MmlStudio({
   const [trackSettingsAnchor, setTrackSettingsAnchor] = useState<{ x: number; y: number } | null>(null);
   const [batchTrackIds, setBatchTrackIds] = useState<string[]>([]);
   const [fileMenuView, setFileMenuView] = useState(false);
-  const [importPayload, setImportPayload] = useState<string[] | null>(null);
+  const [importPayload, setImportPayload] = useState<MmlImportPayload | null>(null);
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string; x?: number; y?: number } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1350,36 +1355,51 @@ export default function MmlStudio({
     });
   };
 
+  const replaceLoadedProject = useCallback((value: any) => {
+    clearPlayback();
+    const next = sanitizeProject(value, currentThemeId);
+    projectRef.current = next;
+    setProject(next);
+    setPast([]);
+    setFuture([]);
+    setBatchTrackIds([]);
+    playheadRef.current = 0;
+    setPlayhead(0);
+    setTimelineEditor(null);
+    setRecordingMessage("");
+    setDroppedCount(0);
+    setFileMenuView(false);
+    setImportPayload(null);
+  }, [clearPlayback, currentThemeId]);
+
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    clearPlayback();
     try {
       if (/\.(mid|midi)$/i.test(file.name)) {
         if (!window.confirm("현재 작업을 MIDI 파일의 곡으로 바꿀까요?")) return;
         const fallbackTitle = file.name.replace(/\.(mid|midi)$/i, "");
         const imported = createProjectFromMidi(await file.arrayBuffer(), currentThemeId, fallbackTitle);
-        commit(sanitizeProject(imported, currentThemeId));
-        setFileMenuView(false);
+        replaceLoadedProject(imported);
         return;
       }
       const text = await file.text();
       if (file.name.toLowerCase().endsWith(".nyangmml")) {
         if (!window.confirm("현재 작업을 불러온 프로젝트로 바꿀까요?")) return;
-        commit(sanitizeProject(JSON.parse(text), currentThemeId));
-        setFileMenuView(false);
+        replaceLoadedProject(JSON.parse(text));
         return;
       }
       if (file.name.toLowerCase().endsWith(".mmi")) {
         if (!window.confirm("현재 작업을 마비꼬 파일의 곡으로 바꿀까요?")) return;
         const fallbackTitle = file.name.replace(/\.mmi$/i, "");
-        commit(sanitizeProject(createProjectFromMmi(text, currentThemeId, fallbackTitle), currentThemeId));
-        setFileMenuView(false);
+        replaceLoadedProject(createProjectFromMmi(text, currentThemeId, fallbackTitle));
         return;
       }
       const parsed = parseMmlDocument(text);
       const ranges = parsed.tracks.map((track: any) => text.slice(track.sourceStart, track.sourceEnd));
-      setImportPayload(ranges);
+      setImportPayload({ ranges, replacementTitle: importedMmlTitle(file.name) });
       setFileMenuView(false);
     } catch (error) {
       window.alert(`파일을 불러오지 못했습니다.\n${(error as Error).message}`);
@@ -1387,37 +1407,15 @@ export default function MmlStudio({
   };
 
   const applyImport = (mode: "replace" | "append" | "tracks" | "selected") => {
-    const ranges = importPayload;
-    if (!ranges) return;
-    commit((draft: any) => {
-      if (mode === "replace") {
-        draft.tracks = ranges.map((sourceText: string, index: number) => ({ ...createTrack(index, currentThemeId), sourceText }));
-        draft.routing = { left: draft.tracks[0] ? [draft.tracks[0].id] : [], right: draft.tracks[1] ? [draft.tracks[1].id] : [] };
-        draft.view.selectedTrackId = draft.tracks[0].id;
-        draft.timeSignature = { numerator: 4, denominator: 4 };
-        draft.timeSignatureMap = [{ tick: 0, numerator: 4, denominator: 4 }];
-        draft.view.loopStart = 0;
-        draft.view.loopEnd = 0;
-      } else if (mode === "append") {
-        ranges.forEach((sourceText: string, index: number) => {
-          if (!draft.tracks[index]) draft.tracks.push(createTrack(index, currentThemeId));
-          draft.tracks[index].sourceText += sourceText;
-        });
-      } else if (mode === "tracks") {
-        ranges.forEach((sourceText: string) => draft.tracks.push({ ...createTrack(draft.tracks.length, currentThemeId), sourceText }));
-      } else {
-        const selected = draft.tracks.find((track: any) => track.id === draft.view.selectedTrackId);
-        if (selected) selected.sourceText = ranges[0] ?? "";
-      }
-      return draft;
-    });
+    if (!importPayload) return;
+    clearPlayback();
+    const next = applyMmlImport(projectRef.current, importPayload, mode, currentThemeId);
     if (mode === "replace") {
-      clearPlayback();
-      playheadRef.current = 0;
-      setPlayhead(0);
-      setTimelineEditor(null);
+      replaceLoadedProject(next);
+    } else {
+      commit(next);
+      setImportPayload(null);
     }
-    setImportPayload(null);
   };
 
   const resetProject = () => {
@@ -2002,7 +2000,7 @@ export default function MmlStudio({
             try {
               const parsed = parseMmlDocument(text);
               const ranges = parsed.tracks.map((track: any) => text.slice(track.sourceStart, track.sourceEnd));
-              setImportPayload(ranges);
+              setImportPayload({ ranges });
             } catch (error) {
               window.alert(`붙여넣은 MML을 나누지 못했습니다.\n${(error as Error).message}`);
             }
