@@ -413,9 +413,8 @@ button {
   line-height: 1;
 }
 
-.transpose-reset small,
-.settings-button small {
-  font-size: 10px;
+.transpose-reset small {
+  font-size: 12px;
   line-height: 1;
   font-weight: 900;
 }
@@ -461,6 +460,7 @@ button {
   height: 100%;
   border: 2px solid var(--ink);
   background: #fffdf7;
+  font-size: 12px;
 }
 
 .settings-button span {
@@ -2987,7 +2987,7 @@ button {
   min-height: 0;
   height: 100%;
   border-radius: 16px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .mml-open .performance-surface .mml-rest-button {
@@ -4155,16 +4155,15 @@ summary:focus-visible {
     font-size: 13px;
   }
 
-  .transpose-reset small,
-  .settings-button small {
-    font-size: 8px;
+  .transpose-reset small {
+    font-size: 10px;
   }
 
   .settings-button {
     min-height: 0;
     height: 100%;
     border-radius: 10px;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .header-actions {
@@ -4417,7 +4416,7 @@ summary:focus-visible {
     width: 42px;
     height: 100%;
     min-height: 0;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mml-open .performance-surface .settings-button span {
