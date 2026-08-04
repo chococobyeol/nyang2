@@ -575,7 +575,10 @@ export function optimizeMmlText(source) {
     baseline,
     shortestLengthEncoding(compactTokens(original)),
     shortestSemanticEncoding(semanticTokens(canonical)),
-  ].filter((candidate, index, values) => candidate && values.indexOf(candidate) === index && verifyEquivalent(before, candidate));
+  ].filter((candidate, index, values) => candidate
+    && !candidate.includes("..")
+    && values.indexOf(candidate) === index
+    && verifyEquivalent(before, candidate));
   if (!candidates.length) throw new Error("원래 연주와 같은 최적화 결과를 만들지 못했습니다.");
   const optimized = candidates.reduce((shortest, candidate) => candidate.length < shortest.length ? candidate : shortest);
   return {

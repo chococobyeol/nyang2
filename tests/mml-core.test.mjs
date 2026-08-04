@@ -305,6 +305,14 @@ test("does not emit double-dotted notes that Mabinogi Mobile rejects", () => {
     parseTrack(optimized.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
     parseTrack(source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
   );
+
+  const repaired = optimizeMmlText("t152v15e2..");
+  assert.equal(repaired.source.includes(".."), false);
+  assert.match(repaired.source, /&/);
+  assert.deepEqual(
+    parseTrack(repaired.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+    parseTrack("t152v15e2..").notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+  );
 });
 
 test("optimizes absolute notes and restores compact MML as readable named notes", () => {
