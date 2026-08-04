@@ -496,7 +496,9 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*min-height: 0;[^}]*grid-template-rows: minmax\(104px, 1\.45fr\) 30px minmax\(84px, 0\.85fr\) 22px;[^}]*overflow: hidden;/s);
   assert.match(studio, /className="mml-editor-done" onClick=\{\(\) => editorRef\.current\?\.blur\(\)\}>완료<\/button>/);
   assert.match(studio, /const moveTrackDrag = \(event: ReactPointerEvent<HTMLElement>\) =>/);
-  assert.match(studio, /event\.currentTarget\.scrollLeft = drag\.scrollLeft - delta/);
+  assert.match(studio, /drag\.axis = Math\.abs\(deltaX\) >= Math\.abs\(deltaY\) \? "x" : "y"/);
+  assert.match(studio, /drag\.frame = window\.requestAnimationFrame/);
+  assert.match(studio, /trackList\.scrollLeft = current\.targetScrollLeft/);
   assert.match(studio, /onPointerDown=\{beginTrackDrag\}/);
   assert.match(studio, /onWheel=\{scrollTrackListWithWheel\}/);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list \{[^}]*overflow: auto;[^}]*touch-action: auto;/s);
@@ -504,7 +506,8 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-track-batch-panel\.mml-track-batch-floating \{[^}]*position: absolute;[^}]*left: 162px;[^}]*display: grid;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*left: 162px;[^}]*max-height: calc\(100% - 104px\);/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 54px minmax\(0, 1fr\);/s);
-  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*scroll-snap-type: x proximity;[^}]*scrollbar-width: thin;[^}]*touch-action: none;/s);
+  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*scrollbar-width: thin;[^}]*touch-action: none;/s);
+  assert.doesNotMatch(mobileMml, /scroll-snap-(?:type|align)/);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: auto;/s);
 });

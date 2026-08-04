@@ -280,7 +280,16 @@ export default function MmlStudio({
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string; x?: number; y?: number } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
-  const trackDragRef = useRef<{ pointerId: number; x: number; y: number; scrollLeft: number; dragging: boolean } | null>(null);
+  const trackDragRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    axis: "x" | "y" | null;
+    scrollLeft: number;
+    targetScrollLeft: number;
+    frame: number;
+    dragging: boolean;
+  } | null>(null);
   const suppressTrackClickRef = useRef(false);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const timelineEditorRef = useRef<HTMLDivElement | null>(null);
@@ -1337,7 +1346,10 @@ export default function MmlStudio({
       pointerId: event.pointerId,
       x: event.clientX,
       y: event.clientY,
+      axis: null,
       scrollLeft: event.currentTarget.scrollLeft,
+      targetScrollLeft: event.currentTarget.scrollLeft,
+      frame: 0,
       dragging: false,
     };
   };
@@ -1347,21 +1359,35 @@ export default function MmlStudio({
     if (!drag || drag.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - drag.x;
     const deltaY = event.clientY - drag.y;
-    const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
-    if (!drag.dragging && Math.abs(delta) < 6) return;
-    drag.dragging = true;
+    if (!drag.axis) {
+      if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 6) return;
+      drag.axis = Math.abs(deltaX) >= Math.abs(deltaY) ? "x" : "y";
+      drag.dragging = true;
+    }
     event.preventDefault();
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
       // Synthetic test events and older WebViews can omit pointer capture.
     }
-    event.currentTarget.scrollLeft = drag.scrollLeft - delta;
+    const delta = drag.axis === "x" ? deltaX : deltaY;
+    drag.targetScrollLeft = drag.scrollLeft - delta;
+    if (!drag.frame) {
+      const trackList = event.currentTarget;
+      drag.frame = window.requestAnimationFrame(() => {
+        const current = trackDragRef.current;
+        if (!current || current.pointerId !== event.pointerId) return;
+        trackList.scrollLeft = current.targetScrollLeft;
+        current.frame = 0;
+      });
+    }
   };
 
   const endTrackDrag = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = trackDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag.frame) window.cancelAnimationFrame(drag.frame);
+    event.currentTarget.scrollLeft = drag.targetScrollLeft;
     if (drag.dragging) {
       suppressTrackClickRef.current = true;
       window.setTimeout(() => { suppressTrackClickRef.current = false; }, 0);

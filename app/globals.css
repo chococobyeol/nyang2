@@ -4617,7 +4617,6 @@ summary:focus-visible {
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior: contain;
-    scroll-snap-type: x proximity;
     scrollbar-width: thin;
     touch-action: none;
     -webkit-overflow-scrolling: touch;
@@ -4626,7 +4625,6 @@ summary:focus-visible {
   .mml-studio .mml-track-card {
     min-height: 42px;
     margin-bottom: 0;
-    scroll-snap-align: center;
   }
 
   .mml-studio .mml-track-list::-webkit-scrollbar {
