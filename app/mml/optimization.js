@@ -150,7 +150,9 @@ function shortestLengthEncoding(tokens) {
 function durationCandidates(denominators) {
   const byTicks = new Map();
   for (const denominator of denominators) {
-    for (let dots = 0; dots <= 2; dots += 1) {
+    // Mabinogi Mobile accepts a single augmentation dot. Keep longer values
+    // as tied notes instead of emitting unsupported double-dotted tokens.
+    for (let dots = 0; dots <= 1; dots += 1) {
       let ticks = TICKS_PER_WHOLE / denominator;
       let addition = ticks / 2;
       for (let dot = 0; dot < dots; dot += 1) {

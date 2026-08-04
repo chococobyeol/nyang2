@@ -296,6 +296,17 @@ test("optimizes MML text with the shortest useful default lengths without changi
   assert.deepEqual(after.rests.map(({ tick, duration }) => ({ tick, duration })), before.rests.map(({ tick, duration }) => ({ tick, duration })));
 });
 
+test("does not emit double-dotted notes that Mabinogi Mobile rejects", () => {
+  const source = "t152v15e2.&e8";
+  const optimized = optimizeMmlText(source);
+  assert.equal(optimized.source.includes(".."), false);
+  assert.match(optimized.source, /e2\.&e8/);
+  assert.deepEqual(
+    parseTrack(optimized.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+    parseTrack(source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+  );
+});
+
 test("optimizes absolute notes and restores compact MML as readable named notes", () => {
   const original = "// memo\nl16 n61 n63 l4. c4. r4.";
   const optimized = optimizeMmlText(original);
