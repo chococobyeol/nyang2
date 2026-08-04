@@ -545,19 +545,19 @@ function lexicalTokens(source) {
 function formatReadable(source) {
   const tokens = lexicalTokens(source);
   const lines = [];
-  let line = [];
+  let line = "";
   let events = 0;
   const flush = () => {
-    if (line.length) lines.push(line.join(" "));
-    line = [];
+    if (line.length) lines.push(line);
+    line = "";
     events = 0;
   };
 
   for (const token of tokens) {
     const isEvent = /^[a-grn]/.test(token);
     const isTempo = /^t/.test(token);
-    if ((isTempo && line.length && events > 0) || (isEvent && events >= 12) || (line.join(" ").length + token.length > 88)) flush();
-    line.push(token);
+    if ((isTempo && line.length && events > 0) || (isEvent && events >= 16) || (line.length + token.length > 88)) flush();
+    line += token;
     if (isEvent) events += 1;
   }
   flush();

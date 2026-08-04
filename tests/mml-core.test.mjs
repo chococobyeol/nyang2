@@ -302,7 +302,7 @@ test("optimizes absolute notes and restores compact MML as readable named notes"
   assert.deepEqual(parseTrack(optimized.source).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })), parseTrack(original).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })));
   const restored = expandMmlText(optimized.source);
   assert.equal(/n[0-9]/.test(restored.source), false);
-  assert.equal(restored.source.includes(" "), true);
+  assert.equal(restored.source.includes(" "), false);
   assert.deepEqual(
     parseTrack(restored.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
     parseTrack(optimized.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
