@@ -4014,7 +4014,7 @@ summary:focus-visible {
   }
 
   .octave-buttons {
-    grid-template-columns: repeat(4, minmax(0, 42px));
+    grid-template-columns: repeat(4, minmax(0, var(--octave-button-size)));
     gap: 3px;
   }
 
@@ -4326,7 +4326,8 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .transpose-panel {
-    grid-template-columns: 32px minmax(62px, 1fr) 42px;
+    grid-template-columns: 42px minmax(62px, 1fr) 42px;
+    gap: 4px;
     height: var(--top-control-height);
     margin-top: 0;
   }
@@ -4411,7 +4412,7 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .top-bar.has-double-keyboard .transpose-panel {
-    width: 132px;
+    width: 154px;
   }
 
   .settings-header {
