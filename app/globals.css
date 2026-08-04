@@ -112,7 +112,7 @@ button {
 
 .top-bar {
   --octave-label-height: 20px;
-  --octave-row-gap: 6px;
+  --octave-row-gap: 3px;
   --top-control-height: 64px;
   --top-control-offset: calc(var(--octave-label-height) / 2);
   --octave-button-size: calc(var(--top-control-height) - var(--octave-row-gap) - (var(--octave-label-height) / 2));
@@ -3953,7 +3953,7 @@ summary:focus-visible {
 
   .top-bar {
     --octave-label-height: 16px;
-    --octave-row-gap: 3px;
+    --octave-row-gap: 2px;
     --top-control-height: 42px;
     grid-template-columns: 82px minmax(200px, 1fr) 210px 42px;
     gap: 8px;
