@@ -478,12 +478,23 @@ test("places timeline navigation beside playback controls instead of the text ed
 });
 
 test("keeps the mobile MML toolbar clear and the full editor reachable by touch", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
   const mobileMml = css.slice(css.indexOf("@media (max-height: 550px)"));
+  assert.match(studio, /aria-label="녹음 설정"/);
+  assert.match(studio, /aria-label="파일 메뉴"/);
+  assert.match(studio, /const closeStudio = \(\) => \{[\s\S]*?setTrackSettingsView\(false\);[\s\S]*?setFileMenuView\(false\);[\s\S]*?onClose\(\);/);
+  assert.match(studio, /className="mml-close" onClick=\{closeStudio\}/);
   assert.match(mobileMml, /\.mml-studio \.mml-transport \{[^}]*display: flex;[^}]*overflow-x: auto;[^}]*touch-action: pan-x;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-main-grid \{[^}]*overflow-y: auto;[^}]*touch-action: pan-y;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*min-height: 520px;[^}]*grid-template-rows: 276px 34px 184px 26px;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-list \{[^}]*position: sticky;[^}]*top: 0;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-transport-tools button:nth-child\(-n \+ 2\) \{[^}]*display: none;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-main-grid \{[^}]*overflow: hidden;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*min-height: 0;[^}]*grid-template-rows: minmax\(104px, 1\.45fr\) 30px minmax\(84px, 0\.85fr\) 22px;[^}]*overflow: hidden;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list \{[^}]*overflow: auto;[^}]*touch-action: pan-x pan-y;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-settings \{[^}]*left: 162px;[^}]*max-height: calc\(100% - 104px\);/s);
+  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 54px minmax\(0, 1fr\);/s);
+  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
 });
 
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {

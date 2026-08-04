@@ -1752,6 +1752,16 @@ export default function MmlStudio({
   const timelineTempoTrack = timelineEditor
     ? project.tracks.find((track: any) => track.id === timelineEditor.tempoTrackId)
     : null;
+  const closeStudio = () => {
+    setSettingsView(false);
+    setTrackSettingsView(false);
+    setTrackSettingsAnchor(null);
+    setFileMenuView(false);
+    setImportPayload(null);
+    setDurationMenu(null);
+    setTimelineEditor(null);
+    onClose();
+  };
 
   return (
     <section className={`mml-studio ${visible ? "" : "is-hidden"}`} aria-label="MML 편집과 녹음" aria-hidden={!visible}>
@@ -1779,7 +1789,7 @@ export default function MmlStudio({
           </div>
         </div>
         <button type="button" className="mml-expand" onClick={() => onExpandedChange(!expanded)} aria-label={expanded ? "작곡창 축소" : "작곡창 전체화면"} title={expanded ? "작곡창 축소" : "작곡창 전체화면"}>{expanded ? "▣" : "⛶"}</button>
-        <button type="button" className="mml-close" onClick={onClose} aria-label="MML 닫기" disabled={recordState !== "idle"}>×</button>
+        <button type="button" className="mml-close" onClick={closeStudio} aria-label="MML 닫기" disabled={recordState !== "idle"}>×</button>
       </header>
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
@@ -1801,8 +1811,8 @@ export default function MmlStudio({
         <div className="mml-transport-tools">
           <button type="button" onClick={undo} disabled={!past.length || recordState !== "idle"} aria-label="실행 취소" title="실행 취소"><Undo2 className="mml-tool-icon" aria-hidden="true" /></button>
           <button type="button" onClick={redo} disabled={!future.length || recordState !== "idle"} aria-label="다시 실행" title="다시 실행"><Redo2 className="mml-tool-icon" aria-hidden="true" /></button>
-          <button type="button" className={settingsView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setSettingsView((value) => !value); setTrackSettingsView(false); setFileMenuView(false); }}><Settings className="mml-tool-icon" aria-hidden="true" /><span>녹음 설정</span></button>
-          <button type="button" className={fileMenuView ? "is-active" : ""} disabled={recordState !== "idle"} onClick={() => { setFileMenuView((value) => !value); setSettingsView(false); setTrackSettingsView(false); }}><Ellipsis className="mml-tool-icon" aria-hidden="true" /><span>파일</span></button>
+          <button type="button" className={settingsView ? "is-active" : ""} aria-label="녹음 설정" disabled={recordState !== "idle"} onClick={() => { setSettingsView((value) => !value); setTrackSettingsView(false); setFileMenuView(false); }}><Settings className="mml-tool-icon" aria-hidden="true" /><span>녹음 설정</span></button>
+          <button type="button" className={fileMenuView ? "is-active" : ""} aria-label="파일 메뉴" disabled={recordState !== "idle"} onClick={() => { setFileMenuView((value) => !value); setSettingsView(false); setTrackSettingsView(false); }}><Ellipsis className="mml-tool-icon" aria-hidden="true" /><span>파일</span></button>
         </div>
         <input ref={fileInputRef} type="file" accept=".mml,.mmi,.nyangmml,.mid,.midi,audio/midi,audio/x-midi,text/plain,application/json" hidden onChange={importFile} />
       </div>

@@ -4497,21 +4497,33 @@ summary:focus-visible {
     padding-right: 2px;
   }
 
+  .mml-studio .mml-transport-tools button:nth-child(-n + 2) {
+    display: none;
+  }
+
+  .mml-studio .mml-transport button {
+    width: 32px;
+    height: 34px;
+    min-width: 32px;
+    padding: 0;
+  }
+
+  .mml-studio .mml-transport button span,
+  .mml-studio .mml-transport button kbd {
+    display: none;
+  }
+
   .mml-studio .mml-main-grid {
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
+    overflow: hidden;
     scrollbar-gutter: stable;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
   }
 
   .mml-studio .mml-work-area {
-    height: 520px;
-    min-height: 520px;
-    grid-template-rows: 276px 34px 184px 26px;
-    overflow: visible;
+    height: auto;
+    min-height: 0;
+    grid-template-rows: minmax(104px, 1.45fr) 30px minmax(84px, 0.85fr) 22px;
+    overflow: hidden;
   }
 
   .mml-studio .mml-piano-roll,
@@ -4521,16 +4533,69 @@ summary:focus-visible {
   }
 
   .mml-studio .mml-track-list {
-    position: sticky;
+    position: relative;
     z-index: 18;
-    top: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
     background: #f0e9dd;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .mml-studio .mml-quick-settings,
+  .mml-studio .mml-track-card {
+    min-height: 54px;
+    margin-bottom: 4px;
+  }
+
+  .mml-studio .mml-track-batch-panel {
+    gap: 3px;
+    margin-bottom: 4px;
+    padding: 4px;
+  }
+
+  .mml-studio .mml-track-batch-panel select {
+    height: 24px;
+  }
+
   .mml-studio .mml-track-settings {
+    top: 96px;
+    right: 8px;
+    left: 162px;
+    width: auto;
+    max-height: calc(100% - 104px);
+    transform: none;
+  }
+
+  .mml-studio .mml-quick-settings {
     top: 90px;
     max-height: calc(100% - 96px);
+  }
+}
+
+@container mml-studio (max-width: 560px) {
+  .mml-studio .mml-main-grid {
+    grid-template-rows: 54px minmax(0, 1fr);
+  }
+
+  .mml-studio .mml-track-list {
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+  }
+
+  .mml-studio .mml-track-card {
+    min-height: 42px;
+    margin-bottom: 0;
+  }
+
+  .mml-studio .mml-track-settings {
+    top: 144px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100% - 152px);
+    transform: none;
   }
 }
 
