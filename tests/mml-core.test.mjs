@@ -252,8 +252,15 @@ test("parses Mabinogi-style notes, commands, dotted lengths, ties and absolute n
   assert.equal(parsed.notes[0].midi, 49);
   assert.equal(parsed.notes[0].duration, 144);
   assert.equal(parsed.notes[1].duration, 96);
-  assert.equal(parsed.notes[2].midi, 61);
+  assert.equal(parsed.notes[2].midi, 73);
   assert.equal(parsed.duration, 384);
+});
+
+test("maps Mabinogi absolute note numbers to the same pitch as named notes", () => {
+  const named = parseTrack("o4c").notes[0];
+  const absolute = parseTrack("n48").notes[0];
+  assert.equal(named.midi, 60);
+  assert.equal(absolute.midi, named.midi);
 });
 
 test("applies a dotted default length declared by the l command", () => {
@@ -333,6 +340,8 @@ test("chooses absolute notes when they are shorter than repeated octave jumps", 
   const source = "l8o1co8co1co8co1co8c";
   const optimized = optimizeMmlText(source);
   assert.match(optimized.source, /n[0-9]/);
+  assert.match(optimized.source, /n96/);
+  assert.equal(optimized.source.includes("n108"), false);
   assert.ok(optimized.source.length < source.length);
   assert.deepEqual(
     parseTrack(optimized.source).notes.map(({ tick, duration, midi }) => ({ tick, duration, midi })),

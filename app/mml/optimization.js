@@ -1,4 +1,11 @@
-import { parseTrack, serializeTrackWithTempos, stripComments, TICKS_PER_WHOLE } from "./core.js";
+import {
+  midiToMmlNoteNumber,
+  mmlNoteNumberToMidi,
+  parseTrack,
+  serializeTrackWithTempos,
+  stripComments,
+  TICKS_PER_WHOLE,
+} from "./core.js";
 
 const INITIAL_LENGTH = "4";
 const INITIAL_OCTAVE = 4;
@@ -322,7 +329,7 @@ function semanticTokens(source) {
     }
     if (character === "n") {
       const number = readDigits(clean, index + 1);
-      tokens.push({ kind: "note", midi: Number(number.text), length: defaultLength });
+      tokens.push({ kind: "note", midi: mmlNoteNumberToMidi(Number(number.text)), length: defaultLength });
       index = number.end;
       continue;
     }
@@ -459,8 +466,9 @@ function shortestSemanticEncoding(tokens) {
           true,
         );
       }
-      if (token.midi >= 0) {
-        addLengthChoices(next, previousKey, previous, octave, length, token.length, "", `n${token.midi}`, 1, false);
+      const mmlNoteNumber = midiToMmlNoteNumber(token.midi);
+      if (mmlNoteNumber >= 0) {
+        addLengthChoices(next, previousKey, previous, octave, length, token.length, "", `n${mmlNoteNumber}`, 1, false);
       }
     }
     history.push(next);

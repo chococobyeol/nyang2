@@ -1,5 +1,15 @@
 export const TICKS_PER_QUARTER = 96;
 export const TICKS_PER_WHOLE = TICKS_PER_QUARTER * 4;
+// Mabinogi MML numbers C0 as n0, while Web Audio/MIDI numbers C0 as 12.
+export const MML_NOTE_NUMBER_MIDI_OFFSET = 12;
+
+export function mmlNoteNumberToMidi(noteNumber) {
+  return noteNumber + MML_NOTE_NUMBER_MIDI_OFFSET;
+}
+
+export function midiToMmlNoteNumber(midi) {
+  return midi - MML_NOTE_NUMBER_MIDI_OFFSET;
+}
 
 const NOTE_CLASS = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
 const NOTE_NAMES = ["c", "c+", "d", "d+", "e", "f", "f+", "g", "g+", "a", "a+", "b"];
@@ -137,7 +147,7 @@ export function parseTrack(source, options = {}) {
     if (isAbsolute) {
       const number = readNumber(clean, index);
       if (number.value === null) throw new MmlSyntaxError("n 뒤에 음 번호가 필요합니다.", tokenStart);
-      midi = number.value;
+      midi = mmlNoteNumberToMidi(number.value);
       index = number.end;
     } else if (isNote) {
       let accidental = 0;

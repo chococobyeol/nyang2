@@ -4619,7 +4619,7 @@ summary:focus-visible {
     overscroll-behavior: contain;
     scroll-snap-type: x proximity;
     scrollbar-width: thin;
-    touch-action: auto;
+    touch-action: none;
     -webkit-overflow-scrolling: touch;
   }
 

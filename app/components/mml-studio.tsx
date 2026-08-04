@@ -13,6 +13,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { ChevronLeft, ChevronRight, Circle, Ellipsis, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2 } from "lucide-react";
@@ -279,6 +280,8 @@ export default function MmlStudio({
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string; x?: number; y?: number } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const trackDragRef = useRef<{ pointerId: number; x: number; y: number; scrollLeft: number; dragging: boolean } | null>(null);
+  const suppressTrackClickRef = useRef(false);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const timelineEditorRef = useRef<HTMLDivElement | null>(null);
   const trackSettingsRef = useRef<HTMLDivElement | null>(null);
@@ -1328,6 +1331,57 @@ export default function MmlStudio({
     </div>
   );
 
+  const beginTrackDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType !== "touch") return;
+    trackDragRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      scrollLeft: event.currentTarget.scrollLeft,
+      dragging: false,
+    };
+  };
+
+  const moveTrackDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const drag = trackDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - drag.x;
+    const deltaY = event.clientY - drag.y;
+    const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
+    if (!drag.dragging && Math.abs(delta) < 6) return;
+    drag.dragging = true;
+    event.preventDefault();
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic test events and older WebViews can omit pointer capture.
+    }
+    event.currentTarget.scrollLeft = drag.scrollLeft - delta;
+  };
+
+  const endTrackDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const drag = trackDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag.dragging) {
+      suppressTrackClickRef.current = true;
+      window.setTimeout(() => { suppressTrackClickRef.current = false; }, 0);
+    }
+    trackDragRef.current = null;
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is optional for taps and synthetic events.
+    }
+  };
+
+  const scrollTrackListWithWheel = (event: ReactWheelEvent<HTMLElement>) => {
+    if (event.currentTarget.scrollWidth <= event.currentTarget.clientWidth) return;
+    const delta = Math.abs(event.deltaX) >= Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (!delta) return;
+    event.preventDefault();
+    event.currentTarget.scrollLeft += delta;
+  };
+
   const updateMasterTempo = (value: number) => {
     const bpm = Math.max(1, Math.round(value || 1));
     commit((draft: any) => {
@@ -1921,7 +1975,20 @@ export default function MmlStudio({
       )}
 
       <div className="mml-main-grid">
-        <aside className="mml-track-list">
+        <aside
+          className="mml-track-list"
+          onPointerDown={beginTrackDrag}
+          onPointerMove={moveTrackDrag}
+          onPointerUp={endTrackDrag}
+          onPointerCancel={endTrackDrag}
+          onWheel={scrollTrackListWithWheel}
+          onClickCapture={(event) => {
+            if (!suppressTrackClickRef.current) return;
+            event.preventDefault();
+            event.stopPropagation();
+            suppressTrackClickRef.current = false;
+          }}
+        >
           <div className="mml-track-list-title">
             <strong>트랙</strong>
             <label className="mml-track-select-all">
