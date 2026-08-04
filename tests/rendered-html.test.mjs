@@ -308,10 +308,12 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /aria-label="솔로"/);
   assert.match(studio, /className="mml-track-add-button"/);
   assert.match(page, /showSideLabel\n\s+settings=\{settings\}/);
-  assert.match(page, /className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
+  assert.match(page, /showSideLabel && offset === 0[\s\S]*?className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
   assert.match(page, /const panelTitle = side === "left" \? "L" : "R"/);
   assert.doesNotMatch(page, /panelTitle = mmlOpen/);
-  assert.match(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\);[^}]*color: #fff;/s);
+  assert.match(css, /\.keyboard-side-code \{[^}]*top: -23px;[^}]*left: 4px;[^}]*border-left: 3px solid[^}]*color: var\(--ink\);[^}]*font-size: 13px;/s);
+  assert.doesNotMatch(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\)/s);
+  assert.match(css, /\.panel-eyebrow \{[^}]*border-left: 3px solid[^}]*color: var\(--ink\);[^}]*font-size: 13px;/s);
   assert.doesNotMatch(studio, /<span>건반 연결<\/span>/);
   assert.doesNotMatch(studio, /<span>재생<\/span>/);
   assert.match(page, /event\.altKey \|\| event\.ctrlKey \|\| event\.metaKey/);

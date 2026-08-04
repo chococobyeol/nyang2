@@ -216,12 +216,18 @@ button {
 }
 
 .panel-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: 18px;
   margin: 0 0 0 3px;
-  color: var(--muted);
-  font-size: 9px;
+  padding-left: 7px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  color: var(--ink);
+  font-size: 13px;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.04em;
 }
 
 .octave-buttons {
@@ -615,20 +621,18 @@ button {
 .keyboard-side-code {
   position: absolute;
   z-index: 12;
-  top: -10px;
+  top: -23px;
   left: 4px;
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-  background: var(--ink);
-  color: #fff;
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 55%, transparent);
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding-left: 7px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  color: var(--ink);
+  font-size: 13px;
   font-weight: 900;
   line-height: 1;
+  letter-spacing: 0.04em;
   pointer-events: none;
 }
 
@@ -3975,12 +3979,13 @@ summary:focus-visible {
   }
 
   .panel-eyebrow {
-    position: absolute;
-    bottom: 100%;
-    left: 2px;
-    margin: 0;
-    font-size: 7px;
-    line-height: 7px;
+    position: static;
+    margin-left: 3px;
+    min-height: 16px;
+    padding-left: 5px;
+    border-left-width: 2px;
+    font-size: 11px;
+    line-height: 1;
   }
 
   .octave-buttons {
@@ -3989,8 +3994,8 @@ summary:focus-visible {
   }
 
   .octave-panel {
-    grid-template-rows: 42px;
-    gap: 0;
+    grid-template-rows: auto 42px;
+    gap: 3px;
   }
 
   .octave-button {
@@ -4226,7 +4231,7 @@ summary:focus-visible {
 
   .mml-open .performance-surface .top-bar {
     grid-template-columns: 40px minmax(0, 1fr) 31px;
-    grid-template-rows: 42px 36px;
+    grid-template-rows: 48px 36px;
     column-gap: 3px;
     row-gap: 3px;
     padding: 7px 5px 3px;
@@ -4246,7 +4251,20 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .octave-panel {
-    grid-template-rows: 36px;
+    grid-template-rows: auto 36px;
+    gap: 2px;
+  }
+
+  .mml-open .performance-surface .panel-eyebrow,
+  .mml-open .performance-surface .keyboard-side-code {
+    font-size: 11px;
+  }
+
+  .mml-open .performance-surface .keyboard-side-code {
+    top: -20px;
+    min-height: 16px;
+    padding-left: 5px;
+    border-left-width: 2px;
   }
 
   .mml-open .performance-surface .octave-button {
