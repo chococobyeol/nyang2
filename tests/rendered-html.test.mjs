@@ -266,7 +266,8 @@ test("uses the piano-roll context action instead of a redundant meter and tempo 
   assert.match(studio, /workArea\.clientWidth > 680[\s\S]*?openTimelineEditor\(tick, anchor\)/);
   assert.match(studio, /timelineEditorRef[\s\S]*?parent\.clientWidth - dialog\.offsetWidth[\s\S]*?parent\.clientHeight - dialog\.offsetHeight/);
   assert.match(css, /\.mml-timeline-editor \{[^}]*left: 50%;[^}]*transform: translateX\(-50%\);/s);
-  assert.match(css, /\.mml-track-settings \{[^}]*left: 50%;[^}]*transform: translateX\(-50%\);/s);
+  assert.match(studio, /cardRect\.right - studioRect\.left \+ 10/);
+  assert.match(studio, /trackSettingsRef[\s\S]*?parent\.clientWidth - dialog\.offsetWidth[\s\S]*?parent\.clientHeight - dialog\.offsetHeight/);
 });
 
 test("provides direct track controls, timeline zoom, and full-screen composing", async () => {
@@ -296,7 +297,7 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /aria-label="음정 간격 축소"/);
   assert.match(studio, /aria-label="음정 간격 확대"/);
   assert.match(studio, /aria-label=\{expanded \? "작곡창 축소" : "작곡창 전체화면"\}/);
-  assert.match(studio, /onDoubleClick=\{\(\) => \{ selectTrack\(track\.id\); setTrackSettingsView\(true\)/);
+  assert.match(studio, /onDoubleClick=\{\(event\) => openTrackSettings\(track\.id, event\)\}/);
   assert.match(studio, /className="mml-track-actions"/);
   assert.match(studio, /className="mml-track-route-actions"/);
   assert.match(studio, /className="mml-track-play-actions"/);
@@ -306,6 +307,10 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /aria-label="음소거"/);
   assert.match(studio, /aria-label="솔로"/);
   assert.match(studio, /className="mml-track-add-button"/);
+  assert.match(page, /showSideLabel=\{mmlOpen\}/);
+  assert.match(page, /className="keyboard-side-code"[\s\S]*?side === "left" \? "L" : "R"/);
+  assert.match(page, /const panelTitle = mmlOpen[\s\S]*?side === "left" \? "L" : "R"/);
+  assert.match(css, /\.keyboard-side-code \{[^}]*background: var\(--ink\);[^}]*color: #fff;/s);
   assert.doesNotMatch(studio, /<span>건반 연결<\/span>/);
   assert.doesNotMatch(studio, /<span>재생<\/span>/);
   assert.match(page, /event\.altKey \|\| event\.ctrlKey \|\| event\.metaKey/);
@@ -454,8 +459,8 @@ test("keeps existing top controls while placing touch rest input with the keyboa
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /className="paw-row paw-row-accidental"[\s\S]*className=\{`mml-rest-button/);
-  assert.doesNotMatch(page, /<span aria-hidden="true">R<\/span>/);
   assert.match(page, /className="mml-rest-symbol"[^>]*>☾<\/span>/);
+  assert.match(page, /className="mml-rest-note">R<\/span>/);
   assert.match(page, /className="mml-rest-shortcut"/);
   assert.doesNotMatch(page, /<small>쉼표<\/small>/);
   assert.match(page, /mmlInputSinkRef\.current\?\.restOn/);
@@ -472,7 +477,8 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
   assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;/s);
   assert.match(css, /\.mml-rest-button\.is-active \{[^}]*drop-shadow/s);
-  assert.match(css, /\.mml-rest-shortcut \{[^}]*border-radius: 999px/s);
+  assert.match(css, /\.mml-rest-labels \{[^}]*border-radius: 999px/s);
+  assert.match(css, /\.key-labels \{[^}]*bottom: 13%;[^}]*background: rgba\(255, 253, 247, 0\.94\);[^}]*transform: translateX\(-50%\);/s);
   assert.match(css, /\.mml-rest-button \{[^}]*pointer-events: auto/s);
   assert.match(css, /\.keyboard-deck:not\(\.is-double\) \{[^}]*height: 190px;/s);
   assert.match(css, /\.mml-rest-button::before \{[^}]*background: #f4ead9;/s);

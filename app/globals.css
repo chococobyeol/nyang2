@@ -612,6 +612,26 @@ button {
   user-select: none;
 }
 
+.keyboard-side-code {
+  position: absolute;
+  z-index: 12;
+  top: -10px;
+  left: 4px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .paw-row {
   position: absolute;
   right: 0;
@@ -756,40 +776,49 @@ button {
 .key-labels {
   position: absolute;
   z-index: 2;
-  right: 15%;
-  bottom: 21%;
-  left: 15%;
+  bottom: 13%;
+  left: 50%;
   display: flex;
+  max-width: 72%;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: clamp(2px, 0.4vw, 6px);
+  padding: clamp(1px, 0.18vw, 3px) clamp(4px, 0.55vw, 8px);
+  border: 1px solid rgba(31, 37, 36, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.94);
   color: var(--ink);
+  line-height: 1;
   pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .note-label {
-  font-size: clamp(9px, 1vw, 14px);
+  font-size: clamp(8px, 0.72vw, 14px);
   font-weight: 900;
 }
 
 .mapping-label {
   display: grid;
-  min-width: 21px;
-  height: 21px;
+  width: clamp(15px, 1.15vw, 21px);
+  height: clamp(15px, 1.15vw, 21px);
+  flex: 0 0 auto;
   place-items: center;
   border: 1px solid rgba(31, 37, 36, 0.2);
   border-radius: 50%;
-  background: rgba(255, 253, 247, 0.84);
+  background: rgba(255, 253, 247, 0.98);
   color: var(--ink);
-  font-size: 9px;
+  font-size: clamp(6px, 0.52vw, 9px);
   font-weight: 900;
 }
 
 .paw-note-accidental .key-labels {
-  right: 10%;
-  bottom: 18%;
-  left: 10%;
+  bottom: 12%;
+  max-width: 78%;
   gap: 3px;
+  padding: 1px clamp(3px, 0.3vw, 5px);
+  background: rgba(255, 253, 247, 0.78);
   color: var(--ink);
 }
 
@@ -2936,26 +2965,42 @@ button {
   line-height: 1;
 }
 
-.mml-open .performance-surface .mml-rest-shortcut {
+.mml-open .performance-surface .mml-rest-labels {
   position: absolute;
   z-index: 2;
-  bottom: 13%;
+  bottom: 11%;
   left: 50%;
-  display: inline-flex;
-  min-width: 18px;
-  height: 18px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 5px;
+  gap: 3px;
+  padding: 2px 5px;
   border: 1px solid rgba(31, 37, 36, 0.25);
   border-radius: 999px;
-  background: rgba(255, 253, 247, 0.9);
+  background: rgba(255, 253, 247, 0.94);
   color: var(--ink);
-  font-family: inherit;
-  font-size: 8px;
-  font-weight: 900;
   line-height: 1;
   transform: translateX(-50%);
+}
+
+.mml-open .performance-surface .mml-rest-note {
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.mml-open .performance-surface .mml-rest-shortcut {
+  display: inline-grid;
+  min-width: 15px;
+  height: 15px;
+  place-items: center;
+  padding: 0 3px;
+  border: 1px solid rgba(31, 37, 36, 0.2);
+  border-radius: 50%;
+  background: rgba(255, 253, 247, 0.98);
+  font-family: inherit;
+  font-size: 7px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .mml-open .performance-surface .mml-rest-button:focus-visible {
@@ -4265,10 +4310,19 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .mml-rest-shortcut {
-    min-width: 13px;
-    height: 13px;
-    padding: 0 3px;
+    min-width: 12px;
+    height: 12px;
+    padding: 0 2px;
     font-size: 6px;
+  }
+
+  .mml-open .performance-surface .mml-rest-labels {
+    gap: 2px;
+    padding: 1px 3px;
+  }
+
+  .mml-open .performance-surface .mml-rest-note {
+    font-size: 7px;
   }
 
   .mml-open .performance-surface .cat-zone {

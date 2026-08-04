@@ -254,6 +254,7 @@ export default function MmlStudio({
   const [droppedCount, setDroppedCount] = useState(0);
   const [settingsView, setSettingsView] = useState(false);
   const [trackSettingsView, setTrackSettingsView] = useState(false);
+  const [trackSettingsAnchor, setTrackSettingsAnchor] = useState<{ x: number; y: number } | null>(null);
   const [batchTrackIds, setBatchTrackIds] = useState<string[]>([]);
   const [fileMenuView, setFileMenuView] = useState(false);
   const [importPayload, setImportPayload] = useState<string[] | null>(null);
@@ -262,6 +263,7 @@ export default function MmlStudio({
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
   const timelineEditorRef = useRef<HTMLDivElement | null>(null);
+  const trackSettingsRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
   const timelineZoomRef = useRef(1);
   const pitchZoomRef = useRef(1);
@@ -1307,6 +1309,38 @@ export default function MmlStudio({
     }));
   };
 
+  const openTrackSettings = (trackId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+    const studio = event.currentTarget.closest(".mml-studio") as HTMLElement | null;
+    const card = event.currentTarget.closest(".mml-track-card") as HTMLElement | null;
+    let anchor: { x: number; y: number } | null = null;
+    if (studio && card && studio.clientWidth > 680) {
+      const studioRect = studio.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      anchor = {
+        x: cardRect.right - studioRect.left + 10,
+        y: cardRect.top - studioRect.top,
+      };
+    }
+    selectTrack(trackId);
+    setTrackSettingsAnchor(anchor);
+    setTrackSettingsView(true);
+    setSettingsView(false);
+    setFileMenuView(false);
+  };
+
+  useLayoutEffect(() => {
+    if (!trackSettingsView || !trackSettingsAnchor) return;
+    const dialog = trackSettingsRef.current;
+    const parent = dialog?.offsetParent as HTMLElement | null;
+    if (!dialog || !parent) return;
+    const maxX = Math.max(8, parent.clientWidth - dialog.offsetWidth - 8);
+    const maxY = Math.max(8, parent.clientHeight - dialog.offsetHeight - 8);
+    const x = Math.max(8, Math.min(trackSettingsAnchor.x, maxX));
+    const y = Math.max(8, Math.min(trackSettingsAnchor.y, maxY));
+    if (x === trackSettingsAnchor.x && y === trackSettingsAnchor.y) return;
+    setTrackSettingsAnchor({ x, y });
+  }, [trackSettingsAnchor, trackSettingsView]);
+
   const selectPianoNote = (trackIndex: number, note: any) => {
     const track = project.tracks[trackIndex];
     selectTrack(track.id);
@@ -1765,14 +1799,20 @@ export default function MmlStudio({
       )}
 
       {trackSettingsView && (
-        <div className="mml-track-settings" role="dialog" aria-label={`${selectedTrack.name} 설정`}>
-          <div className="mml-quick-settings-head"><span><strong>트랙 설정</strong><small>선택한 트랙의 녹음·재생 속성</small></span><button type="button" onClick={() => setTrackSettingsView(false)}>닫기</button></div>
+        <div
+          ref={trackSettingsRef}
+          className="mml-track-settings"
+          role="dialog"
+          aria-label={`${selectedTrack.name} 설정`}
+          style={trackSettingsAnchor ? { left: trackSettingsAnchor.x, top: trackSettingsAnchor.y, right: "auto", transform: "none" } : undefined}
+        >
+          <div className="mml-quick-settings-head"><span><strong>트랙 설정</strong><small>선택한 트랙의 녹음·재생 속성</small></span><button type="button" onClick={() => { setTrackSettingsView(false); setTrackSettingsAnchor(null); }}>닫기</button></div>
           <label className="mml-track-name-field">이름<input value={selectedTrack.name} onChange={(event) => updateTrack(selectedTrack.id, { name: event.target.value })} /></label>
           <label>색상<input type="color" value={selectedTrack.color} onChange={(event) => updateTrack(selectedTrack.id, { color: event.target.value })} /></label>
           <label>음색<select value={selectedTrack.themeId} onChange={(event) => changeTrackThemes([selectedTrack.id], event.target.value)}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
           <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
           <label className="mml-track-volume-field">재생 음량<input aria-label={`${selectedTrack.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={selectedTrack.mixerVolume} onChange={(event) => updateTrack(selectedTrack.id, { mixerVolume: Number(event.target.value) })} /></label>
-          <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
+          <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); setTrackSettingsAnchor(null); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
         </div>
       )}
 
@@ -1816,7 +1856,7 @@ export default function MmlStudio({
               <label className="mml-track-batch-checkbox" title="여러 트랙을 함께 바꿀 때 선택">
                 <input type="checkbox" checked={batchTrackIds.includes(track.id)} onChange={() => toggleBatchTrack(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 선택`} />
               </label>
-              <button type="button" className="mml-track-select" onClick={() => selectTrack(track.id)} onDoubleClick={() => { selectTrack(track.id); setTrackSettingsView(true); setSettingsView(false); setFileMenuView(false); }} aria-pressed={track.id === selectedTrack.id} aria-label={`${track.name || `Track ${index + 1}`} 선택, 두 번 누르면 트랙 설정`} title="두 번 누르면 트랙 설정">
+              <button type="button" className="mml-track-select" onClick={() => selectTrack(track.id)} onDoubleClick={(event) => openTrackSettings(track.id, event)} aria-pressed={track.id === selectedTrack.id} aria-label={`${track.name || `Track ${index + 1}`} 선택, 두 번 누르면 트랙 설정`} title="두 번 누르면 트랙 설정">
                 <span><strong>{track.name || `Track ${index + 1}`}</strong><small>{themes.find((theme) => theme.id === track.themeId)?.name ?? "음색"}</small></span>
               </button>
               <div className="mml-track-actions" aria-label={`${track.name || `Track ${index + 1}`} 빠른 설정`}>

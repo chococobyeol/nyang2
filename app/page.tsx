@@ -494,6 +494,7 @@ function OctavePresetInput({
 type KeyboardGroupProps = {
   side: KeyboardSide;
   octave: number;
+  showSideLabel?: boolean;
   settings: Settings;
   mapping: string[];
   transpose: number;
@@ -518,6 +519,7 @@ type KeyboardGroupProps = {
 function KeyboardGroup({
   side,
   octave,
+  showSideLabel = false,
   settings,
   mapping,
   transpose,
@@ -547,6 +549,7 @@ function KeyboardGroup({
 
   return (
     <div className="paw-keyboard-group" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} O${octave} 발바닥 음판`}>
+      {showSideLabel && <span className="keyboard-side-code" aria-hidden="true">{side === "left" ? "L" : "R"}</span>}
       <div className="paw-row paw-row-natural">
         {visibleWhites.map((offset) => {
           const keyId = `${side}:${offset}`;
@@ -616,7 +619,10 @@ function KeyboardGroup({
             onClick={restControl.onClick}
           >
             <span className="mml-rest-symbol" aria-hidden="true">☾</span>
-            {restControl.showShortcut && <kbd className="mml-rest-shortcut">{restControl.shortcut}</kbd>}
+            <span className="mml-rest-labels" aria-hidden="true">
+              <span className="mml-rest-note">R</span>
+              {restControl.showShortcut && <kbd className="mml-rest-shortcut">{restControl.shortcut}</kbd>}
+            </span>
           </button>
         )}
       </div>
@@ -1720,9 +1726,11 @@ export default function Home() {
     const setter = side === "left" ? setLeftOctave : setRightOctave;
     const presets = side === "left" ? settings.leftOctavePresets : settings.rightOctavePresets;
     const shortcutOffset = side === "left" ? 0 : 4;
-    const panelTitle = settings.keyboardCount === 1
-      ? "옥타브"
-      : side === "left" ? "왼쪽 옥타브" : "오른쪽 옥타브";
+    const panelTitle = mmlOpen
+      ? side === "left" ? "L" : "R"
+      : settings.keyboardCount === 1
+        ? "옥타브"
+        : side === "left" ? "왼쪽 옥타브" : "오른쪽 옥타브";
     return (
       <section className="octave-panel" aria-label={`${side === "left" ? "왼쪽" : "오른쪽"} 옥타브 선택`}>
         <div className="panel-eyebrow">{panelTitle}</div>
@@ -1940,6 +1948,7 @@ export default function Home() {
           <KeyboardGroup
             side="left"
             octave={leftOctave}
+            showSideLabel={mmlOpen}
             settings={settings}
             mapping={settings.leftMapping}
             transpose={transpose}
@@ -1977,6 +1986,7 @@ export default function Home() {
             <KeyboardGroup
               side="right"
               octave={rightOctave}
+              showSideLabel={mmlOpen}
               settings={settings}
               mapping={settings.rightMapping}
               transpose={transpose}
