@@ -332,7 +332,7 @@ button {
   gap: 8px;
   min-width: 0;
   height: 64px;
-  margin-top: 15px;
+  margin-top: 26px;
 }
 
 .transpose-status {
@@ -428,7 +428,7 @@ button {
   align-items: stretch;
   gap: 8px;
   min-height: 64px;
-  margin-top: 15px;
+  margin-top: 26px;
 }
 
 .settings-button,
@@ -4037,7 +4037,7 @@ summary:focus-visible {
     grid-template-columns: 42px minmax(110px, 1fr) 38px;
     gap: 4px;
     height: 42px;
-    margin-top: 0;
+    margin-top: 20px;
   }
 
   .transpose-status {
@@ -4101,7 +4101,7 @@ summary:focus-visible {
   }
 
   .header-actions {
-    margin-top: 0;
+    margin-top: 20px;
   }
 
   .settings-button span {
