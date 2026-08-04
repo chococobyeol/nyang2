@@ -124,14 +124,16 @@ function secondsToTick(seconds: number, tempoEvents: Array<{ tick: number; bpm: 
   return Math.round((low + high) / 2);
 }
 
-function formatPlaybackTime(seconds: number, roundUp = false) {
-  const totalSeconds = Math.max(0, roundUp ? Math.ceil(seconds) : Math.floor(seconds));
+function formatPlaybackTime(seconds: number) {
+  const totalTenths = Math.max(0, Math.round(seconds * 10));
+  const totalSeconds = Math.floor(totalTenths / 10);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const remainder = totalSeconds % 60;
+  const tenths = totalTenths % 10;
   return hours > 0
-    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
-    : `${minutes}:${String(remainder).padStart(2, "0")}`;
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}.${tenths}`
+    : `${minutes}:${String(remainder).padStart(2, "0")}.${tenths}`;
 }
 
 function renderRecordingProject(
@@ -2068,7 +2070,7 @@ export default function MmlStudio({
             }
           }} aria-label={`${selectedTrack.name} MML 편집`} />}
           <div className="mml-status-line">
-            <span>{`MML ${selectedTrackCharacterCount.toLocaleString()}자 · 재생 ${formatPlaybackTime(currentPlaybackSeconds)} / ${formatPlaybackTime(totalPlaybackSeconds, true)} · ${recordTempo} BPM · ${recordMeter.numerator}/${recordMeter.denominator}`}</span>
+            <span>{`MML ${selectedTrackCharacterCount.toLocaleString()}자 · 재생 ${formatPlaybackTime(currentPlaybackSeconds)} / ${formatPlaybackTime(totalPlaybackSeconds)} · ${recordTempo} BPM · ${recordMeter.numerator}/${recordMeter.denominator}`}</span>
             <span>{parseError
               ? `Track ${parseError.trackIndex + 1} · ${parseError.line}줄 ${parseError.column}자 · ${parseError.message}`
               : tempoConflict || (droppedCount > 0 ? `놓친 음 ${droppedCount}개` : recordingMessage)}</span>

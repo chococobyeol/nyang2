@@ -138,7 +138,9 @@ test("keeps the MML workspace text readable in the split layout", async () => {
 test("shows useful track length and clock progress instead of raw ticks", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /selectedTrackCharacterCount = selectedTrack\.sourceText\.length/);
-  assert.match(studio, /MML \$\{selectedTrackCharacterCount\.toLocaleString\(\)\}자 · 재생 \$\{formatPlaybackTime\(currentPlaybackSeconds\)\} \/ \$\{formatPlaybackTime\(totalPlaybackSeconds, true\)\}/);
+  assert.match(studio, /MML \$\{selectedTrackCharacterCount\.toLocaleString\(\)\}자 · 재생 \$\{formatPlaybackTime\(currentPlaybackSeconds\)\} \/ \$\{formatPlaybackTime\(totalPlaybackSeconds\)\}/);
+  assert.match(studio, /Math\.round\(seconds \* 10\)/);
+  assert.match(studio, /String\(remainder\)\.padStart\(2, "0"\)\}\.\$\{tenths\}/);
   assert.doesNotMatch(studio, /Math\.round\(songDuration\)\} tick/);
   assert.doesNotMatch(studio, /음이름과 음가를 읽기 좋게 풀어썼습니다/);
 });
