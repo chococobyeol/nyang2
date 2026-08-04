@@ -122,14 +122,15 @@ button {
   grid-template-columns: 155px minmax(330px, 1fr) 330px 68px;
   align-items: start;
   gap: 18px;
-  padding: 22px 24px 10px;
+  padding: 14px 24px 10px;
 }
 
 .brand-block {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 62px;
+  min-height: 48px;
+  margin: 13px 0 0 3px;
 }
 
 .brand-mark {
@@ -2827,7 +2828,7 @@ button {
   grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 68px;
   column-gap: 6px;
   row-gap: 5px;
-  padding: 8px 8px 5px;
+  padding: 14px 24px 5px;
 }
 
 .mml-open .performance-surface .top-bar .brand-block {
@@ -2855,7 +2856,7 @@ button {
 
 .mml-open .performance-surface .brand-block {
   gap: 6px;
-  min-height: 76px;
+  min-height: 50px;
 }
 
 .mml-open .performance-surface .brand-mark {
@@ -3951,17 +3952,19 @@ summary:focus-visible {
   }
 
   .top-bar {
-    --octave-label-height: 17px;
+    --octave-label-height: 16px;
     --octave-row-gap: 3px;
     --top-control-height: 42px;
     grid-template-columns: 82px minmax(200px, 1fr) 210px 42px;
     gap: 8px;
-    padding: 8px 10px 4px;
+    padding: 2px 10px 4px;
   }
 
   .brand-block {
     gap: 7px;
-    min-height: 42px;
+    min-height: 34px;
+    margin-top: 10px;
+    margin-left: 2px;
   }
 
   .brand-mark {
@@ -4003,7 +4006,7 @@ summary:focus-visible {
     position: static;
     margin: 0;
     min-width: 19px;
-    height: 17px;
+    height: var(--octave-label-height);
     padding: 0 4px;
     border-radius: 6px;
     font-size: 11px;
@@ -4260,18 +4263,33 @@ summary:focus-visible {
   }
 
   .mml-open .performance-surface .top-bar {
-    --octave-label-height: 17px;
+    --octave-label-height: 16px;
     --octave-row-gap: 2px;
     --top-control-height: 36px;
     grid-template-columns: 40px minmax(0, 1fr) 31px;
     grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 36px;
     column-gap: 3px;
     row-gap: 3px;
-    padding: 7px 5px 3px;
+    padding: 2px 10px 3px;
   }
 
   .mml-open .performance-surface .brand-block {
     min-width: 0;
+    min-height: 34px;
+    margin-top: 10px;
+    margin-left: 2px;
+  }
+
+  .mml-open .performance-surface .brand-mark {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+
+  .mml-open .performance-surface .brand-mark img {
+    width: 23px;
+    height: 23px;
   }
 
   .mml-open .performance-surface .brand-block h1 {
