@@ -113,9 +113,9 @@ button {
 .top-bar {
   --octave-label-height: 20px;
   --octave-row-gap: 6px;
-  --octave-button-size: 64px;
+  --top-control-height: 64px;
   --top-control-offset: calc(var(--octave-label-height) / 2);
-  --top-control-height: calc(var(--octave-button-size) + var(--octave-row-gap) + (var(--octave-label-height) / 2));
+  --octave-button-size: calc(var(--top-control-height) - var(--octave-row-gap) - (var(--octave-label-height) / 2));
   position: relative;
   z-index: 20;
   display: grid;
@@ -2822,7 +2822,7 @@ button {
 .mml-open .performance-surface .top-bar {
   --octave-label-height: 20px;
   --octave-row-gap: 3px;
-  --octave-button-size: 60px;
+  --top-control-height: 64px;
   grid-template-columns: 88px minmax(0, 1fr) 64px;
   grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 68px;
   column-gap: 6px;
@@ -2896,10 +2896,6 @@ button {
   gap: 3px;
 }
 
-.mml-open .performance-surface .top-bar.has-double-keyboard {
-  --octave-button-size: 54px;
-}
-
 .mml-open .performance-surface .octave-button {
   border-radius: 16px;
   background-size: 39px;
@@ -2909,7 +2905,7 @@ button {
 .mml-open .performance-surface .transpose-panel {
   grid-template-columns: 64px minmax(150px, 1fr) 64px;
   gap: 6px;
-  height: 68px;
+  height: var(--top-control-height);
   margin-top: 0;
 }
 
@@ -3957,7 +3953,7 @@ summary:focus-visible {
   .top-bar {
     --octave-label-height: 17px;
     --octave-row-gap: 3px;
-    --octave-button-size: 42px;
+    --top-control-height: 42px;
     grid-template-columns: 82px minmax(200px, 1fr) 210px 42px;
     gap: 8px;
     padding: 8px 10px 4px;
@@ -4266,16 +4262,12 @@ summary:focus-visible {
   .mml-open .performance-surface .top-bar {
     --octave-label-height: 17px;
     --octave-row-gap: 2px;
-    --octave-button-size: 36px;
+    --top-control-height: 36px;
     grid-template-columns: 40px minmax(0, 1fr) 31px;
-    grid-template-rows: 55px 36px;
+    grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 36px;
     column-gap: 3px;
     row-gap: 3px;
     padding: 7px 5px 3px;
-  }
-
-  .mml-open .performance-surface .top-bar.has-double-keyboard {
-    --octave-button-size: 36px;
   }
 
   .mml-open .performance-surface .brand-block {
