@@ -154,6 +154,7 @@ test("aligns compact octave, key, and settings controls", async () => {
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(css, /\.top-bar \{[^}]*--octave-label-height: 20px;[^}]*--octave-row-gap: 3px;[^}]*--top-control-height: 64px;[^}]*--top-control-offset: calc\(var\(--octave-label-height\) \/ 2\);[^}]*--octave-button-size: calc\(var\(--top-control-height\) - var\(--octave-row-gap\) - \(var\(--octave-label-height\) \/ 2\)\);/s);
+  assert.match(css, /\.top-bar \{[^}]*grid-template-columns: 155px minmax\(330px, 1fr\) 330px 64px;/s);
   assert.match(css, /\.octave-buttons \{[^}]*repeat\(4, minmax\(0, var\(--octave-button-size\)\)\)/s);
   assert.match(css, /\.octave-button \{[^}]*aspect-ratio: 1;/s);
   assert.match(css, /\.octave-panel \{[^}]*grid-template-rows: var\(--octave-label-height\) var\(--octave-button-size\);[^}]*gap: var\(--octave-row-gap\);/s);
@@ -482,7 +483,7 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(studio, /setRestInputActive\(true\)/);
   assert.match(studio, /className=\{`mml-beat-visual/);
   assert.match(page, /preparing \? \(accented \? 1760 : 1480\)/);
-  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 68px;[^}]*grid-template-rows: calc\(var\(--octave-label-height\) \+ var\(--octave-row-gap\) \+ var\(--octave-button-size\)\) 68px/s);
+  assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: 88px minmax\(0, 1fr\) 64px;[^}]*grid-template-rows: calc\(var\(--octave-label-height\) \+ var\(--octave-row-gap\) \+ var\(--octave-button-size\)\) 68px/s);
   assert.match(css, /\.mml-open \.performance-surface \.top-bar \{[^}]*--octave-label-height: 20px;[^}]*--octave-row-gap: 3px;[^}]*--top-control-height: 64px;/s);
   assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 0;[^}]*height: 100%/s);
   assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 42%;[^}]*height: auto/s);

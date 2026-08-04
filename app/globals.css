@@ -119,7 +119,7 @@ button {
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: 155px minmax(330px, 1fr) 330px 68px;
+  grid-template-columns: 155px minmax(330px, 1fr) 330px 64px;
   align-items: start;
   gap: 18px;
   padding: 14px 24px 10px;
@@ -2824,7 +2824,7 @@ button {
   --octave-label-height: 20px;
   --octave-row-gap: 3px;
   --top-control-height: 64px;
-  grid-template-columns: 88px minmax(0, 1fr) 68px;
+  grid-template-columns: 88px minmax(0, 1fr) 64px;
   grid-template-rows: calc(var(--octave-label-height) + var(--octave-row-gap) + var(--octave-button-size)) 68px;
   column-gap: 6px;
   row-gap: 5px;
