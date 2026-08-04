@@ -4469,14 +4469,68 @@ summary:focus-visible {
 }
 
 @media (max-height: 550px) and (max-width: 1000px), (orientation: portrait) and (max-width: 600px) {
+  .mml-studio {
+    grid-template-rows: 42px 46px minmax(0, 1fr);
+  }
+
+  .mml-studio .mml-transport {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 5px;
+    padding: 5px 6px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mml-studio .mml-transport-primary,
+  .mml-studio .mml-transport-navigation,
+  .mml-studio .mml-transport-toggles,
+  .mml-studio .mml-transport-tools {
+    flex: 0 0 auto;
+  }
+
+  .mml-studio .mml-transport-tools {
+    padding-right: 2px;
+  }
+
+  .mml-studio .mml-main-grid {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mml-studio .mml-work-area {
+    height: 520px;
+    min-height: 520px;
+    grid-template-rows: 276px 34px 184px 26px;
+    overflow: visible;
+  }
+
+  .mml-studio .mml-piano-roll,
+  .mml-studio .mml-playback-source,
+  .mml-studio .mml-work-area textarea {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mml-studio .mml-track-list {
+    position: sticky;
+    z-index: 18;
+    top: 0;
+    background: #f0e9dd;
+  }
+
   .mml-studio .mml-quick-settings,
   .mml-studio .mml-track-settings {
     top: 90px;
     max-height: calc(100% - 96px);
-  }
-
-  .mml-studio .mml-work-area {
-    grid-template-rows: minmax(88px, 1.3fr) 24px minmax(64px, 0.8fr) 18px;
   }
 }
 

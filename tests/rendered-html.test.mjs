@@ -476,6 +476,15 @@ test("places timeline navigation beside playback controls instead of the text ed
   assert.match(studio, /<SkipForward className="mml-tool-icon"/);
 });
 
+test("keeps the mobile MML toolbar clear and the full editor reachable by touch", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const mobileMml = css.slice(css.indexOf("@media (max-height: 550px)"));
+  assert.match(mobileMml, /\.mml-studio \.mml-transport \{[^}]*display: flex;[^}]*overflow-x: auto;[^}]*touch-action: pan-x;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-main-grid \{[^}]*overflow-y: auto;[^}]*touch-action: pan-y;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*min-height: 520px;[^}]*grid-template-rows: 276px 34px 184px 26px;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list \{[^}]*position: sticky;[^}]*top: 0;/s);
+});
+
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
