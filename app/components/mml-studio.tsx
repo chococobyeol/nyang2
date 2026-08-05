@@ -41,6 +41,7 @@ import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "
 import { expandMmlText, optimizeMmlText } from "../mml/optimization.js";
 import { createProjectFromMmi } from "../mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../mml/midi.js";
+import RangeControl from "./range-control";
 
 type KeyboardSide = "left" | "right";
 
@@ -1957,7 +1958,7 @@ export default function MmlStudio({
             commit((draft: any) => { draft.timeSignature = { numerator, denominator }; draft.timeSignatureMap = [{ tick: 0, numerator, denominator }, ...draft.timeSignatureMap.filter((item: any) => item.tick !== 0)]; return draft; });
           }}>{["2/4", "3/4", "4/4", "6/8", "9/8", "12/8"].map((value) => <option value={value} key={value}>{value}</option>)}<option value="custom">직접 입력</option></select><span className="mml-meter-fraction"><input aria-label="박자 분자" type="number" min="1" value={project.timeSignature.numerator} onChange={(event) => commit((draft: any) => { draft.timeSignature.numerator = Math.max(1, Number(event.target.value)); draft.timeSignatureMap = [{ tick: 0, ...draft.timeSignature }, ...draft.timeSignatureMap.filter((item: any) => item.tick !== 0)]; return draft; })} /><i>/</i><input aria-label="박자 분모" type="number" min="1" value={project.timeSignature.denominator} onChange={(event) => commit((draft: any) => { draft.timeSignature.denominator = Math.max(1, Number(event.target.value)); draft.timeSignatureMap = [{ tick: 0, ...draft.timeSignature }, ...draft.timeSignatureMap.filter((item: any) => item.tick !== 0)]; return draft; })} /></span></div></label>
           {project.recording.mode === "realtime" && <label>카운트인<select value={project.recording.countIn} onChange={(event) => commit((draft: any) => { draft.recording.countIn = Number(event.target.value); return draft; })}><option value="0">없음</option><option value="1">1마디</option><option value="2">2마디</option></select></label>}
-          <label>메트로놈 음량<input type="range" min="0" max="1" step="0.05" value={project.recording.metronomeVolume} onChange={(event) => commit((draft: any) => { draft.recording.metronomeVolume = Number(event.target.value); return draft; })} /></label>
+          <label>메트로놈 음량<RangeControl ariaLabel="메트로놈 음량" min={0} max={1} step={0.05} value={project.recording.metronomeVolume} onValueChange={(metronomeVolume) => commit((draft: any) => { draft.recording.metronomeVolume = metronomeVolume; return draft; })} /></label>
           {project.recording.mode === "append" && <label>쉼표 키<input value={project.recording.restKey.replace(/^Key/, "")} readOnly onKeyDown={(event) => { event.preventDefault(); commit((draft: any) => { draft.recording.restKey = event.code; return draft; }); }} /></label>}
           {(["play", "record", "stop"] as const).map((action) => <label key={action}>{action === "play" ? "재생 키" : action === "record" ? "녹음 키" : "정지 키"}<input value={shortcutLabel(recordingShortcuts[action])} readOnly onKeyDown={(event) => captureShortcut(action, event)} /></label>)}
           <label>반복 시작 마디<input type="number" min="1" max={songMeasures.length} value={loopStartMeasure} onChange={(event) => commit((draft: any) => { const measure = Math.max(1, Math.min(songMeasures.length, Number(event.target.value) || 1)); draft.view.loopStart = songMeasures[measure - 1]?.tick ?? 0; if (draft.view.loopEnd > 0 && draft.view.loopEnd <= draft.view.loopStart) draft.view.loopEnd = songMeasures[measure]?.tick ?? 0; return draft; })} /></label>
@@ -1979,7 +1980,7 @@ export default function MmlStudio({
           <label>색상<input type="color" value={selectedTrack.color} onChange={(event) => updateTrack(selectedTrack.id, { color: event.target.value })} /></label>
           <label>음색<select value={selectedTrack.themeId} onChange={(event) => changeTrackThemes([selectedTrack.id], event.target.value)}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
           <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
-          <label className="mml-track-volume-field">재생 음량<input aria-label={`${selectedTrack.name} 재생 음량`} type="range" min="0" max="1" step="0.01" value={selectedTrack.mixerVolume} onChange={(event) => updateTrack(selectedTrack.id, { mixerVolume: Number(event.target.value) })} /></label>
+          <label className="mml-track-volume-field">재생 음량<RangeControl ariaLabel={`${selectedTrack.name} 재생 음량`} min={0} max={1} step={0.01} value={selectedTrack.mixerVolume} onValueChange={(mixerVolume) => updateTrack(selectedTrack.id, { mixerVolume })} /></label>
           <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); setTrackSettingsAnchor(null); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
         </div>
       )}

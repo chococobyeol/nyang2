@@ -1785,11 +1785,6 @@ button {
   padding: 3px;
 }
 
-.mml-track-settings input[type="range"] {
-  padding: 0;
-  accent-color: var(--track-color, var(--accent));
-}
-
 .mml-track-name-field,
 .mml-track-volume-field,
 .mml-track-setting-group,
@@ -3305,9 +3300,69 @@ button {
   box-shadow: 0 2px 8px rgba(38, 31, 23, 0.11);
 }
 
-.range-field input[type="range"] {
+.nyang-range {
+  --range-progress: 0%;
+  --range-color: var(--accent);
+  position: relative;
   width: 100%;
-  accent-color: var(--accent);
+  height: 28px;
+  outline: none;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nyang-range-rail {
+  position: absolute;
+  inset: 0 11px;
+}
+
+.nyang-range-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid #aeb4b2;
+  border-radius: 999px;
+  background: #e7e8e7;
+  transform: translateY(-50%);
+}
+
+.nyang-range-track i {
+  display: block;
+  width: var(--range-progress);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--range-color);
+}
+
+.nyang-range-thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--range-progress);
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--range-color);
+  border-radius: 50%;
+  background: var(--range-color);
+  box-shadow: 0 1px 3px rgba(31, 37, 36, 0.18);
+  transform: translate(-50%, -50%);
+}
+
+.nyang-range:focus-visible .nyang-range-thumb {
+  outline: 3px solid color-mix(in srgb, var(--range-color) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.mml-track-settings .nyang-range {
+  --range-color: var(--track-color, var(--accent));
+}
+
+.range-field .nyang-range {
+  width: 100%;
 }
 
 .theme-grid {

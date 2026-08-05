@@ -143,6 +143,26 @@ test("includes the MML studio without changing the public route", async () => {
   assert.match(studio, /if \(!visible\) return;[\s\S]*?window\.addEventListener\("keydown", down\)/);
 });
 
+test("uses endpoint-safe sliders that follow touch drags in the rotated mobile layout", async () => {
+  const [page, studio, range, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/range-control.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /ariaLabel="전체 음량"/);
+  assert.match(studio, /ariaLabel="메트로놈 음량"/);
+  assert.match(studio, /ariaLabel=\{`\$\{selectedTrack\.name\} 재생 음량`\}/);
+  assert.match(range, /const verticalOnScreen = rect\.height > rect\.width/);
+  assert.match(range, /setPointerCapture/);
+  assert.match(range, /event\.key === "Home"/);
+  assert.match(range, /event\.key === "End"/);
+  assert.match(css, /\.nyang-range \{[^}]*touch-action: none;/s);
+  assert.match(css, /\.nyang-range-rail \{[^}]*inset: 0 11px;/s);
+  assert.doesNotMatch(`${page}\n${studio}`, /type="range"/);
+});
+
 test("keeps the MML workspace text readable in the split layout", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(css, /\.mml-project-title input \{[^}]*font-size: 18px;/s);

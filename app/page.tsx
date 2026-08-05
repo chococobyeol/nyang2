@@ -16,6 +16,7 @@ import type { WorkletSynthesizer } from "spessasynth_lib";
 import spessaProcessorUrl from "spessasynth_lib/dist/spessasynth_processor.min.js?url";
 import { chooseSecondKeyboardOctave } from "./octave-selection";
 import MmlStudio, { type MmlInputSink } from "./components/mml-studio";
+import RangeControl from "./components/range-control";
 import {
   deleteStoredSoundPack,
   loadStoredSoundPack,
@@ -1967,8 +1968,8 @@ export default function Home() {
               <section className="settings-section">
                 <div className="settings-section-title"><span>03</span><h3>소리와 음색</h3></div>
                 <div className="setting-field range-field">
-                  <label htmlFor="master-volume">전체 음량 <strong>{Math.round(settings.masterVolume * 100)}%</strong></label>
-                  <input id="master-volume" type="range" min="0" max="1" step="0.01" value={settings.masterVolume} onChange={(event) => updateSettings({ masterVolume: Number(event.target.value) })} />
+                  <label>전체 음량 <strong>{Math.round(settings.masterVolume * 100)}%</strong></label>
+                  <RangeControl id="master-volume" ariaLabel="전체 음량" min={0} max={1} step={0.01} value={settings.masterVolume} onValueChange={(masterVolume) => updateSettings({ masterVolume })} />
                 </div>
                 <div className="theme-grid">
                   {THEMES.map((item) => (
