@@ -333,10 +333,13 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(studio, /onWheel=\{zoomTimelineWithWheel\}/);
+  assert.match(studio, /addEventListener\("wheel", handleWheel, \{ passive: false \}\)/);
+  assert.match(studio, /removeEventListener\("wheel", handleWheel\)/);
+  assert.doesNotMatch(studio, /onWheel=\{zoomTimelineWithWheel\}/);
   assert.match(studio, /if \(!event\.altKey\) return/);
+  assert.match(studio, /event\.stopPropagation\(\)/);
   assert.match(studio, /nativeEvent\.wheelDeltaY \?\? nativeEvent\.wheelDelta/);
-  assert.match(studio, /normalizedWheelSteps\(delta, event\.deltaMode, event\.currentTarget\.clientHeight, windowsWheelDelta\)/);
+  assert.match(studio, /normalizedWheelSteps\(delta, event\.deltaMode, roll\.clientHeight, windowsWheelDelta\)/);
   assert.match(studio, /consumeWheelSteps\(state\.timelineSteps\)/);
   assert.match(studio, /window\.requestAnimationFrame\(animateWheelZoom\)/);
   assert.match(studio, /timelineZoomAnchorRef/);

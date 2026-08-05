@@ -311,6 +311,7 @@ export default function MmlStudio({
     pitchAnchor: { midi: number; offset: number } | null;
     activeUntil: number;
   }>({ frame: 0, timelineSteps: 0, pitchSteps: 0, timelineAnchor: null, pitchAnchor: null, activeUntil: 0 });
+  const pianoRollWheelHandlerRef = useRef<(event: WheelEvent) => void>(() => undefined);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
@@ -1834,36 +1835,48 @@ export default function MmlStudio({
     }
   };
 
-  const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+  const zoomTimelineWithWheel = (event: WheelEvent) => {
     if (!event.altKey) return;
     event.preventDefault();
+    event.stopPropagation();
+    const roll = pianoRollRef.current;
+    if (!roll) return;
     const delta = event.deltaY || event.deltaX;
-    const nativeEvent = event.nativeEvent as WheelEvent & { wheelDelta?: number; wheelDeltaY?: number };
+    const nativeEvent = event as WheelEvent & { wheelDelta?: number; wheelDeltaY?: number };
     const windowsWheelDelta = /Windows/i.test(window.navigator.userAgent)
       ? nativeEvent.wheelDeltaY ?? nativeEvent.wheelDelta
       : null;
-    const steps = normalizedWheelSteps(delta, event.deltaMode, event.currentTarget.clientHeight, windowsWheelDelta);
+    const steps = normalizedWheelSteps(delta, event.deltaMode, roll.clientHeight, windowsWheelDelta);
     if (!steps) return;
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = roll.getBoundingClientRect();
     const state = wheelZoomRef.current;
-    const x = Math.max(0, Math.min(event.currentTarget.clientWidth, event.clientX - rect.left));
-    const y = Math.max(0, Math.min(event.currentTarget.clientHeight, event.clientY - rect.top));
+    const x = Math.max(0, Math.min(roll.clientWidth, event.clientX - rect.left));
+    const y = Math.max(0, Math.min(roll.clientHeight, event.clientY - rect.top));
     state.activeUntil = performance.now() + 180;
     if (event.shiftKey) {
       state.pitchAnchor ??= {
-        midi: maxMidi + 0.5 - (event.currentTarget.scrollTop + y) / (PIANO_PITCH_ROW_HEIGHT * pitchZoomRef.current),
+        midi: maxMidi + 0.5 - (roll.scrollTop + y) / (PIANO_PITCH_ROW_HEIGHT * pitchZoomRef.current),
         offset: y,
       };
       state.pitchSteps = Math.max(-24, Math.min(24, state.pitchSteps + steps));
     } else {
       state.timelineAnchor ??= {
-        tick: (event.currentTarget.scrollLeft + x) / (PIANO_PIXELS_PER_TICK * timelineZoomRef.current),
+        tick: (roll.scrollLeft + x) / (PIANO_PIXELS_PER_TICK * timelineZoomRef.current),
         offset: x,
       };
       state.timelineSteps = Math.max(-24, Math.min(24, state.timelineSteps + steps));
     }
     if (!state.frame) state.frame = window.requestAnimationFrame(animateWheelZoom);
   };
+  pianoRollWheelHandlerRef.current = zoomTimelineWithWheel;
+
+  useEffect(() => {
+    const roll = pianoRollRef.current;
+    if (!roll) return;
+    const handleWheel = (event: WheelEvent) => pianoRollWheelHandlerRef.current(event);
+    roll.addEventListener("wheel", handleWheel, { passive: false });
+    return () => roll.removeEventListener("wheel", handleWheel);
+  }, []);
 
   useEffect(() => {
     if (!hydrated || pianoRollCenteredRef.current) return;
@@ -2150,7 +2163,7 @@ export default function MmlStudio({
               <p>템포는 MML 트랙의 t 코드로 기록됩니다. 피아노롤에서 원하는 위치를 오른쪽 클릭해 변경 지점을 만들 수 있습니다.</p>
             </div>
           )}
-          <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onWheel={zoomTimelineWithWheel} onContextMenu={timelineContext} onClick={(event) => {
+          <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onContextMenu={timelineContext} onClick={(event) => {
             if ((event.target as HTMLElement).closest(".mml-note-block")) return;
             const rect = event.currentTarget.getBoundingClientRect();
             const rawTick = Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick);
