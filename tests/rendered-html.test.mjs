@@ -45,11 +45,11 @@ test("publishes a compact paw-mark link preview", async () => {
   ]);
 
   assert.match(layout, /const siteUrl = "https:\/\/nyang2\.pages\.dev"/);
-  assert.match(layout, /마비노기 모바일 작곡용 mml 고양이 건반 앱\.\.\./);
+  assert.match(layout, /그냥 마비노기 모바일 작곡 mml 고양이 건반 어쩌구\.\.\./);
   assert.match(layout, /card: "summary"/);
   assert.match(layout, /width: 512/);
   assert.match(layout, /height: 512/);
-  assert.match(manifest, /마비노기 모바일 작곡용 mml 고양이 건반 앱\.\.\./);
+  assert.match(manifest, /그냥 마비노기 모바일 작곡 mml 고양이 건반 어쩌구\.\.\./);
   assert.equal(previewImage.subarray(1, 4).toString(), "PNG");
   assert.equal(previewImage.readUInt32BE(16), 512);
   assert.equal(previewImage.readUInt32BE(20), 512);

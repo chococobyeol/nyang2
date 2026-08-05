@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 const siteUrl = "https://nyang2.pages.dev";
 const siteTitle = "냥냥";
-const siteDescription = "마비노기 모바일 작곡용 mml 고양이 건반 앱...";
+const siteDescription = "그냥 마비노기 모바일 작곡 mml 고양이 건반 어쩌구...";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
