@@ -180,14 +180,32 @@ export default function HelpPage() {
               <div key={title}><span>{index + 1}</span><div><h3>{title}</h3><p>{body}</p></div></div>
             ))}
           </div>
+          <div className="help-dialog-grid">
+            <article>
+              <a href="/help/duration-menu-screen.png" target="_blank" rel="noreferrer" aria-label="선택 음가 변경 메뉴 크게 보기">
+                <Image src="/help/duration-menu-screen.png" alt="MML 텍스트를 선택한 뒤 연 음가 변경 메뉴" width={520} height={365} sizes="(max-width: 760px) 100vw, 540px" />
+              </a>
+              <div>
+                <span>텍스트 우클릭</span>
+                <h3>선택한 음표 길이 변경</h3>
+                <p>MML 텍스트에서 바꿀 구간을 드래그하고 오른쪽 클릭하면 음표와 점음표 길이를 한꺼번에 바꿀 수 있습니다. 메뉴 아래에는 길게·짧게 바꾸는 단축키도 표시됩니다.</p>
+              </div>
+            </article>
+            <article>
+              <a href="/help/tempo-dialog-screen.png" target="_blank" rel="noreferrer" aria-label="박자와 템포 변경창 크게 보기">
+                <Image src="/help/tempo-dialog-screen.png" alt="피아노롤의 박자와 템포 변경창" width={520} height={370} sizes="(max-width: 760px) 100vw, 540px" />
+              </a>
+              <div>
+                <span>피아노롤 우클릭</span>
+                <h3>곡 중간의 템포·박자 변경</h3>
+                <p>피아노롤에서 바꿀 위치를 오른쪽 클릭해 템포와 박자표를 추가합니다. 기존 변경 지점도 이 창에 모여 있어 선택한 코드를 수정하거나 삭제할 수 있습니다.</p>
+              </div>
+            </article>
+          </div>
           <div className="help-action-grid">
             <article>
               <span>피아노롤 확대</span>
               <p>오른쪽 위의 가로·세로 −/＋로 시간축과 음정 간격을 따로 조절합니다. 마우스에서는 <kbd>Alt</kbd>+휠이 시간축, <kbd>Alt</kbd>+<kbd>Shift</kbd>+휠이 음정 간격입니다.</p>
-            </article>
-            <article>
-              <span>중간 템포·박자 변경</span>
-              <p>피아노롤의 원하는 위치를 오른쪽 클릭합니다. 템포는 선택한 트랙에 <code>t</code> 코드로 기록되며, 만든 변경 지점은 같은 창에서 수정하거나 삭제합니다.</p>
             </article>
             <article>
               <span>트랙 빠른 조작</span>
@@ -217,6 +235,16 @@ export default function HelpPage() {
               <p>손을 떼고 기다린 시간은 버리고, 보정된 음의 끝으로 재생 위치를 옮겨 다음 음을 바로 붙입니다. 쉼표가 필요할 때만 화면의 쉼표 건반이나 설정한 쉼표 키를 길게 누릅니다.</p>
             </article>
           </div>
+          <article className="help-rest-guide">
+            <a href="/help/rest-button-screen.png" target="_blank" rel="noreferrer" aria-label="쉼표 건반 크게 보기">
+              <Image src="/help/rest-button-screen.png" alt="검은 건반 자리에 놓인 쉼표 건반" width={545} height={295} sizes="(max-width: 760px) 100vw, 520px" />
+            </a>
+            <div>
+              <span>이어붙이기 녹음</span>
+              <h3>쉼표 건반</h3>
+              <p>검은 건반 사이의 쉼표 버튼을 누른 길이만큼 <code>r</code>을 기록합니다. 기본 단축키는 <kbd>S</kbd>이며, 다른 음과 마찬가지로 녹음 설정의 음가 보정이 적용됩니다.</p>
+            </div>
+          </article>
           <div className="help-note">
             <strong>음가 보정</strong>
             <p>1/1·1/2·1/4·1/8·1/16·1/32는 누른 길이를 가장 가까운 음가로 정리합니다. 자동 리듬 인식은 셋잇단을 포함한 여러 후보 중 실제 길이에 가장 가까운 조합을 고르고, 보정 안 함은 연주 길이를 그대로 기록합니다.</p>
