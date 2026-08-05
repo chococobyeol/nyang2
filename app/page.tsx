@@ -2192,6 +2192,10 @@ export default function Home() {
               </section>
 
               <div className="settings-legal">
+                <a href="/help" target="_blank" rel="noreferrer">
+                  <span>도움말</span>
+                  <strong aria-hidden="true">↗</strong>
+                </a>
                 <a href="/privacy" target="_blank" rel="noreferrer">
                   <span>개인정보처리방침</span>
                   <strong aria-hidden="true">↗</strong>
