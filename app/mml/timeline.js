@@ -21,6 +21,16 @@ export function consumeWheelSteps(pendingSteps, maxStep = 0.5, epsilon = 0.001) 
   return { step, remaining: Math.abs(remaining) <= epsilon ? 0 : remaining };
 }
 
+export function anchoredScrollOffset(contentPosition, scale, anchorOffset, viewportSize, contentSize) {
+  const position = Math.max(0, Number(contentPosition) || 0);
+  const safeScale = Math.max(0, Number(scale) || 0);
+  const viewport = Math.max(0, Number(viewportSize) || 0);
+  const content = Math.max(0, Number(contentSize) || 0);
+  const offset = Math.max(0, Math.min(viewport, Number(anchorOffset) || 0));
+  const maxScroll = Math.max(0, content - viewport);
+  return Math.max(0, Math.min(maxScroll, position * safeScale - offset));
+}
+
 function validSignature(signature, fallback) {
   return {
     numerator: Math.max(1, Number(signature?.numerator) || fallback.numerator),

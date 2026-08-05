@@ -36,7 +36,7 @@ import {
 import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
+import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
 import { expandMmlText, optimizeMmlText } from "../mml/optimization.js";
 import { createProjectFromMmi } from "../mml/mmi.js";
@@ -303,7 +303,14 @@ export default function MmlStudio({
   const pitchZoomRef = useRef(1);
   const timelineZoomAnchorRef = useRef<{ tick: number; offset: number } | null>(null);
   const pitchZoomAnchorRef = useRef<{ midi: number; offset: number } | null>(null);
-  const wheelZoomRef = useRef({ frame: 0, timelineSteps: 0, pitchSteps: 0, x: 0, y: 0 });
+  const wheelZoomRef = useRef<{
+    frame: number;
+    timelineSteps: number;
+    pitchSteps: number;
+    timelineAnchor: { tick: number; offset: number } | null;
+    pitchAnchor: { midi: number; offset: number } | null;
+    activeUntil: number;
+  }>({ frame: 0, timelineSteps: 0, pitchSteps: 0, timelineAnchor: null, pitchAnchor: null, activeUntil: 0 });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const projectRef = useRef(project);
   const playTimersRef = useRef<number[]>([]);
@@ -1244,6 +1251,9 @@ export default function MmlStudio({
     wheelZoomRef.current.frame = 0;
     wheelZoomRef.current.timelineSteps = 0;
     wheelZoomRef.current.pitchSteps = 0;
+    wheelZoomRef.current.timelineAnchor = null;
+    wheelZoomRef.current.pitchAnchor = null;
+    wheelZoomRef.current.activeUntil = 0;
     if (countInTimerRef.current !== null) window.clearTimeout(countInTimerRef.current);
     clearCountInClicks();
     clearBeatVisualTimers();
@@ -1733,14 +1743,14 @@ export default function MmlStudio({
       );
     });
   };
-  const changeTimelineZoom = (factor: number, anchorOffset?: number) => {
+  const changeTimelineZoom = (factor: number, anchor?: { tick: number; offset: number }) => {
     const roll = pianoRollRef.current;
     const current = timelineZoomRef.current;
     const next = clampTimelineZoom(current * factor);
     if (next === current) return;
     if (roll) {
-      const offset = Math.max(0, Math.min(roll.clientWidth, anchorOffset ?? roll.clientWidth / 2));
-      timelineZoomAnchorRef.current = {
+      const offset = Math.max(0, Math.min(roll.clientWidth, anchor?.offset ?? roll.clientWidth / 2));
+      timelineZoomAnchorRef.current = anchor ?? {
         tick: (roll.scrollLeft + offset) / (PIANO_PIXELS_PER_TICK * current),
         offset,
       };
@@ -1761,14 +1771,14 @@ export default function MmlStudio({
   const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT * pitchZoom;
   const pianoHeight = (maxMidi - minMidi + 1) * pixelsPerPitch;
 
-  const changePitchZoom = (factor: number, anchorOffset?: number) => {
+  const changePitchZoom = (factor: number, anchor?: { midi: number; offset: number }) => {
     const roll = pianoRollRef.current;
     const current = pitchZoomRef.current;
     const next = Math.max(0.5, Math.min(3, current * factor));
     if (next === current) return;
     if (roll) {
-      const offset = Math.max(0, Math.min(roll.clientHeight, anchorOffset ?? roll.clientHeight / 2));
-      pitchZoomAnchorRef.current = {
+      const offset = Math.max(0, Math.min(roll.clientHeight, anchor?.offset ?? roll.clientHeight / 2));
+      pitchZoomAnchorRef.current = anchor ?? {
         midi: maxMidi + 0.5 - (roll.scrollTop + offset) / (PIANO_PITCH_ROW_HEIGHT * current),
         offset,
       };
@@ -1782,7 +1792,13 @@ export default function MmlStudio({
     const anchor = timelineZoomAnchorRef.current;
     const roll = pianoRollRef.current;
     if (!anchor || !roll) return;
-    roll.scrollLeft = Math.max(0, anchor.tick * PIANO_PIXELS_PER_TICK * timelineZoom - anchor.offset);
+    roll.scrollLeft = anchoredScrollOffset(
+      anchor.tick * PIANO_PIXELS_PER_TICK,
+      timelineZoom,
+      anchor.offset,
+      roll.clientWidth,
+      roll.scrollWidth,
+    );
     timelineZoomAnchorRef.current = null;
   }, [timelineZoom]);
 
@@ -1791,7 +1807,13 @@ export default function MmlStudio({
     const anchor = pitchZoomAnchorRef.current;
     const roll = pianoRollRef.current;
     if (!anchor || !roll) return;
-    roll.scrollTop = Math.max(0, (maxMidi - anchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT * pitchZoom - anchor.offset);
+    roll.scrollTop = anchoredScrollOffset(
+      (maxMidi - anchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT,
+      pitchZoom,
+      anchor.offset,
+      roll.clientHeight,
+      roll.scrollHeight,
+    );
     pitchZoomAnchorRef.current = null;
   }, [maxMidi, pitchZoom]);
 
@@ -1802,9 +1824,14 @@ export default function MmlStudio({
     const pitch = consumeWheelSteps(state.pitchSteps);
     state.timelineSteps = timeline.remaining;
     state.pitchSteps = pitch.remaining;
-    if (timeline.step) changeTimelineZoom(Math.exp(-timeline.step * 0.045), state.x);
-    if (pitch.step) changePitchZoom(Math.exp(-pitch.step * 0.045), state.y);
-    if (state.timelineSteps || state.pitchSteps) state.frame = window.requestAnimationFrame(animateWheelZoom);
+    if (timeline.step) changeTimelineZoom(Math.exp(-timeline.step * 0.045), state.timelineAnchor ?? undefined);
+    if (pitch.step) changePitchZoom(Math.exp(-pitch.step * 0.045), state.pitchAnchor ?? undefined);
+    if (state.timelineSteps || state.pitchSteps) {
+      state.frame = window.requestAnimationFrame(animateWheelZoom);
+    } else {
+      state.timelineAnchor = null;
+      state.pitchAnchor = null;
+    }
   };
 
   const zoomTimelineWithWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -1819,11 +1846,20 @@ export default function MmlStudio({
     if (!steps) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const state = wheelZoomRef.current;
-    state.x = event.clientX - rect.left;
-    state.y = event.clientY - rect.top;
+    const x = Math.max(0, Math.min(event.currentTarget.clientWidth, event.clientX - rect.left));
+    const y = Math.max(0, Math.min(event.currentTarget.clientHeight, event.clientY - rect.top));
+    state.activeUntil = performance.now() + 180;
     if (event.shiftKey) {
+      state.pitchAnchor ??= {
+        midi: maxMidi + 0.5 - (event.currentTarget.scrollTop + y) / (PIANO_PITCH_ROW_HEIGHT * pitchZoomRef.current),
+        offset: y,
+      };
       state.pitchSteps = Math.max(-24, Math.min(24, state.pitchSteps + steps));
     } else {
+      state.timelineAnchor ??= {
+        tick: (event.currentTarget.scrollLeft + x) / (PIANO_PIXELS_PER_TICK * timelineZoomRef.current),
+        offset: x,
+      };
       state.timelineSteps = Math.max(-24, Math.min(24, state.timelineSteps + steps));
     }
     if (!state.frame) state.frame = window.requestAnimationFrame(animateWheelZoom);
@@ -1842,6 +1878,7 @@ export default function MmlStudio({
 
   useEffect(() => {
     if (!playing && recordState !== "recording") return;
+    if (performance.now() < wheelZoomRef.current.activeUntil) return;
     const roll = pianoRollRef.current;
     if (!roll) return;
     roll.scrollLeft = followTimelineScroll(

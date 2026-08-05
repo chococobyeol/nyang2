@@ -340,6 +340,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /consumeWheelSteps\(state\.timelineSteps\)/);
   assert.match(studio, /window\.requestAnimationFrame\(animateWheelZoom\)/);
   assert.match(studio, /timelineZoomAnchorRef/);
+  assert.match(studio, /timelineAnchor \?\?=/);
+  assert.match(studio, /pitchAnchor \?\?=/);
+  assert.match(studio, /performance\.now\(\) < wheelZoomRef\.current\.activeUntil/);
   assert.match(studio, /useLayoutEffect\(\(\) => \{[\s\S]*?roll\.scrollLeft/);
   assert.match(studio, /if \(event\.shiftKey\)[\s\S]*?state\.pitchSteps/);
   assert.match(studio, /title="Alt\+휠 시간축 · Alt\+Shift\+휠 음정 간격"/);
@@ -380,6 +383,7 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(page, /expanded=\{mmlExpanded\}/);
   assert.match(css, /\.mml-expanded \.performance-surface \{[^}]*visibility: hidden;[^}]*pointer-events: none;/s);
   assert.match(css, /\.mml-zoom-controls/);
+  assert.match(css, /\.mml-piano-roll \{[^}]*overflow-anchor: none;/s);
   assert.match(css, /\.mml-track-route-actions \{\s*grid-template-columns: repeat\(2, 28px\);/s);
   assert.match(css, /\.mml-track-play-actions \{\s*grid-template-columns: repeat\(3, 18px\);/s);
   assert.match(css, /\.mml-track-visibility span \{[^}]*width: 14px;[^}]*height: 9px;/s);

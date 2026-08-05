@@ -1286,6 +1286,7 @@ button {
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
+  overflow-anchor: none;
   background: #f7f3eb;
 }
 
