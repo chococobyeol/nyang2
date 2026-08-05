@@ -12,20 +12,36 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://nyang2.pages.dev";
+const siteTitle = "냥냥";
+const siteDescription =
+  "발바닥 건반으로 연주하고 MML로 작곡하는 멀티터치 웹 음악 앱입니다.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "냥냥",
-  description:
-    "옥타브와 조성을 자유롭게 바꾸며 고양이와 함께 연주하는 멀티터치 웹 건반입니다.",
+  description: siteDescription,
+  applicationName: "냥냥",
   openGraph: {
-    title: "냥냥",
-    description: "고양이와 함께 연주하는 멀티터치 웹 건반",
+    title: siteTitle,
+    description: siteDescription,
+    url: siteUrl,
+    siteName: "냥냥",
+    locale: "ko_KR",
     type: "website",
-    images: [{ url: "/og.png", width: 1080, height: 796, alt: "냥냥 고양이 발바닥 연주 앱" }],
+    images: [
+      {
+        url: "/og.png",
+        width: 512,
+        height: 512,
+        alt: "냥냥 발바닥 마크",
+      },
+    ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "냥냥",
-    description: "고양이와 함께 연주하는 멀티터치 웹 건반",
+    card: "summary",
+    title: siteTitle,
+    description: siteDescription,
     images: ["/og.png"],
   },
   icons: {

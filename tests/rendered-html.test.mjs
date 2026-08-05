@@ -37,6 +37,24 @@ test("server-renders the finished nyangnyang app", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Building your site/i);
 });
 
+test("publishes a compact paw-mark link preview", async () => {
+  const [layout, manifest, previewImage] = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(new URL("../public/og.png", import.meta.url)),
+  ]);
+
+  assert.match(layout, /const siteUrl = "https:\/\/nyang2\.pages\.dev"/);
+  assert.match(layout, /발바닥 건반으로 연주하고 MML로 작곡하는 멀티터치 웹 음악 앱/);
+  assert.match(layout, /card: "summary"/);
+  assert.match(layout, /width: 512/);
+  assert.match(layout, /height: 512/);
+  assert.match(manifest, /발바닥 건반으로 연주하고 MML로 작곡하는 멀티터치 웹 음악 앱/);
+  assert.equal(previewImage.subarray(1, 4).toString(), "PNG");
+  assert.equal(previewImage.readUInt32BE(16), 512);
+  assert.equal(previewImage.readUInt32BE(20), 512);
+});
+
 test("ships the tuned E4 nyang sample with conditional tail-only reverb", async () => {
   const audioRoot = new URL("../public/audio/nyang/", import.meta.url);
   const expectedFiles = ["e4.mp3"];
