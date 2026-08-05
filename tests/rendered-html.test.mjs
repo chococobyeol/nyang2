@@ -108,10 +108,10 @@ test("publishes a privacy policy and links it from settings", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /개인정보처리방침/);
-  assert.match(html, /마이크 소리는 기기 안에서만 실시간으로 처리/);
   assert.match(html, /기기 저장 공간에만 보관/);
   assert.match(html, /마지막 MML 프로젝트·편집 기록/);
   assert.match(html, /Cloudflare/);
+  assert.doesNotMatch(html, /마이크|불어서 연주/);
   assert.match(html, /mailto:chaamu\.channel@gmail\.com/);
   assert.doesNotMatch(html, /github\.com\/chococobyeol\/nyang2\/issues/);
   assert.match(page, /href="\/privacy"/);
@@ -127,7 +127,7 @@ test("includes the MML studio without changing the public route", async () => {
   assert.match(page, /MmlStudio/);
   assert.match(page, /visible=\{mmlOpen\}/);
   assert.doesNotMatch(page, /\{mmlOpen && \(\s*<MmlStudio/);
-  assert.match(page, /불어서 연주를 끄고 MML을 열까요/);
+  assert.doesNotMatch(page, /getUserMedia|불어서 연주|마이크 연결/);
   assert.match(page, /className=\{`brand-mark \$\{mmlOpen \? "is-mml-open" : ""\}`\}/);
   assert.match(page, /className="brand-mark-mml"[^>]*>MML<\/span>/);
   assert.doesNotMatch(page, /className="settings-tabs"/);

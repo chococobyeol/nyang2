@@ -439,8 +439,7 @@ button {
   margin-top: var(--top-control-offset);
 }
 
-.settings-button,
-.mic-status {
+.settings-button {
   min-height: 43px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -467,31 +466,6 @@ button {
   font-size: 19px;
 }
 
-.mic-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--muted);
-}
-
-.mic-status.is-active {
-  border-color: var(--accent);
-  color: var(--ink);
-}
-
-.mic-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #aaa;
-}
-
-.mic-status.is-active .mic-dot {
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
-}
-
 .cat-zone {
   position: absolute;
   inset: 137px 30px 300px;
@@ -500,10 +474,6 @@ button {
   align-items: center;
   gap: 20px;
   min-height: 220px;
-}
-
-.cat-zone.has-breath {
-  grid-template-columns: 1fr 124px;
 }
 
 .cat-zone.is-double {
@@ -558,36 +528,6 @@ button {
 .cat-end {
   width: calc(var(--cat-height) * 0.2578125);
   margin-left: calc(var(--cat-overlap) * -1);
-}
-
-.breath-meter {
-  align-self: center;
-  width: 100%;
-}
-
-.breath-meter > span {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--muted);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.15em;
-}
-
-.breath-meter > div {
-  height: 8px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: #fff;
-}
-
-.breath-meter i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width 70ms linear;
 }
 
 .keyboard-deck {
@@ -3112,14 +3052,6 @@ button {
   transform: none;
 }
 
-.mml-open .performance-surface .cat-zone.has-breath {
-  grid-template-columns: 1fr;
-}
-
-.mml-open .performance-surface .cat-zone .breath-meter {
-  display: none;
-}
-
 .mml-open .performance-surface .keyboard-deck {
   right: 12px;
   bottom: 31px;
@@ -3525,35 +3457,6 @@ button {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.55;
-}
-
-.live-meter {
-  height: 9px;
-  margin-top: 10px;
-  overflow: hidden;
-  border-radius: 12px;
-  background: #ded7ca;
-}
-
-.live-meter span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width 70ms linear;
-}
-
-.connect-mic-button {
-  width: 100%;
-  height: 40px;
-  margin-top: 11px;
-  border: 1px solid var(--ink);
-  border-radius: 10px;
-  background: var(--ink);
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 900;
 }
 
 .settings-section details {
@@ -4274,7 +4177,8 @@ summary:focus-visible {
 }
 
 .help-dialog-grid article,
-.help-rest-guide {
+.help-rest-guide,
+.help-recording-settings-guide {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -4282,26 +4186,30 @@ summary:focus-visible {
 }
 
 .help-dialog-grid a,
-.help-rest-guide a {
+.help-rest-guide a,
+.help-recording-settings-guide a {
   display: block;
   overflow: hidden;
   background: #e9e1d4;
 }
 
 .help-dialog-grid img,
-.help-rest-guide img {
+.help-rest-guide img,
+.help-recording-settings-guide img {
   display: block;
   width: 100%;
   height: auto;
 }
 
 .help-dialog-grid article > div,
-.help-rest-guide > div {
+.help-rest-guide > div,
+.help-recording-settings-guide > div {
   padding: 21px 23px 23px;
 }
 
 .help-dialog-grid span,
-.help-rest-guide span {
+.help-rest-guide span,
+.help-recording-settings-guide span {
   display: inline-flex;
   padding: 5px 8px;
   border-radius: 999px;
@@ -4312,13 +4220,15 @@ summary:focus-visible {
 }
 
 .help-dialog-grid h3,
-.help-rest-guide h3 {
+.help-rest-guide h3,
+.help-recording-settings-guide h3 {
   margin: 11px 0 8px;
   font-size: 18px;
 }
 
 .help-dialog-grid p,
-.help-rest-guide p {
+.help-rest-guide p,
+.help-recording-settings-guide p {
   margin: 0;
   color: #4f5753;
   font-size: 13px;
@@ -4332,7 +4242,15 @@ summary:focus-visible {
   margin-top: 18px;
 }
 
-.help-rest-guide a {
+.help-recording-settings-guide {
+  display: grid;
+  grid-template-columns: minmax(380px, 1.2fr) minmax(300px, 0.8fr);
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+
+.help-rest-guide a,
+.help-recording-settings-guide a {
   display: flex;
   align-items: center;
 }
@@ -4581,7 +4499,8 @@ summary:focus-visible {
   .help-mode-grid,
   .help-file-grid,
   .help-settings-layout,
-  .help-rest-guide {
+  .help-rest-guide,
+  .help-recording-settings-guide {
     grid-template-columns: 1fr;
   }
 

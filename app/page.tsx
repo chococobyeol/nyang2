@@ -50,9 +50,6 @@ type Settings = {
   transposeShortcuts: TransposeShortcuts;
   masterVolume: number;
   themeId: string;
-  breathEnabled: boolean;
-  microphoneSensitivity: number;
-  breathGate: number;
 };
 
 type Theme = {
@@ -77,7 +74,6 @@ type Theme = {
 type AudioGraph = {
   context: AudioContext;
   master: GainNode;
-  breath: GainNode;
   compressor: DynamicsCompressorNode;
   reverbImpulse: AudioBuffer;
 };
@@ -217,9 +213,6 @@ const DEFAULT_SETTINGS: Settings = {
   transposeShortcuts: TRANSPOSE_SHORTCUTS,
   masterVolume: 0.72,
   themeId: "nyang-voice",
-  breathEnabled: false,
-  microphoneSensitivity: 2.1,
-  breathGate: 0.035,
 };
 
 const DEFAULT_VISUALS = {
@@ -407,11 +400,6 @@ function sanitizeSettings(raw: unknown): Settings {
         ? value.themeId as string
         : DEFAULT_SETTINGS.themeId,
     masterVolume: Math.max(0, Math.min(1, Number(value.masterVolume ?? DEFAULT_SETTINGS.masterVolume))),
-    microphoneSensitivity: Math.max(
-      0.5,
-      Math.min(6, Number(value.microphoneSensitivity ?? DEFAULT_SETTINGS.microphoneSensitivity)),
-    ),
-    breathGate: Math.max(0.005, Math.min(0.2, Number(value.breathGate ?? DEFAULT_SETTINGS.breathGate))),
   };
 }
 
@@ -657,9 +645,6 @@ export default function Home() {
   const [lastCatPitchClass, setLastCatPitchClass] = useState(11);
   const [mouthOpen, setMouthOpen] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
-  const [micActive, setMicActive] = useState(false);
-  const [micError, setMicError] = useState("");
-  const [breathLevel, setBreathLevel] = useState(0);
   const [captureTarget, setCaptureTarget] = useState<CaptureTarget>(null);
   const [mappingError, setMappingError] = useState("");
   const [hydrated, setHydrated] = useState(false);
@@ -672,7 +657,6 @@ export default function Home() {
   const rightOctaveRef = useRef(rightOctave);
   const transposeRef = useRef(transpose);
   const sustainRef = useRef(sustainPressed);
-  const breathLevelRef = useRef(0);
   const captureRef = useRef<CaptureTarget>(null);
   const audioRef = useRef<AudioGraph | null>(null);
   const voicesRef = useRef<Map<string, Voice>>(new Map());
@@ -683,12 +667,6 @@ export default function Home() {
   const sampleDataRef = useRef<Map<string, Promise<ArrayBuffer>>>(new Map());
   const sampleBufferRef = useRef<Map<string, Promise<AudioBuffer>>>(new Map());
   const activePointersRef = useRef<Map<number, string>>(new Map());
-  const microphoneRef = useRef<{
-    stream: MediaStream;
-    source: MediaStreamAudioSourceNode;
-    analyser: AnalyserNode;
-    frame: number;
-  } | null>(null);
   const mmlInputSinkRef = useRef<MmlInputSink | null>(null);
   const soundPackInputRef = useRef<HTMLInputElement | null>(null);
   const soundPackRef = useRef<StoredSoundPack | null>(null);
@@ -823,22 +801,18 @@ export default function Home() {
       if (!AudioContextCtor) throw new Error("이 브라우저에서는 오디오를 사용할 수 없습니다.");
       const context = new AudioContextCtor({ latencyHint: "interactive" });
       const master = context.createGain();
-      const breath = context.createGain();
       const compressor = context.createDynamicsCompressor();
       compressor.threshold.value = -16;
       compressor.knee.value = 12;
       compressor.ratio.value = 4;
       compressor.attack.value = 0.003;
       compressor.release.value = 0.18;
-      breath.gain.value = settingsRef.current.breathEnabled ? 0 : 1;
       master.gain.value = settingsRef.current.masterVolume;
-      breath.connect(master);
       master.connect(compressor);
       compressor.connect(context.destination);
       audioRef.current = {
         context,
         master,
-        breath,
         compressor,
         reverbImpulse: createReverbImpulse(context),
       };
@@ -886,7 +860,7 @@ export default function Home() {
     // Chromium limits a single AudioWorklet output to 32 channels. SpessaSynth's
     // one-output mode requests 34, so keep its regular stereo-output layout.
     const synth = new WorkletSynthesizerConstructor(graph.context, { oneOutput: false });
-    synth.connect(graph.breath);
+    synth.connect(graph.master);
     await synth.soundBankManager.addSoundBank(pack.dls.slice(0), `user-${pack.importedAt}`);
     await synth.isReady;
     const next = {
@@ -937,8 +911,7 @@ export default function Home() {
     const pressed = new Set(voices.filter((voice) => !voice.released).map((voice) => voice.keyId));
     setActiveKeys(pressed);
 
-    const canHearBreath = !settingsRef.current.breathEnabled || breathLevelRef.current > 0.012;
-    const isSounding = voices.length > 0 && canHearBreath;
+    const isSounding = voices.length > 0;
     setMouthOpen(isSounding);
     if (isSounding) {
       const highestBaseMidi = Math.max(...voices.map((voice) => voice.baseMidi));
@@ -981,7 +954,7 @@ export default function Home() {
     tailGain.gain.value = 0.38;
     source.connect(convolver);
     convolver.connect(tailGain);
-    tailGain.connect(graph.breath);
+    tailGain.connect(graph.master);
     source.start(startAt, offset, duration);
     voice.sources.push(source);
     state.tailGain = tailGain;
@@ -1162,7 +1135,7 @@ export default function Home() {
 
       const gain = graph.context.createGain();
       gain.gain.value = 0.0001;
-      gain.connect(graph.breath);
+      gain.connect(graph.master);
       const now = Math.max(graph.context.currentTime, scheduledStartAt);
       const sources: AudioScheduledSourceNode[] = [];
       let sampleSource: AudioBufferSourceNode | null = null;
@@ -1450,82 +1423,6 @@ export default function Home() {
     };
   }, [releaseInput, startNote]);
 
-  const stopMicrophone = useCallback(() => {
-    const microphone = microphoneRef.current;
-    if (microphone) {
-      cancelAnimationFrame(microphone.frame);
-      microphone.source.disconnect();
-      microphone.stream.getTracks().forEach((track) => track.stop());
-      microphoneRef.current = null;
-    }
-    setMicActive(false);
-    setBreathLevel(0);
-    breathLevelRef.current = 0;
-    const graph = audioRef.current;
-    if (graph) {
-      graph.breath.gain.setTargetAtTime(settingsRef.current.breathEnabled ? 0 : 1, graph.context.currentTime, 0.02);
-    }
-    refreshVoiceUI();
-  }, [refreshVoiceUI]);
-
-  const startMicrophone = useCallback(async () => {
-    setMicError("");
-    try {
-      const graph = await initAudio();
-      stopMicrophone();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
-      const source = graph.context.createMediaStreamSource(stream);
-      const analyser = graph.context.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0;
-      source.connect(analyser);
-      const data = new Float32Array(analyser.fftSize);
-      let smooth = 0;
-      let lastUiUpdate = 0;
-
-      const tick = (time: number) => {
-        analyser.getFloatTimeDomainData(data);
-        let sum = 0;
-        for (let index = 0; index < data.length; index += 1) sum += data[index] * data[index];
-        const rms = Math.sqrt(sum / data.length) * settingsRef.current.microphoneSensitivity;
-        const gate = settingsRef.current.breathGate;
-        const normalized = Math.max(0, Math.min(1, (rms - gate) / Math.max(0.04, 0.32 - gate)));
-        smooth = smooth * 0.72 + normalized * 0.28;
-        if (smooth < 0.008) smooth = 0;
-        breathLevelRef.current = smooth;
-        graph.breath.gain.setTargetAtTime(smooth, graph.context.currentTime, 0.018);
-        if (time - lastUiUpdate > 70) {
-          setBreathLevel(smooth);
-          refreshVoiceUI();
-          lastUiUpdate = time;
-        }
-        const current = microphoneRef.current;
-        if (current) current.frame = requestAnimationFrame(tick);
-      };
-      microphoneRef.current = { stream, source, analyser, frame: requestAnimationFrame(tick) };
-      setMicActive(true);
-    } catch {
-      setMicError("마이크를 연결하지 못했습니다. 브라우저 권한을 확인해주세요.");
-      setMicActive(false);
-      updateSettings({ breathEnabled: false });
-      const graph = audioRef.current;
-      if (graph) graph.breath.gain.setTargetAtTime(1, graph.context.currentTime, 0.02);
-    }
-  }, [initAudio, refreshVoiceUI, stopMicrophone, updateSettings]);
-
-  useEffect(() => () => stopMicrophone(), [stopMicrophone]);
-
-  const toggleBreath = useCallback(
-    async (enabled: boolean) => {
-      updateSettings({ breathEnabled: enabled });
-      if (enabled) await startMicrophone();
-      else stopMicrophone();
-    },
-    [startMicrophone, stopMicrophone, updateSettings],
-  );
-
   const selectTheme = useCallback(
     (themeId: string) => {
       allNotesOff();
@@ -1598,7 +1495,6 @@ export default function Home() {
 
   const resetSettings = useCallback(() => {
     if (!window.confirm("모든 설정을 기본값으로 되돌릴까요?")) return;
-    stopMicrophone();
     allNotesOff();
     window.localStorage.removeItem(STORAGE_KEY);
     setSettings(DEFAULT_SETTINGS);
@@ -1609,7 +1505,7 @@ export default function Home() {
     setMouthOpen(false);
     setMappingError("");
     setCaptureTarget(null);
-  }, [allNotesOff, stopMicrophone]);
+  }, [allNotesOff]);
 
   const resetTranspose = useCallback(() => {
     allNotesOff();
@@ -1699,13 +1595,9 @@ export default function Home() {
   }, [initAudio]);
 
   const openMml = useCallback(() => {
-    if (settingsRef.current.breathEnabled) {
-      if (!window.confirm("불어서 연주를 끄고 MML을 열까요?")) return;
-      void toggleBreath(false);
-    }
     setSustain(false);
     setMmlOpen(true);
-  }, [setSustain, toggleBreath]);
+  }, [setSustain]);
 
   useEffect(() => {
     const handleMmlShortcut = (event: KeyboardEvent) => {
@@ -1916,16 +1808,6 @@ export default function Home() {
           </section>
 
           <div className="header-actions">
-            {settings.breathEnabled && (
-              <button
-                type="button"
-                className={`mic-status ${micActive ? "is-active" : ""}`}
-                onClick={() => (micActive ? stopMicrophone() : void startMicrophone())}
-              >
-                <span className="mic-dot" />
-                {micActive ? "바람 연결됨" : "마이크 연결"}
-              </button>
-            )}
             <button type="button" className="settings-button" onClick={() => setSettingsOpen(true)} aria-label="설정 열기">
               <span aria-hidden="true">⚙</span>
               설정
@@ -1933,7 +1815,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className={`cat-zone ${settings.keyboardCount === 2 ? "is-double" : ""} ${settings.breathEnabled ? "has-breath" : ""}`} aria-label={`고양이 길이 ${catNote}, ${segmentCount + 1}단계`}>
+        <section className={`cat-zone ${settings.keyboardCount === 2 ? "is-double" : ""}`} aria-label={`고양이 길이 ${catNote}, ${segmentCount + 1}단계`}>
           <div className="cat-track">
             <div className="cat-assembly" aria-hidden="true">
               <img className="cat-mouth" src={mouthOpen ? theme.visuals.mouthOpen : theme.visuals.mouthClosed} alt="" draggable={false} />
@@ -1943,12 +1825,6 @@ export default function Home() {
               <img className="cat-end" src={theme.visuals.bodyEnd} alt="" draggable={false} />
             </div>
           </div>
-          {settings.breathEnabled && (
-            <div className="breath-meter" aria-label={`바람 세기 ${Math.round(breathLevel * 100)}퍼센트`}>
-              <span>BREATH</span>
-              <div><i style={{ width: `${breathLevel * 100}%` }} /></div>
-            </div>
-          )}
         </section>
 
         <section className={`keyboard-deck ${settings.keyboardCount === 2 ? "is-double" : ""}`} aria-label="발바닥 음판">
@@ -2151,28 +2027,7 @@ export default function Home() {
               </section>
 
               <section className="settings-section">
-                <div className="settings-section-title"><span>04</span><h3>불어서 연주</h3></div>
-                <Toggle checked={settings.breathEnabled} onChange={(checked) => void toggleBreath(checked)} label="마이크로 음량 제어" />
-                {settings.breathEnabled && (
-                  <>
-                    <div className="setting-field range-field">
-                      <label htmlFor="mic-sensitivity">마이크 감도 <strong>{settings.microphoneSensitivity.toFixed(1)}×</strong></label>
-                      <input id="mic-sensitivity" type="range" min="0.5" max="6" step="0.1" value={settings.microphoneSensitivity} onChange={(event) => updateSettings({ microphoneSensitivity: Number(event.target.value) })} />
-                    </div>
-                    <div className="setting-field range-field">
-                      <label htmlFor="breath-gate">바람 인식 최소 세기 <strong>{Math.round(settings.breathGate * 1000)}</strong></label>
-                      <input id="breath-gate" type="range" min="0.005" max="0.2" step="0.005" value={settings.breathGate} onChange={(event) => updateSettings({ breathGate: Number(event.target.value) })} />
-                    </div>
-                    <div className="live-meter"><span style={{ width: `${breathLevel * 100}%` }} /></div>
-                    {!micActive && <button type="button" className="connect-mic-button" onClick={() => void startMicrophone()}>마이크 연결</button>}
-                    {micError && <p className="error-message">{micError}</p>}
-                    <p className="setting-note">음높이 분석 없이 바람의 세기만 가볍게 측정합니다.</p>
-                  </>
-                )}
-              </section>
-
-              <section className="settings-section">
-                <div className="settings-section-title"><span>05</span><h3>컴퓨터 키 매핑</h3></div>
+                <div className="settings-section-title"><span>04</span><h3>컴퓨터 키 매핑</h3></div>
                 <p className="setting-note">바꾸려는 키를 누른 다음 새 키를 입력하세요. 숨긴 건반의 매핑도 계속 작동합니다.</p>
                 <details open>
                   <summary>왼쪽 건반</summary>
