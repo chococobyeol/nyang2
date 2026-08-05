@@ -298,7 +298,7 @@ export default function HelpPage() {
             <div><small>FILES</small><h2>파일과 호환</h2></div>
           </div>
           <div className="help-file-grid">
-            <div><strong>MML</strong><p><code>MML@</code> 전체 코드를 텍스트창에 붙여넣으면 파트를 인식해 트랙으로 나눕니다. 파일 불러오기에서는 전체 교체·곡 뒤에 이어 붙이기·새 트랙 추가·선택 트랙 교체를 고릅니다.</p></div>
+            <div><strong>MML</strong><p><code>MML@</code> 전체 코드를 텍스트창에 붙여넣으면 파트를 인식해 트랙으로 나눕니다. 파일 불러오기에서는 일반 MML과 3MLE 채널 파일을 열고, 전체 교체·곡 뒤에 이어 붙이기·새 트랙 추가·선택 트랙 교체를 고릅니다.</p></div>
             <div><strong>MMI</strong><p>마비꼬의 <code>.mmi</code> 파일에서 곡 제목, 박자표와 여러 MML 트랙을 읽습니다.</p></div>
             <div><strong>MIDI</strong><p>표준 MIDI 파일을 트랙으로 불러오거나 현재 곡을 MIDI 파일로 내보냅니다.</p></div>
             <div><strong>냥 프로젝트</strong><p>트랙 이름·색상·음색·박자표와 편집 상태를 함께 저장했다가 냥냥에서 다시 이어서 작업합니다.</p></div>

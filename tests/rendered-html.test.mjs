@@ -465,7 +465,14 @@ test("accepts MabiIcco MMI files from the project file menu", async () => {
   assert.match(studio, /createProjectFromMmi/);
   assert.match(studio, /endsWith\("\.mmi"\)/);
   assert.match(studio, /accept="\.mml,\.mmi,\.nyangmml/);
-  assert.match(studio, /MML·마비꼬 MMI·냥 프로젝트/);
+  assert.match(studio, /MML·(?:3MLE·)?마비꼬 MMI·냥 프로젝트/);
+});
+
+test("recognizes channel-based 3MLE files from the MML file picker", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  assert.match(studio, /isThreeMleDocument\(text\)/);
+  assert.match(studio, /parseThreeMleDocument\(text\)/);
+  assert.match(studio, /MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI/);
 });
 
 test("highlights the active MML source token while playback advances", async () => {

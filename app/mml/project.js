@@ -166,9 +166,15 @@ export function importedMmlTitle(filename) {
 export function applyMmlImport(project, payload, mode, themeId = "nyang-voice") {
   const draft = JSON.parse(JSON.stringify(project));
   const ranges = Array.isArray(payload?.ranges) ? payload.ranges : [];
+  const trackNames = Array.isArray(payload?.trackNames) ? payload.trackNames : [];
   if (mode === "replace") {
-    draft.tracks = ranges.map((sourceText, index) => ({ ...createTrack(index, themeId), sourceText }));
+    draft.tracks = ranges.map((sourceText, index) => ({
+      ...createTrack(index, themeId),
+      sourceText,
+      ...(trackNames[index] ? { name: trackNames[index] } : {}),
+    }));
     if (payload.replacementTitle !== undefined) draft.title = payload.replacementTitle;
+    if (payload.importSource) draft.importSource = payload.importSource;
     draft.routing = {
       left: draft.tracks[0] ? [draft.tracks[0].id] : [],
       right: draft.tracks[1] ? [draft.tracks[1].id] : [],
@@ -184,7 +190,11 @@ export function applyMmlImport(project, payload, mode, themeId = "nyang-voice") 
       draft.tracks[index].sourceText += sourceText;
     });
   } else if (mode === "tracks") {
-    ranges.forEach((sourceText) => draft.tracks.push({ ...createTrack(draft.tracks.length, themeId), sourceText }));
+    ranges.forEach((sourceText, index) => draft.tracks.push({
+      ...createTrack(draft.tracks.length, themeId),
+      sourceText,
+      ...(trackNames[index] ? { name: trackNames[index] } : {}),
+    }));
   } else if (mode === "selected") {
     const selected = draft.tracks.find((track) => track.id === draft.view.selectedTrackId);
     if (selected) selected.sourceText = ranges[0] ?? "";

@@ -8,6 +8,7 @@ import { adjacentMeasureTick, buildMetronomeEvents, buildTimelineGrid, clampTime
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../app/mml/midi.js";
+import { decodeThreeMleFile, isThreeMleDocument, parseThreeMleDocument } from "../app/mml/three-mle.js";
 import { expandMmlText, optimizeMmlText } from "../app/mml/optimization.js";
 import { MIDIBuilder, MIDIMessageTypes } from "spessasynth_core";
 
@@ -31,6 +32,42 @@ test("changes the project title only when an imported MML file replaces the song
   assert.equal(applyMmlImport(project, payload, "append").title, "기존 제목");
   assert.equal(applyMmlImport(project, payload, "tracks").title, "기존 제목");
   assert.equal(applyMmlImport(project, payload, "selected").title, "기존 제목");
+});
+
+test("imports wrapped 3MLE channel files without reading extension data as MML", () => {
+  const source = `[Settings]\r
+Encoding=ks_c_5601-1987\r
+Title=남극 산책\r
+Source=\r
+Memo=\r
+[Channel2]\r
+v12o3g4\r
+[Channel1]\r
+t120o4l\r
+8cdef\r
+[3MLE EXTENSION]\r
+/* DO NOT EDIT!! DATA VOID IF "3MLE EXTENSION" IS EDITED. */\r
+c=123\r
+d=not-mml`;
+  assert.equal(isThreeMleDocument(source), true);
+  const parsed = parseThreeMleDocument(source);
+  assert.equal(parsed.title, "남극 산책");
+  assert.deepEqual(parsed.channels.map((channel) => channel.name), ["Channel 1", "Channel 2"]);
+  assert.deepEqual(parsed.channels.map((channel) => channel.sourceText), ["t120o4l8cdef", "v12o3g4"]);
+  parsed.channels.forEach((channel) => assert.doesNotThrow(() => parseTrack(channel.sourceText)));
+
+  const asciiEncoded = source.replace("Title=남극 산책", "Title=Antarctic walk");
+  const decoded = decodeThreeMleFile(new TextEncoder().encode(asciiEncoded));
+  assert.match(decoded, /Title=Antarctic walk/);
+  const project = applyMmlImport(createProject(), {
+    ranges: parsed.channels.map((channel) => channel.sourceText),
+    trackNames: parsed.channels.map((channel) => channel.name),
+    replacementTitle: parsed.title,
+    importSource: { format: parsed.format },
+  }, "replace");
+  assert.equal(project.title, "남극 산책");
+  assert.deepEqual(project.tracks.map((track) => track.name), ["Channel 1", "Channel 2"]);
+  assert.equal(project.importSource.format, "3mle");
 });
 
 test("normalizes Windows and high-resolution wheel movement by physical delta", () => {

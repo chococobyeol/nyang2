@@ -41,6 +41,7 @@ import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "
 import { expandMmlText, optimizeMmlText } from "../mml/optimization.js";
 import { createProjectFromMmi } from "../mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../mml/midi.js";
+import { decodeThreeMleFile, isThreeMleDocument, parseThreeMleDocument } from "../mml/three-mle.js";
 import RangeControl from "./range-control";
 
 type KeyboardSide = "left" | "right";
@@ -96,6 +97,8 @@ type LiveRecordingNote = {
 type MmlImportPayload = {
   ranges: string[];
   replacementTitle?: string;
+  trackNames?: string[];
+  importSource?: { format: string };
 };
 
 const PIANO_PITCH_ROW_HEIGHT = 12;
@@ -1546,7 +1549,8 @@ export default function MmlStudio({
         replaceLoadedProject(imported);
         return;
       }
-      const text = await file.text();
+      const fileBytes = await file.arrayBuffer();
+      const text = decodeThreeMleFile(fileBytes);
       if (file.name.toLowerCase().endsWith(".nyangmml")) {
         if (!window.confirm("현재 작업을 불러온 프로젝트로 바꿀까요?")) return;
         replaceLoadedProject(JSON.parse(text));
@@ -1556,6 +1560,17 @@ export default function MmlStudio({
         if (!window.confirm("현재 작업을 마비꼬 파일의 곡으로 바꿀까요?")) return;
         const fallbackTitle = file.name.replace(/\.mmi$/i, "");
         replaceLoadedProject(createProjectFromMmi(text, currentThemeId, fallbackTitle));
+        return;
+      }
+      if (isThreeMleDocument(text)) {
+        const imported = parseThreeMleDocument(text);
+        setImportPayload({
+          ranges: imported.channels.map((channel) => channel.sourceText),
+          trackNames: imported.channels.map((channel) => channel.name),
+          replacementTitle: imported.title.trim() || importedMmlTitle(file.name),
+          importSource: { format: imported.format },
+        });
+        setFileMenuView(false);
         return;
       }
       const parsed = parseMmlDocument(text);
@@ -1921,7 +1936,7 @@ export default function MmlStudio({
         <div className="mml-action-menu" role="dialog" aria-label="MML 파일 메뉴">
           <div className="mml-action-menu-head"><strong>파일</strong><button type="button" onClick={() => setFileMenuView(false)}>닫기</button></div>
           <button type="button" onClick={resetProject}><b>＋</b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
           <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b>♪</b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
           <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
           <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b>⧉</b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
