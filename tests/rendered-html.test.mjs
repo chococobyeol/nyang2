@@ -537,7 +537,7 @@ test("keeps existing top controls while placing touch rest input with the keyboa
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /className="paw-row paw-row-accidental"[\s\S]*className=\{`mml-rest-button/);
-  assert.match(page, /className="mml-rest-symbol"[^>]*>☾<\/span>/);
+  assert.match(page, /className="mml-rest-mark"[\s\S]*src="\/assets\/themes\/default\/rest\.svg"/);
   assert.match(page, /restControl\.showNoteLabel && <span className="mml-rest-note">R<\/span>/);
   assert.match(page, /className="mml-rest-shortcut"/);
   assert.match(page, /showNoteLabel: settings\.noteLabelMode !== "hidden"/);
@@ -555,7 +555,7 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(css, /\.mml-open \.performance-surface \.settings-button \{[^}]*min-height: 0;[^}]*height: 100%/s);
   assert.match(css, /\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*top: 42%;[^}]*height: auto/s);
   assert.match(css, /\.mml-open \.performance-surface \.mml-rest-button/);
-  assert.match(css, /\.mml-rest-symbol \{[^}]*font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;/s);
+  assert.match(css, /\.mml-rest-mark \{[^}]*width: 100%;[^}]*object-fit: contain;/s);
   assert.match(css, /\.mml-rest-button\.is-active \{[^}]*drop-shadow/s);
   assert.match(css, /\.mml-rest-labels \{[^}]*top: 63%;[^}]*width: 58%;[^}]*transform: translateX\(-50%\);/s);
   assert.match(css, /\.key-labels \{[^}]*top: 63%;[^}]*width: 52%;[^}]*transform: translateX\(-50%\);/s);

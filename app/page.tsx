@@ -621,7 +621,13 @@ function KeyboardGroup({
             onPointerCancel={restControl.onPointerCancel}
             onClick={restControl.onClick}
           >
-            <span className="mml-rest-symbol" aria-hidden="true">☾</span>
+            <img
+              className="mml-rest-mark"
+              src="/assets/themes/default/rest.svg"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
             {(restControl.showNoteLabel || restControl.showShortcut) && (
               <span className="mml-rest-labels" aria-hidden="true">
                 {restControl.showNoteLabel && <span className="mml-rest-note">R</span>}

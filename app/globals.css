@@ -3019,7 +3019,7 @@ button {
 .mml-open .performance-surface .mml-rest-button::before {
   position: absolute;
   inset: 7%;
-  border: 2px solid var(--ink);
+  border: 0;
   border-radius: 50%;
   background: #f4ead9;
   box-shadow: 0 4px 0 rgba(31, 37, 36, 0.1);
@@ -3027,16 +3027,14 @@ button {
   transition: background 90ms ease, box-shadow 90ms ease;
 }
 
-.mml-open .performance-surface .mml-rest-symbol {
+.mml-open .performance-surface .mml-rest-mark {
   position: relative;
   z-index: 1;
   display: block;
-  height: 32px;
-  margin-top: -7px;
-  font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;
-  font-size: 34px;
-  font-weight: 700;
-  line-height: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .mml-open .performance-surface .mml-rest-labels {
@@ -4427,12 +4425,6 @@ summary:focus-visible {
     top: 0;
     height: auto;
     max-width: 44px;
-  }
-
-  .mml-open .performance-surface .mml-rest-symbol {
-    height: 22px;
-    margin-top: -5px;
-    font-size: 24px;
   }
 
   .mml-open .performance-surface .mml-rest-shortcut {
