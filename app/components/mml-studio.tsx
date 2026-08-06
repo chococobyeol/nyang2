@@ -36,7 +36,7 @@ import {
 import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
+import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
 import { expandMmlText, optimizeMmlText } from "../mml/optimization.js";
 import { createProjectFromMmi } from "../mml/mmi.js";
@@ -1821,19 +1821,14 @@ export default function MmlStudio({
   const animateWheelZoom = () => {
     const state = wheelZoomRef.current;
     state.frame = 0;
-    const timeline = consumeWheelSteps(state.timelineSteps);
-    const pitch = consumeWheelSteps(state.pitchSteps);
-    state.timelineSteps = timeline.remaining;
-    state.pitchSteps = pitch.remaining;
-    if (timeline.step) changeTimelineZoom(Math.exp(-timeline.step * 0.045), state.timelineAnchor ?? undefined);
-    if (pitch.step) changePitchZoom(Math.exp(-pitch.step * 0.045), state.pitchAnchor ?? undefined);
-    if (state.timelineSteps || state.pitchSteps) {
-      state.activeUntil = performance.now() + 120;
-      state.frame = window.requestAnimationFrame(animateWheelZoom);
-    } else {
-      state.timelineAnchor = null;
-      state.pitchAnchor = null;
-    }
+    const timelineSteps = state.timelineSteps;
+    const pitchSteps = state.pitchSteps;
+    state.timelineSteps = 0;
+    state.pitchSteps = 0;
+    if (timelineSteps) changeTimelineZoom(Math.exp(-timelineSteps * 0.045), state.timelineAnchor ?? undefined);
+    if (pitchSteps) changePitchZoom(Math.exp(-pitchSteps * 0.045), state.pitchAnchor ?? undefined);
+    state.timelineAnchor = null;
+    state.pitchAnchor = null;
   };
 
   const zoomTimelineWithWheel = (event: WheelEvent) => {

@@ -4,7 +4,7 @@ import test from "node:test";
 import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, upsertTempoCommand } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { applyMmlImport, createProject, importedMmlTitle, sanitizeProject } from "../app/mml/project.js";
-import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, consumeWheelSteps, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
+import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../app/mml/midi.js";
@@ -77,23 +77,6 @@ test("normalizes standard pixel, line, and page wheel movement without OS-specif
   assert.equal(normalizedWheelSteps(1, 2, 600), 2);
   assert.equal(normalizedWheelSteps(960, 0), 2);
   assert.equal(normalizedWheelSteps(-960, 0), -2);
-});
-
-test("consumes a wheel burst in small stable animation steps", () => {
-  assert.deepEqual(consumeWheelSteps(4), { step: 0.2, remaining: 3.8 });
-  assert.deepEqual(consumeWheelSteps(-0.2), { step: -0.2, remaining: 0 });
-  assert.deepEqual(consumeWheelSteps(0.0005), { step: 0, remaining: 0 });
-});
-
-test("spreads a Windows wheel detent across animation frames", () => {
-  let remaining = 1;
-  const frames = [];
-  while (remaining) {
-    const next = consumeWheelSteps(remaining);
-    frames.push(Number(next.step.toFixed(3)));
-    remaining = next.remaining;
-  }
-  assert.deepEqual(frames, [0.2, 0.2, 0.2, 0.2, 0.2]);
 });
 
 test("keeps the content beneath the pointer fixed while zooming", () => {

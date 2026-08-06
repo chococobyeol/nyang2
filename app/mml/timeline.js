@@ -16,15 +16,6 @@ export function normalizedWheelSteps(delta, deltaMode = 0, viewportSize = 800) {
   return Math.sign(steps) * Math.min(2, Math.abs(steps));
 }
 
-export function consumeWheelSteps(pendingSteps, maxStep = 0.2, epsilon = 0.001) {
-  const pending = Number(pendingSteps) || 0;
-  if (Math.abs(pending) <= epsilon) return { step: 0, remaining: 0 };
-  const limit = Math.max(epsilon, Math.abs(Number(maxStep) || 0.2));
-  const step = Math.sign(pending) * Math.min(Math.abs(pending), limit);
-  const remaining = pending - step;
-  return { step, remaining: Math.abs(remaining) <= epsilon ? 0 : remaining };
-}
-
 export function anchoredScrollOffset(contentPosition, scale, anchorOffset, viewportSize, contentSize) {
   const position = Math.max(0, Number(contentPosition) || 0);
   const safeScale = Math.max(0, Number(scale) || 0);
