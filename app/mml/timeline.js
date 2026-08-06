@@ -26,6 +26,13 @@ export function anchoredScrollOffset(contentPosition, scale, anchorOffset, viewp
   return Math.max(0, Math.min(maxScroll, position * safeScale - offset));
 }
 
+export function zoomPreviewTransform(contentPosition, baseScale, targetScale) {
+  const position = Math.max(0, Number(contentPosition) || 0);
+  const base = Math.max(Number.EPSILON, Number(baseScale) || 1);
+  const target = Math.max(Number.EPSILON, Number(targetScale) || base);
+  return { origin: position * base, scale: target / base };
+}
+
 function validSignature(signature, fallback) {
   return {
     numerator: Math.max(1, Number(signature?.numerator) || fallback.numerator),
