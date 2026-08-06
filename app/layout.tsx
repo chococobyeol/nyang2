@@ -47,6 +47,9 @@ export const metadata: Metadata = {
     icon: "/assets/themes/default/pawpad.svg",
     shortcut: "/assets/themes/default/pawpad.svg",
   },
+  verification: {
+    google: "J__UMFOLO82I8VesZ8u-cGN4JRPvcTGOZRKqNAdjba4",
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
