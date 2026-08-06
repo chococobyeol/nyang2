@@ -664,3 +664,11 @@ test("keeps existing top controls while placing touch rest input with the keyboa
   assert.match(css, /\.mml-rest-button::before \{[^}]*background: #f4ead9;/s);
   assert.match(css, /\.mml-beat-visual\.is-preparing/);
 });
+
+test("keeps recording controls recoverable and preserves per-note velocity", async () => {
+  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  assert.match(studio, /velocity:\s*note\.velocity/);
+  assert.match(studio, /velocityByTrack:\s*Object\.fromEntries/);
+  assert.match(studio, /disabled=\{recordState === "idle" && Boolean\(parseError \|\| tempoConflict\)\}/);
+  assert.doesNotMatch(studio, /tempo:\s*writesTempo \? options\.bpm/);
+});

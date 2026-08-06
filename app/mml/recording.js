@@ -317,7 +317,14 @@ export function recordingToTrackTexts(inputs, tracks, routing, options = {}) {
   const allocation = allocateInputs(normalized, routing, options.pitchPriority ?? "high");
   const byTrack = new Map(tracks.map((track) => [track.id, []]));
   for (const { input, trackId } of allocation.assigned) {
-    byTrack.get(trackId)?.push({ tick: input.tick, duration: input.duration, midi: input.midi });
+    const track = tracks.find((candidate) => candidate.id === trackId);
+    const capturedVelocity = input.velocityByTrack?.[trackId];
+    byTrack.get(trackId)?.push({
+      tick: input.tick,
+      duration: input.duration,
+      midi: input.midi,
+      velocity: Number.isFinite(capturedVelocity) ? capturedVelocity : (track?.recordVelocity ?? 15),
+    });
   }
   return {
     texts: new Map(tracks.map((track) => [track.id, serializeTrackEvents(byTrack.get(track.id) ?? [], { velocity: track.recordVelocity ?? 15 })])),

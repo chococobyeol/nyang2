@@ -84,6 +84,7 @@ type RecordingInput = {
   midi: number;
   startedAt: number;
   endedAt: number;
+  velocityByTrack: Record<string, number>;
 };
 
 type LiveRecordingNote = {
@@ -190,9 +191,19 @@ function renderRecordingProject(
     let existing;
     try { existing = parseTrack(track.sourceText); } catch { existing = { notes: [], tempos: [] }; }
     const inserted = newText
-      ? parseTrack(newText).notes.map((note: any) => ({ ...note, tick: note.tick + options.startTick }))
+      ? parseTrack(newText).notes.map((note: any) => ({
+        tick: note.tick + options.startTick,
+        duration: note.duration,
+        midi: note.midi,
+        velocity: note.velocity,
+      }))
       : [];
-    let notes = existing.notes.map((note: any) => ({ tick: note.tick, duration: note.duration, midi: note.midi }));
+    let notes = existing.notes.map((note: any) => ({
+      tick: note.tick,
+      duration: note.duration,
+      midi: note.midi,
+      velocity: note.velocity,
+    }));
     if (baseProject.recording.editMode === "insert") {
       notes = notes.map((note: any) => note.tick >= options.startTick ? { ...note, tick: note.tick + recordingLength } : note);
       if (isUsed) notes.push(...inserted);
@@ -200,10 +211,11 @@ function renderRecordingProject(
       notes = notes.filter((note: any) => note.tick + note.duration <= options.startTick || note.tick >= options.startTick + recordingLength);
       notes.push(...inserted);
     }
-    const writesTempo = index === 0 || existing.tempos.length > 0;
+    const initialVelocity = [...notes].sort((a: any, b: any) => a.tick - b.tick)[0]?.velocity
+      ?? track.recordVelocity
+      ?? 15;
     let sourceText = serializeTrackEvents(notes, {
-      velocity: track.recordVelocity,
-      tempo: writesTempo ? options.bpm : null,
+      velocity: initialVelocity,
     });
     sourceText = mergeTempoCommands(sourceText, existing.tempos ?? []);
     const parsedDuration = parseTrack(sourceText).duration;
@@ -1159,6 +1171,10 @@ export default function MmlStudio({
         side,
         midi,
         startedAt,
+        velocityByTrack: Object.fromEntries(current.tracks.map((track: any) => [
+          track.id,
+          Math.max(0, Math.min(15, Number(track.recordVelocity) || 0)),
+        ])),
       });
     },
     noteOff(inputId, at) {
@@ -1303,11 +1319,26 @@ export default function MmlStudio({
     stopMetronomeClock();
   }, [clearBeatVisualTimers, clearCountInClicks, clearPlayback, stopMetronomeClock]);
 
-  const updateTrack = (id: string, patch: Record<string, unknown>) => commit((draft: any) => {
-    const track = draft.tracks.find((item: any) => item.id === id);
-    if (track) Object.assign(track, patch);
-    return draft;
-  });
+  const updateTrack = (id: string, patch: Record<string, unknown>) => {
+    const recordingBase = recordingBaseProjectRef.current;
+    if (recordingBase) {
+      const baseTrack = recordingBase.tracks.find((item: any) => item.id === id);
+      if (baseTrack) Object.assign(baseTrack, patch);
+      setProject((current: any) => {
+        const next = clone(current);
+        const track = next.tracks.find((item: any) => item.id === id);
+        if (track) Object.assign(track, patch);
+        projectRef.current = next;
+        return next;
+      });
+      return;
+    }
+    commit((draft: any) => {
+      const track = draft.tracks.find((item: any) => item.id === id);
+      if (track) Object.assign(track, patch);
+      return draft;
+    });
+  };
 
   const optimizeSelectedTrack = () => {
     try {
@@ -1638,10 +1669,17 @@ export default function MmlStudio({
   };
 
   const selectTrack = (trackId: string) => {
-    setProject((current: any) => ({
-      ...current,
-      view: { ...current.view, selectedTrackId: trackId },
-    }));
+    if (recordingBaseProjectRef.current) {
+      recordingBaseProjectRef.current.view.selectedTrackId = trackId;
+    }
+    setProject((current: any) => {
+      const next = {
+        ...current,
+        view: { ...current.view, selectedTrackId: trackId },
+      };
+      projectRef.current = next;
+      return next;
+    });
   };
 
   const openTrackSettings = (trackId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
@@ -2278,8 +2316,15 @@ export default function MmlStudio({
       <div className="mml-transport" aria-label="MML 재생과 녹음">
         <div className="mml-transport-primary">
           <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}>{playing ? <Pause className="mml-tool-icon" aria-hidden="true" /> : <Play className="mml-tool-icon" aria-hidden="true" />}<span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
-          <button type="button" onClick={() => { clearPlayback(); playheadRef.current = 0; setPlayhead(0); }}><Square className="mml-tool-icon" aria-hidden="true" /><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
-          <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={Boolean(parseError || tempoConflict)}><Circle className="mml-tool-icon mml-record-icon" aria-hidden="true" /><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
+          <button type="button" onClick={() => {
+            if (recordState !== "idle") finishRecording();
+            else {
+              clearPlayback();
+              playheadRef.current = 0;
+              setPlayhead(0);
+            }
+          }}><Square className="mml-tool-icon" aria-hidden="true" /><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
+          <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={recordState === "idle" && Boolean(parseError || tempoConflict)}><Circle className="mml-tool-icon mml-record-icon" aria-hidden="true" /><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         </div>
         <nav className="mml-transport-navigation" aria-label="재생 위치 이동">
           <button type="button" aria-label="맨앞으로 이동" title="맨앞으로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(0)}><SkipBack className="mml-tool-icon" aria-hidden="true" /></button>

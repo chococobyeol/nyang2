@@ -617,6 +617,45 @@ test("serializes the recording tempo into the generated master track", () => {
   assert.match(serializeTrackEvents([{ tick: 0, duration: 96, midi: 60 }], { tempo: 90 }), /^t90v15/);
 });
 
+test("captures recording velocity per assigned track at note-on time", () => {
+  const tracks = [{ id: "t1", recordVelocity: 15 }, { id: "t2", recordVelocity: 15 }];
+  const result = recordingToTrackTexts([
+    {
+      id: "first",
+      side: "left",
+      midi: 60,
+      startedAt: 0,
+      endedAt: 0.5,
+      velocityByTrack: { t1: 7, t2: 12 },
+    },
+    {
+      id: "second",
+      side: "left",
+      midi: 62,
+      startedAt: 0.5,
+      endedAt: 1,
+      velocityByTrack: { t1: 11, t2: 12 },
+    },
+  ], tracks, { left: ["t1"], right: [] }, { bpm: 120, quantize: "1/8", origin: 0 });
+
+  assert.deepEqual(parseTrack(result.texts.get("t1")).notes.map((note) => note.velocity), [7, 11]);
+  assert.match(result.texts.get("t1"), /^v15v7/);
+  assert.match(result.texts.get("t1"), /v11/);
+});
+
+test("restores the previous track velocity after a recorded section", () => {
+  const existing = parseTrack("v15c4r4e4").notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity }));
+  const recorded = { tick: 96, duration: 96, midi: 62, velocity: 7 };
+  const source = serializeTrackEvents([...existing, recorded], { velocity: existing[0].velocity });
+  assert.deepEqual(parseTrack(source).notes.map(({ midi, velocity }) => ({ midi, velocity })), [
+    { midi: 60, velocity: 15 },
+    { midi: 62, velocity: 7 },
+    { midi: 64, velocity: 15 },
+  ]);
+  assert.match(source, /v7/);
+  assert.match(source, /v15[^v]*e4$/);
+});
+
 test("keeps a minimum grid duration for a very short recorded tap", () => {
   const tracks = [{ id: "t1", recordVelocity: 15 }];
   const result = recordingToTrackTexts([
