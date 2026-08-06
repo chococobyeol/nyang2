@@ -1319,7 +1319,7 @@ button {
 
 .mml-pitch-label-layer {
   position: sticky;
-  z-index: 13;
+  z-index: 11;
   left: 0;
   width: 31px;
   height: 0;
