@@ -1939,6 +1939,7 @@ export default function MmlStudio({
     pitchLabels.querySelectorAll<HTMLElement>(".mml-pitch-label").forEach((element) => {
       const currentTop = Number.parseFloat(element.style.top) || 0;
       element.style.transform = `translateY(${currentTop * (vertical.scale - 1)}px)`;
+      element.style.height = `${pixelsPerPitch * vertical.scale}px`;
     });
   };
 
