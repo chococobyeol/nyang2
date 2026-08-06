@@ -342,7 +342,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /normalizedWheelSteps\(delta, event\.deltaMode, roll\.clientHeight\)/);
   assert.match(studio, /const timelineSteps = state\.timelineSteps/);
   assert.match(studio, /state\.timelineSteps = 0/);
-  assert.match(studio, /timelineTargetZoom = clampTimelineZoom/);
+  assert.match(studio, /timelineTargetZoom = clampPianoTimelineZoom/);
+  assert.match(studio, /minimumTimelineZoom = pianoViewportWidth > 0/);
+  assert.match(studio, /new ResizeObserver\(updateWidth\)/);
   assert.match(studio, /renderWheelZoomPreview\(\)/);
   assert.match(studio, /window\.requestAnimationFrame\(flushWheelZoom\)/);
   assert.match(studio, /window\.setTimeout\(commitWheelZoom, 90\)/);

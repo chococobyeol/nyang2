@@ -268,6 +268,7 @@ export default function MmlStudio({
   const [playhead, setPlayhead] = useState(0);
   const [timelineZoom, setTimelineZoom] = useState(1);
   const [pitchZoom, setPitchZoom] = useState(1);
+  const [pianoViewportWidth, setPianoViewportWidth] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [recordState, setRecordState] = useState<"idle" | "count-in" | "recording">("idle");
   const [recordingMessage, setRecordingMessage] = useState("");
@@ -1646,12 +1647,21 @@ export default function MmlStudio({
   };
   const exportMidi = () => saveBlob(midiFilename(project), "audio/midi", createMidiFile(project));
 
-  const pianoPixelsPerTick = PIANO_PIXELS_PER_TICK * timelineZoom;
   const pianoTimelineDuration = Math.max(
     songDuration,
     TICKS_PER_QUARTER * 16,
     recordState === "recording" ? playhead + TICKS_PER_QUARTER * 12 : 0,
   );
+  const unscaledPianoWidth = pianoTimelineDuration * PIANO_PIXELS_PER_TICK;
+  const fitTimelineScale = pianoViewportWidth > 0
+    ? Math.max(1, (pianoViewportWidth + 1) / unscaledPianoWidth)
+    : 1;
+  const minimumTimelineZoom = pianoViewportWidth > 0
+    ? clampTimelineZoom((pianoViewportWidth + 1) / (unscaledPianoWidth * fitTimelineScale))
+    : 0.5;
+  const clampPianoTimelineZoom = (value: number) => Math.max(minimumTimelineZoom, clampTimelineZoom(value));
+  const pianoRenderZoom = timelineZoom * fitTimelineScale;
+  const pianoPixelsPerTick = PIANO_PIXELS_PER_TICK * pianoRenderZoom;
   const pianoWidth = pianoTimelineDuration * pianoPixelsPerTick;
   const timelineGrid = buildTimelineGrid(pianoTimelineDuration, project.timeSignatureMap, project.timeSignature);
   const timelineChangeTicks = [...new Set([
@@ -1767,12 +1777,12 @@ export default function MmlStudio({
   const changeTimelineZoom = (factor: number, anchor?: { tick: number; offset: number }) => {
     const roll = pianoRollRef.current;
     const current = timelineZoomRef.current;
-    const next = clampTimelineZoom(current * factor);
+    const next = clampPianoTimelineZoom(current * factor);
     if (next === current) return;
     if (roll) {
       const offset = Math.max(0, Math.min(roll.clientWidth, anchor?.offset ?? roll.clientWidth / 2));
       timelineZoomAnchorRef.current = anchor ?? {
-        tick: (roll.scrollLeft + offset) / (PIANO_PIXELS_PER_TICK * current),
+        tick: (roll.scrollLeft + offset) / (PIANO_PIXELS_PER_TICK * current * fitTimelineScale),
         offset,
       };
     }
@@ -1816,12 +1826,37 @@ export default function MmlStudio({
     canvas.style.removeProperty("will-change");
   };
 
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const roll = pianoRollRef.current;
+    if (!roll) return;
+    const updateWidth = () => {
+      const width = roll.clientWidth;
+      setPianoViewportWidth((current) => Math.abs(current - width) < 0.5 ? current : width);
+    };
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(roll);
+    return () => observer.disconnect();
+  }, [expanded, visible]);
+
+  useLayoutEffect(() => {
+    const current = timelineZoomRef.current;
+    if (current >= minimumTimelineZoom) return;
+    timelineZoomRef.current = minimumTimelineZoom;
+    setTimelineZoom(minimumTimelineZoom);
+  }, [minimumTimelineZoom]);
+
   const renderWheelZoomPreview = () => {
     const canvas = pianoCanvasRef.current;
     if (!canvas) return;
     const state = wheelZoomRef.current;
     const horizontal = state.timelineAnchor
-      ? zoomPreviewTransform(state.timelineAnchor.tick * PIANO_PIXELS_PER_TICK, state.timelineBaseZoom, state.timelineTargetZoom)
+      ? zoomPreviewTransform(
+        state.timelineAnchor.tick * PIANO_PIXELS_PER_TICK,
+        state.timelineBaseZoom * fitTimelineScale,
+        state.timelineTargetZoom * fitTimelineScale,
+      )
       : { origin: 0, scale: 1 };
     const vertical = state.pitchAnchor
       ? zoomPreviewTransform((maxMidi - state.pitchAnchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT, state.pitchBaseZoom, state.pitchTargetZoom)
@@ -1864,14 +1899,14 @@ export default function MmlStudio({
     if (!anchor || !roll) return;
     roll.scrollLeft = anchoredScrollOffset(
       anchor.tick * PIANO_PIXELS_PER_TICK,
-      timelineZoom,
+      timelineZoom * fitTimelineScale,
       anchor.offset,
       roll.clientWidth,
       roll.scrollWidth,
     );
     timelineZoomAnchorRef.current = null;
     clearWheelPreviewStyle();
-  }, [timelineZoom]);
+  }, [fitTimelineScale, timelineZoom]);
 
   useLayoutEffect(() => {
     pitchZoomRef.current = pitchZoom;
@@ -1897,7 +1932,7 @@ export default function MmlStudio({
     state.timelineSteps = 0;
     state.pitchSteps = 0;
     if (timelineSteps) {
-      state.timelineTargetZoom = clampTimelineZoom(state.timelineTargetZoom * Math.exp(-timelineSteps * 0.045));
+      state.timelineTargetZoom = clampPianoTimelineZoom(state.timelineTargetZoom * Math.exp(-timelineSteps * 0.045));
     }
     if (pitchSteps) {
       state.pitchTargetZoom = Math.max(0.5, Math.min(3, state.pitchTargetZoom * Math.exp(-pitchSteps * 0.045)));
@@ -1936,7 +1971,7 @@ export default function MmlStudio({
         state.timelineBaseZoom = timelineZoomRef.current;
         state.timelineTargetZoom = timelineZoomRef.current;
         state.timelineAnchor = {
-          tick: (roll.scrollLeft + x) / (PIANO_PIXELS_PER_TICK * timelineZoomRef.current),
+          tick: (roll.scrollLeft + x) / (PIANO_PIXELS_PER_TICK * timelineZoomRef.current * fitTimelineScale),
           offset: x,
         };
       }
