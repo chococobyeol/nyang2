@@ -1473,6 +1473,7 @@ export default function MmlStudio({
     if (recordState !== "idle") return;
     const list = event.currentTarget.closest(".mml-track-list") as HTMLElement | null;
     if (!list) return;
+    const touchPointer = event.pointerType === "touch";
     event.preventDefault();
     event.stopPropagation();
 
@@ -1521,10 +1522,23 @@ export default function MmlStudio({
       updateTarget(nativeEvent.clientX, nativeEvent.clientY);
     };
     const onPointerEnd = (nativeEvent: PointerEvent) => finish(nativeEvent.pointerId);
+    const onPointerCancel = (nativeEvent: PointerEvent) => {
+      if (!touchPointer) finish(nativeEvent.pointerId);
+    };
+    const onTouchMove = (nativeEvent: TouchEvent) => {
+      const touch = nativeEvent.touches[0] ?? nativeEvent.changedTouches[0];
+      if (!touch || trackReorderRef.current !== drag) return;
+      nativeEvent.preventDefault();
+      updateTarget(touch.clientX, touch.clientY);
+    };
+    const onTouchEnd = () => finish(drag.pointerId);
     const cleanup = () => {
       window.removeEventListener("pointermove", onPointerMove, true);
       window.removeEventListener("pointerup", onPointerEnd, true);
-      window.removeEventListener("pointercancel", onPointerEnd, true);
+      window.removeEventListener("pointercancel", onPointerCancel, true);
+      window.removeEventListener("touchmove", onTouchMove, true);
+      window.removeEventListener("touchend", onTouchEnd, true);
+      window.removeEventListener("touchcancel", onTouchEnd, true);
       document.documentElement.classList.remove("is-track-reordering");
       try { drag.handle.releasePointerCapture(drag.pointerId); } catch { /* optional */ }
     };
@@ -1541,7 +1555,12 @@ export default function MmlStudio({
     trackReorderRef.current = drag;
     window.addEventListener("pointermove", onPointerMove, { capture: true, passive: false });
     window.addEventListener("pointerup", onPointerEnd, true);
-    window.addEventListener("pointercancel", onPointerEnd, true);
+    window.addEventListener("pointercancel", onPointerCancel, true);
+    if (touchPointer) {
+      window.addEventListener("touchmove", onTouchMove, { capture: true, passive: false });
+      window.addEventListener("touchend", onTouchEnd, true);
+      window.addEventListener("touchcancel", onTouchEnd, true);
+    }
     document.documentElement.classList.add("is-track-reordering");
     try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* optional */ }
     setTrackReorder({ trackId, targetId: null, placement: "before" });

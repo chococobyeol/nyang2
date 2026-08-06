@@ -671,7 +671,6 @@ export default function Home() {
   const mmlInputSinkRef = useRef<MmlInputSink | null>(null);
   const soundPackInputRef = useRef<HTMLInputElement | null>(null);
   const soundPackRef = useRef<StoredSoundPack | null>(null);
-  const mmlLandscapeSessionRef = useRef({ locked: false, fullscreen: false });
   const soundPackSynthRef = useRef<{
     importedAt: number;
     synth: WorkletSynthesizer;
@@ -1596,45 +1595,14 @@ export default function Home() {
     };
   }, [initAudio]);
 
-  const requestMmlLandscape = useCallback(() => {
-    if (!settingsRef.current.mobileLandscape || !window.matchMedia("(orientation: portrait) and (max-width: 600px) and (pointer: coarse)").matches) return;
-    const orientation = window.screen.orientation as ScreenOrientation & {
-      lock?: (mode: "landscape") => Promise<void>;
-      unlock?: () => void;
-    };
-    void (async () => {
-      let enteredFullscreen = false;
-      try {
-        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen({ navigationUI: "hide" });
-          enteredFullscreen = true;
-        }
-        if (orientation.lock) {
-          await orientation.lock("landscape");
-          mmlLandscapeSessionRef.current = { locked: true, fullscreen: enteredFullscreen };
-        } else if (enteredFullscreen) {
-          mmlLandscapeSessionRef.current = { locked: false, fullscreen: true };
-        }
-      } catch {
-        if (enteredFullscreen) mmlLandscapeSessionRef.current = { locked: false, fullscreen: true };
-      }
-    })();
-  }, []);
-
   const openMml = useCallback(() => {
     setSustain(false);
-    requestMmlLandscape();
     setMmlOpen(true);
-  }, [requestMmlLandscape, setSustain]);
+  }, [setSustain]);
 
   const closeMml = useCallback(() => {
     setMmlExpanded(false);
     setMmlOpen(false);
-    const session = mmlLandscapeSessionRef.current;
-    mmlLandscapeSessionRef.current = { locked: false, fullscreen: false };
-    const orientation = window.screen.orientation as ScreenOrientation & { unlock?: () => void };
-    if (session.locked) orientation.unlock?.();
-    if (session.fullscreen && document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   }, []);
 
   useEffect(() => {
