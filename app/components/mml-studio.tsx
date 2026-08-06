@@ -16,7 +16,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { ChevronLeft, ChevronRight, Circle, Ellipsis, GripHorizontal, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Ellipsis, GripVertical, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
 import {
   combineTracks,
   deleteTempoCommand,
@@ -286,6 +286,7 @@ export default function MmlStudio({
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string; x?: number; y?: number } | null>(null);
   const [trackReorder, setTrackReorder] = useState<{ trackId: string; targetId: string | null; placement: "before" | "after" } | null>(null);
+  const [mobileTrackListCollapsed, setMobileTrackListCollapsed] = useState(false);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const trackReorderRef = useRef<{
     pointerId: number;
@@ -2383,9 +2384,9 @@ export default function MmlStudio({
         </div>
       )}
 
-      <div className="mml-main-grid">
+      <div className={`mml-main-grid ${mobileTrackListCollapsed ? "is-track-list-collapsed" : ""}`}>
         <aside
-          className="mml-track-list"
+          className={`mml-track-list ${mobileTrackListCollapsed ? "is-mobile-collapsed" : ""}`}
           onPointerDown={beginTrackDrag}
           onPointerMove={moveTrackDrag}
           onPointerUp={endTrackDrag}
@@ -2404,6 +2405,17 @@ export default function MmlStudio({
               <input type="checkbox" checked={project.tracks.length > 0 && batchTrackIds.length === project.tracks.length} onChange={toggleAllBatchTracks} />
               <span>{project.tracks.length > 0 && batchTrackIds.length === project.tracks.length ? "전체 해제" : "전체 선택"}</span>
             </label>
+            <button
+              type="button"
+              className="mml-track-collapse"
+              aria-expanded={!mobileTrackListCollapsed}
+              aria-label={mobileTrackListCollapsed ? "트랙 목록 펼치기" : "트랙 목록 접기"}
+              title={mobileTrackListCollapsed ? "트랙 목록 펼치기" : "트랙 목록 접기"}
+              onClick={() => setMobileTrackListCollapsed((collapsed) => !collapsed)}
+            >
+              {mobileTrackListCollapsed ? <ChevronDown aria-hidden="true" /> : <ChevronUp aria-hidden="true" />}
+              <span>{mobileTrackListCollapsed ? "펼치기" : "접기"}</span>
+            </button>
           </div>
           {renderBatchPanel("sidebar")}
           {project.tracks.map((track: any, index: number) => (
@@ -2422,7 +2434,7 @@ export default function MmlStudio({
                 onPointerDown={(event) => beginTrackReorder(event, track.id)}
                 onKeyDown={(event) => moveTrackWithKeyboard(event, track.id, index)}
               >
-                <GripHorizontal aria-hidden="true" />
+                <GripVertical aria-hidden="true" />
               </button>
               <label className="mml-track-batch-checkbox" title="여러 트랙을 함께 바꿀 때 선택">
                 <input type="checkbox" checked={batchTrackIds.includes(track.id)} onChange={() => toggleBatchTrack(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 선택`} />

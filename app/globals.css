@@ -1182,6 +1182,10 @@ button {
   font-weight: 900;
 }
 
+.mml-track-list-title .mml-track-collapse {
+  display: none;
+}
+
 .mml-track-card {
   margin-bottom: 7px;
   padding: 7px;
@@ -5488,7 +5492,11 @@ summary:focus-visible {
 
 @container mml-studio (max-width: 560px) {
   .mml-studio .mml-main-grid {
-    grid-template-rows: 54px minmax(0, 1fr);
+    grid-template-rows: 60px minmax(0, 1fr);
+  }
+
+  .mml-studio .mml-main-grid.is-track-list-collapsed {
+    grid-template-rows: 34px minmax(0, 1fr);
   }
 
   .mml-studio .mml-track-list {
@@ -5496,13 +5504,86 @@ summary:focus-visible {
     overflow-y: hidden;
     overscroll-behavior: contain;
     scrollbar-width: thin;
+    gap: 4px;
+    padding: 3px 5px;
     touch-action: none;
     -webkit-overflow-scrolling: touch;
   }
 
+  .mml-studio .mml-track-list.is-mobile-collapsed {
+    overflow: hidden;
+    touch-action: auto;
+  }
+
+  .mml-studio .mml-track-list.is-mobile-collapsed > :not(.mml-track-list-title) {
+    display: none;
+  }
+
+  .mml-studio .mml-track-list-title {
+    display: flex;
+    height: 28px;
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  .mml-studio .mml-track-list-title .mml-track-collapse {
+    display: inline-flex;
+    width: auto;
+    height: 26px;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    background: #fffdf7;
+    color: var(--ink);
+    font-size: 8px;
+  }
+
+  .mml-studio .mml-track-list-title .mml-track-collapse svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .mml-studio .mml-track-list.is-mobile-collapsed .mml-track-list-title strong {
+    display: inline;
+    margin-right: auto;
+    font-size: 10px;
+  }
+
   .mml-studio .mml-track-card {
-    min-height: 42px;
+    flex: 0 0 152px;
+    width: 152px;
+    height: 52px;
+    min-height: 52px;
+    grid-template-columns: 18px 20px minmax(0, 1fr) 54px;
+    gap: 3px;
     margin-bottom: 0;
+    padding: 4px;
+  }
+
+  .mml-studio .mml-track-reorder-handle {
+    position: static;
+    width: 18px;
+    height: 40px;
+    grid-column: 1;
+    transform: none;
+  }
+
+  .mml-studio .mml-track-reorder-handle svg {
+    width: 14px;
+    height: 20px;
+  }
+
+  .mml-studio .mml-track-batch-checkbox {
+    grid-column: 2;
+  }
+
+  .mml-studio .mml-track-select {
+    grid-column: 3;
+  }
+
+  .mml-studio .mml-track-actions {
+    grid-column: 4;
   }
 
   .mml-studio .mml-track-list::-webkit-scrollbar {
@@ -5561,7 +5642,7 @@ summary:focus-visible {
     min-height: 0;
     margin: 0;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
+    grid-template-rows: minmax(0, 58fr) minmax(0, 42fr);
   }
 
   .app-viewport.mml-open .mml-studio {
@@ -5577,17 +5658,117 @@ summary:focus-visible {
     overflow: hidden;
   }
 
-  .app-viewport.mml-open .performance-surface .top-bar,
   .app-viewport.mml-open .performance-surface .cat-zone,
   .app-viewport.mml-open .performance-surface .performance-footer {
     display: none;
+  }
+
+  .app-viewport.mml-open .performance-surface .top-bar {
+    --octave-label-height: 13px;
+    --octave-row-gap: 1px;
+    --top-control-height: 38px;
+    position: absolute;
+    inset: 0 0 auto;
+    display: grid;
+    height: 94px;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    grid-template-rows: 52px 38px;
+    column-gap: 4px;
+    row-gap: 2px;
+    padding: 2px 5px;
+  }
+
+  .app-viewport.mml-open .performance-surface .top-bar .brand-block {
+    display: none;
+  }
+
+  .app-viewport.mml-open .performance-surface .top-bar .octave-area {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    width: 100%;
+    align-self: start;
+  }
+
+  .app-viewport.mml-open .performance-surface .octave-area.is-double {
+    gap: 5px;
+  }
+
+  .app-viewport.mml-open .performance-surface .panel-eyebrow {
+    height: 13px;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+
+  .app-viewport.mml-open .performance-surface .octave-buttons {
+    gap: 3px;
+  }
+
+  .app-viewport.mml-open .performance-surface .octave-button {
+    border-radius: 8px;
+    background-size: 20px;
+    font-size: 9px;
+  }
+
+  .app-viewport.mml-open .performance-surface .top-bar .transpose-panel {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: stretch;
+    width: 100%;
+    height: 38px;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 3px;
+    margin: 0;
+  }
+
+  .app-viewport.mml-open .performance-surface .transpose-grid {
+    height: 38px;
+    gap: 2px;
+  }
+
+  .app-viewport.mml-open .performance-surface .transpose-grid button {
+    border-radius: 6px;
+    font-size: 7px;
+  }
+
+  .app-viewport.mml-open .performance-surface .transpose-status,
+  .app-viewport.mml-open .performance-surface .transpose-reset {
+    border-radius: 8px;
+  }
+
+  .app-viewport.mml-open .performance-surface .transpose-status strong {
+    font-size: 15px;
+  }
+
+  .app-viewport.mml-open .performance-surface .transpose-reset small {
+    font-size: 7px;
+  }
+
+  .app-viewport.mml-open .performance-surface .top-bar .header-actions {
+    grid-column: 2;
+    grid-row: 2;
+    width: 40px;
+    height: 38px;
+    min-height: 38px;
+    margin: 0;
+  }
+
+  .app-viewport.mml-open .performance-surface .settings-button {
+    width: 40px;
+    height: 38px;
+    min-height: 38px;
+    border-radius: 8px;
+    font-size: 8px;
+  }
+
+  .app-viewport.mml-open .performance-surface .settings-button span {
+    font-size: 13px;
   }
 
   .app-viewport.mml-open .performance-surface .keyboard-deck,
   .app-viewport.mml-open .performance-surface .keyboard-deck:not(.is-double),
   .app-viewport.mml-open .performance-surface .keyboard-deck.is-double {
     position: absolute;
-    inset: 0 6px;
+    inset: 94px 6px 0;
     display: grid;
     width: auto;
     height: auto;
@@ -5595,7 +5776,7 @@ summary:focus-visible {
     align-content: center;
     align-items: center;
     gap: 10px;
-    padding: 16px 0 10px;
+    padding: 5px 0 7px;
   }
 
   .app-viewport.mml-open .performance-surface .keyboard-deck:not(.is-double) {

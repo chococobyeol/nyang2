@@ -596,8 +596,12 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*left: 162px;[^}]*max-height: calc\(100% - 104px\);/s);
   assert.match(mobileMml, /\.mml-studio \.mml-action-menu \{[^}]*top: 96px;[^}]*max-height: calc\(100% - 104px\);[^}]*overflow-y: auto;[^}]*scrollbar-width: thin;/s);
   assert.match(css, /\.mml-action-menu-head \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: #f0e8dc;/s);
-  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 54px minmax\(0, 1fr\);/s);
+  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 60px minmax\(0, 1fr\);/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*scrollbar-width: thin;[^}]*touch-action: none;/s);
+  assert.match(studio, /className="mml-track-collapse"/);
+  assert.match(studio, /<GripVertical aria-hidden="true" \/>/);
+  assert.match(mobileMml, /\.mml-studio \.mml-main-grid\.is-track-list-collapsed \{[^}]*grid-template-rows: 34px minmax\(0, 1fr\);/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-reorder-handle \{[^}]*position: static;[^}]*grid-column: 1;[^}]*transform: none;/s);
   assert.doesNotMatch(mobileMml, /scroll-snap-(?:type|align)/);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: auto;/s);
@@ -608,8 +612,12 @@ test("stacks the MML editor above the playable keyboard on portrait phones", asy
   const portraitMml = css.slice(css.indexOf("/* Phone portrait MML workspace"));
   assert.match(portraitMml, /@media \(orientation: portrait\) and \(max-width: 600px\)/);
   assert.match(portraitMml, /\.app-viewport\.mml-open \{[^}]*width: 100dvw;[^}]*height: 100dvh;[^}]*transform: none;/s);
-  assert.match(portraitMml, /\.app-viewport\.mml-open \.app-stage \{[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*grid-template-rows: minmax\(0, 62fr\) minmax\(0, 38fr\);/s);
-  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar,[\s\S]*?\.performance-footer \{\s*display: none;/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.app-stage \{[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*grid-template-rows: minmax\(0, 58fr\) minmax\(0, 42fr\);/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.cat-zone,[\s\S]*?\.performance-footer \{\s*display: none;/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \{[^}]*display: grid;[^}]*height: 94px;[^}]*grid-template-rows: 52px 38px;/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \.octave-area \{[^}]*grid-column: 1 \/ 3;[^}]*grid-row: 1;/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \.transpose-panel \{[^}]*grid-column: 1;[^}]*grid-row: 2;/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \.header-actions \{[^}]*grid-column: 2;[^}]*grid-row: 2;/s);
   assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);/s);
 });
 
