@@ -16,7 +16,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { ChevronLeft, ChevronRight, Circle, Ellipsis, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Circle, Ellipsis, GripHorizontal, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
 import {
   combineTracks,
   deleteTempoCommand,
@@ -33,7 +33,7 @@ import {
   TICKS_PER_QUARTER,
   upsertTempoCommand,
 } from "../mml/core.js";
-import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, sanitizeProject } from "../mml/project.js";
+import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, reorderProjectTrack, sanitizeProject } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewTransform } from "../mml/timeline.js";
@@ -285,7 +285,15 @@ export default function MmlStudio({
   const [importPayload, setImportPayload] = useState<MmlImportPayload | null>(null);
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string; x?: number; y?: number } | null>(null);
+  const [trackReorder, setTrackReorder] = useState<{ trackId: string; targetId: string | null; placement: "before" | "after" } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const trackReorderRef = useRef<{
+    pointerId: number;
+    trackId: string;
+    targetId: string | null;
+    placement: "before" | "after";
+    list: HTMLElement;
+  } | null>(null);
   const trackDragRef = useRef<{
     pointerId: number;
     x: number;
@@ -1381,6 +1389,7 @@ export default function MmlStudio({
   );
 
   const beginTrackDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement | null)?.closest(".mml-track-reorder-handle")) return;
     if (event.pointerType !== "touch") return;
     trackDragRef.current = {
       pointerId: event.pointerId,
@@ -1446,6 +1455,83 @@ export default function MmlStudio({
     if (!delta) return;
     event.preventDefault();
     event.currentTarget.scrollLeft += delta;
+  };
+
+  const reorderTrack = (trackId: string, targetId: string, placement: "before" | "after") => {
+    commit((draft: any) => reorderProjectTrack(draft, trackId, targetId, placement));
+  };
+
+  const beginTrackReorder = (event: ReactPointerEvent<HTMLButtonElement>, trackId: string) => {
+    if (recordState !== "idle") return;
+    const list = event.currentTarget.closest(".mml-track-list") as HTMLElement | null;
+    if (!list) return;
+    event.preventDefault();
+    event.stopPropagation();
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* optional */ }
+    trackReorderRef.current = {
+      pointerId: event.pointerId,
+      trackId,
+      targetId: null,
+      placement: "before",
+      list,
+    };
+    setTrackReorder({ trackId, targetId: null, placement: "before" });
+  };
+
+  const moveTrackReorder = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = trackReorderRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const listRect = drag.list.getBoundingClientRect();
+    const horizontal = getComputedStyle(drag.list).display === "flex";
+    const edge = 28;
+    if (horizontal) {
+      if (event.clientX < listRect.left + edge) drag.list.scrollLeft -= 14;
+      else if (event.clientX > listRect.right - edge) drag.list.scrollLeft += 14;
+    } else {
+      if (event.clientY < listRect.top + edge) drag.list.scrollTop -= 14;
+      else if (event.clientY > listRect.bottom - edge) drag.list.scrollTop += 14;
+    }
+    const card = document.elementFromPoint(event.clientX, event.clientY)?.closest(".mml-track-card") as HTMLElement | null;
+    const targetId = card?.dataset.trackId ?? null;
+    if (!card || !targetId || targetId === drag.trackId) {
+      if (drag.targetId !== null) {
+        drag.targetId = null;
+        setTrackReorder({ trackId: drag.trackId, targetId: null, placement: drag.placement });
+      }
+      return;
+    }
+    const rect = card.getBoundingClientRect();
+    const placement = horizontal
+      ? (event.clientX < rect.left + rect.width / 2 ? "before" : "after")
+      : (event.clientY < rect.top + rect.height / 2 ? "before" : "after");
+    if (drag.targetId === targetId && drag.placement === placement) return;
+    drag.targetId = targetId;
+    drag.placement = placement;
+    setTrackReorder({ trackId: drag.trackId, targetId, placement });
+  };
+
+  const endTrackReorder = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = trackReorderRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (drag.targetId) reorderTrack(drag.trackId, drag.targetId, drag.placement);
+    trackReorderRef.current = null;
+    setTrackReorder(null);
+    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* optional */ }
+  };
+
+  const moveTrackWithKeyboard = (event: ReactKeyboardEvent<HTMLButtonElement>, trackId: string, index: number) => {
+    const backwards = event.key === "ArrowUp" || event.key === "ArrowLeft";
+    const forwards = event.key === "ArrowDown" || event.key === "ArrowRight";
+    if (!backwards && !forwards) return;
+    event.preventDefault();
+    const targetIndex = index + (backwards ? -1 : 1);
+    const target = project.tracks[targetIndex];
+    if (!target) return;
+    reorderTrack(trackId, target.id, backwards ? "before" : "after");
   };
 
   const updateMasterTempo = (value: number) => {
@@ -2278,7 +2364,26 @@ export default function MmlStudio({
           </div>
           {renderBatchPanel("sidebar")}
           {project.tracks.map((track: any, index: number) => (
-            <div className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""} ${batchTrackIds.includes(track.id) ? "is-batch-selected" : ""}`} style={{ "--track-color": track.color } as CSSProperties} key={track.id}>
+            <div
+              className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""} ${batchTrackIds.includes(track.id) ? "is-batch-selected" : ""} ${trackReorder?.trackId === track.id ? "is-reordering" : ""} ${trackReorder?.targetId === track.id ? `is-drop-${trackReorder.placement}` : ""}`}
+              style={{ "--track-color": track.color } as CSSProperties}
+              data-track-id={track.id}
+              key={track.id}
+            >
+              <button
+                type="button"
+                className="mml-track-reorder-handle"
+                aria-label={`${track.name || `Track ${index + 1}`} 순서 이동`}
+                title="드래그해서 트랙 순서 변경"
+                disabled={recordState !== "idle"}
+                onPointerDown={(event) => beginTrackReorder(event, track.id)}
+                onPointerMove={moveTrackReorder}
+                onPointerUp={endTrackReorder}
+                onPointerCancel={endTrackReorder}
+                onKeyDown={(event) => moveTrackWithKeyboard(event, track.id, index)}
+              >
+                <GripHorizontal aria-hidden="true" />
+              </button>
               <label className="mml-track-batch-checkbox" title="여러 트랙을 함께 바꿀 때 선택">
                 <input type="checkbox" checked={batchTrackIds.includes(track.id)} onChange={() => toggleBatchTrack(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 선택`} />
               </label>

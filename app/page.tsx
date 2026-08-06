@@ -671,6 +671,7 @@ export default function Home() {
   const mmlInputSinkRef = useRef<MmlInputSink | null>(null);
   const soundPackInputRef = useRef<HTMLInputElement | null>(null);
   const soundPackRef = useRef<StoredSoundPack | null>(null);
+  const mmlLandscapeSessionRef = useRef({ locked: false, fullscreen: false });
   const soundPackSynthRef = useRef<{
     importedAt: number;
     synth: WorkletSynthesizer;
@@ -1595,10 +1596,46 @@ export default function Home() {
     };
   }, [initAudio]);
 
+  const requestMmlLandscape = useCallback(() => {
+    if (!settingsRef.current.mobileLandscape || !window.matchMedia("(orientation: portrait) and (max-width: 600px) and (pointer: coarse)").matches) return;
+    const orientation = window.screen.orientation as ScreenOrientation & {
+      lock?: (mode: "landscape") => Promise<void>;
+      unlock?: () => void;
+    };
+    void (async () => {
+      let enteredFullscreen = false;
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+          enteredFullscreen = true;
+        }
+        if (orientation.lock) {
+          await orientation.lock("landscape");
+          mmlLandscapeSessionRef.current = { locked: true, fullscreen: enteredFullscreen };
+        } else if (enteredFullscreen) {
+          mmlLandscapeSessionRef.current = { locked: false, fullscreen: true };
+        }
+      } catch {
+        if (enteredFullscreen) mmlLandscapeSessionRef.current = { locked: false, fullscreen: true };
+      }
+    })();
+  }, []);
+
   const openMml = useCallback(() => {
     setSustain(false);
+    requestMmlLandscape();
     setMmlOpen(true);
-  }, [setSustain]);
+  }, [requestMmlLandscape, setSustain]);
+
+  const closeMml = useCallback(() => {
+    setMmlExpanded(false);
+    setMmlOpen(false);
+    const session = mmlLandscapeSessionRef.current;
+    mmlLandscapeSessionRef.current = { locked: false, fullscreen: false };
+    const orientation = window.screen.orientation as ScreenOrientation & { unlock?: () => void };
+    if (session.locked) orientation.unlock?.();
+    if (session.fullscreen && document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handleMmlShortcut = (event: KeyboardEvent) => {
@@ -1607,14 +1644,13 @@ export default function Home() {
       if (typing) return;
       event.preventDefault();
       if (mmlOpen) {
-        setMmlExpanded(false);
-        setMmlOpen(false);
+        closeMml();
       }
       else openMml();
     };
     window.addEventListener("keydown", handleMmlShortcut);
     return () => window.removeEventListener("keydown", handleMmlShortcut);
-  }, [mmlOpen, openMml]);
+  }, [closeMml, mmlOpen, openMml]);
 
   const segmentCount = 11 - lastCatPitchClass;
   const currentKey = noteName(transpose, settings.accidentalStyle);
@@ -1742,7 +1778,7 @@ export default function Home() {
           visible={mmlOpen}
           expanded={mmlExpanded}
           onExpandedChange={setMmlExpanded}
-          onClose={() => { setMmlExpanded(false); setMmlOpen(false); }}
+          onClose={closeMml}
           registerInputSink={registerMmlInputSink}
           prepareThemes={prepareMmlThemes}
           playMidi={playMmlMidi}
@@ -1759,7 +1795,7 @@ export default function Home() {
             <button
               type="button"
               className={`brand-mark ${mmlOpen ? "is-mml-open" : ""}`}
-              onClick={() => { if (mmlOpen) { setMmlExpanded(false); setMmlOpen(false); } else openMml(); }}
+              onClick={() => { if (mmlOpen) closeMml(); else openMml(); }}
               aria-label={mmlOpen ? "MML 편집창 닫기" : "MML 편집창 열기"}
               aria-pressed={mmlOpen}
               title={mmlOpen ? "MML 편집창 닫기 · Alt+M" : "MML 편집창 열기 · Alt+M"}

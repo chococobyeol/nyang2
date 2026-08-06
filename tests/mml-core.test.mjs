@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, upsertTempoCommand } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
-import { applyMmlImport, createProject, importedMmlTitle, sanitizeProject } from "../app/mml/project.js";
+import { applyMmlImport, createProject, importedMmlTitle, reorderProjectTrack, sanitizeProject } from "../app/mml/project.js";
 import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewTransform } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
@@ -32,6 +32,20 @@ test("changes the project title only when an imported MML file replaces the song
   assert.equal(applyMmlImport(project, payload, "append").title, "기존 제목");
   assert.equal(applyMmlImport(project, payload, "tracks").title, "기존 제목");
   assert.equal(applyMmlImport(project, payload, "selected").title, "기존 제목");
+});
+
+test("reorders tracks together with their keyboard routing order", () => {
+  const project = createProject();
+  project.routing = {
+    left: [project.tracks[0].id, project.tracks[2].id],
+    right: [project.tracks[0].id, project.tracks[1].id, project.tracks[2].id],
+  };
+  const [first, second, third] = project.tracks;
+  reorderProjectTrack(project, third.id, first.id, "before");
+  assert.deepEqual(project.tracks.map((track) => track.id), [third.id, first.id, second.id]);
+  assert.deepEqual(project.routing.left, [third.id, first.id]);
+  assert.deepEqual(project.routing.right, [third.id, first.id, second.id]);
+  assert.equal(project.tracks[0].sourceText, third.sourceText);
 });
 
 test("imports wrapped 3MLE channel files without reading extension data as MML", () => {

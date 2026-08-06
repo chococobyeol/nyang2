@@ -163,6 +163,26 @@ export function importedMmlTitle(filename) {
     .trim() ?? "";
 }
 
+export function reorderProjectTrack(project, trackId, targetId, placement = "before") {
+  const tracks = project?.tracks;
+  if (!Array.isArray(tracks) || trackId === targetId) return project;
+  const sourceIndex = tracks.findIndex((track) => track.id === trackId);
+  const targetIndex = tracks.findIndex((track) => track.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0) return project;
+
+  const [track] = tracks.splice(sourceIndex, 1);
+  let insertIndex = targetIndex + (placement === "after" ? 1 : 0);
+  if (sourceIndex < insertIndex) insertIndex -= 1;
+  tracks.splice(Math.max(0, Math.min(insertIndex, tracks.length)), 0, track);
+
+  const order = new Map(tracks.map((item, index) => [item.id, index]));
+  for (const side of ["left", "right"]) {
+    if (!Array.isArray(project.routing?.[side])) continue;
+    project.routing[side].sort((left, right) => (order.get(left) ?? Infinity) - (order.get(right) ?? Infinity));
+  }
+  return project;
+}
+
 export function applyMmlImport(project, payload, mode, themeId = "nyang-voice") {
   const draft = JSON.parse(JSON.stringify(project));
   const ranges = Array.isArray(payload?.ranges) ? payload.ranges : [];
