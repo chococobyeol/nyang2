@@ -70,18 +70,30 @@ d=not-mml`;
   assert.equal(project.importSource.format, "3mle");
 });
 
-test("normalizes Windows and high-resolution wheel movement by physical delta", () => {
-  assert.equal(normalizedWheelSteps(999, 0, 800, -120), 1);
-  assert.equal(normalizedWheelSteps(999, 0, 800, -12), 0.1);
+test("normalizes standard pixel, line, and page wheel movement without OS-specific deltas", () => {
+  assert.equal(normalizedWheelSteps(12, 0), 0.1);
   assert.equal(normalizedWheelSteps(120, 0), 1);
   assert.equal(normalizedWheelSteps(3, 1), 1);
-  assert.equal(normalizedWheelSteps(1, 2, 600), 5);
+  assert.equal(normalizedWheelSteps(1, 2, 600), 2);
+  assert.equal(normalizedWheelSteps(960, 0), 2);
+  assert.equal(normalizedWheelSteps(-960, 0), -2);
 });
 
 test("consumes a wheel burst in small stable animation steps", () => {
-  assert.deepEqual(consumeWheelSteps(4), { step: 0.5, remaining: 3.5 });
+  assert.deepEqual(consumeWheelSteps(4), { step: 0.2, remaining: 3.8 });
   assert.deepEqual(consumeWheelSteps(-0.2), { step: -0.2, remaining: 0 });
   assert.deepEqual(consumeWheelSteps(0.0005), { step: 0, remaining: 0 });
+});
+
+test("spreads a Windows wheel detent across animation frames", () => {
+  let remaining = 1;
+  const frames = [];
+  while (remaining) {
+    const next = consumeWheelSteps(remaining);
+    frames.push(Number(next.step.toFixed(3)));
+    remaining = next.remaining;
+  }
+  assert.deepEqual(frames, [0.2, 0.2, 0.2, 0.2, 0.2]);
 });
 
 test("keeps the content beneath the pointer fixed while zooming", () => {

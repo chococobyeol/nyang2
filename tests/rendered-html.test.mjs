@@ -338,10 +338,12 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.doesNotMatch(studio, /onWheel=\{zoomTimelineWithWheel\}/);
   assert.match(studio, /if \(!event\.altKey\) return/);
   assert.match(studio, /event\.stopPropagation\(\)/);
-  assert.match(studio, /nativeEvent\.wheelDeltaY \?\? nativeEvent\.wheelDelta/);
-  assert.match(studio, /normalizedWheelSteps\(delta, event\.deltaMode, roll\.clientHeight, windowsWheelDelta\)/);
+  assert.doesNotMatch(studio, /wheelDeltaY|windowsWheelDelta/);
+  assert.match(studio, /normalizedWheelSteps\(delta, event\.deltaMode, roll\.clientHeight\)/);
   assert.match(studio, /consumeWheelSteps\(state\.timelineSteps\)/);
   assert.match(studio, /window\.requestAnimationFrame\(animateWheelZoom\)/);
+  assert.match(studio, /state\.activeUntil = performance\.now\(\) \+ 120/);
+  assert.match(studio, /Math\.max\(-6, Math\.min\(6, state\.timelineSteps \+ steps\)\)/);
   assert.match(studio, /timelineZoomAnchorRef/);
   assert.match(studio, /timelineAnchor \?\?=/);
   assert.match(studio, /pitchAnchor \?\?=/);

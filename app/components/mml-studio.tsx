@@ -1828,6 +1828,7 @@ export default function MmlStudio({
     if (timeline.step) changeTimelineZoom(Math.exp(-timeline.step * 0.045), state.timelineAnchor ?? undefined);
     if (pitch.step) changePitchZoom(Math.exp(-pitch.step * 0.045), state.pitchAnchor ?? undefined);
     if (state.timelineSteps || state.pitchSteps) {
+      state.activeUntil = performance.now() + 120;
       state.frame = window.requestAnimationFrame(animateWheelZoom);
     } else {
       state.timelineAnchor = null;
@@ -1842,11 +1843,7 @@ export default function MmlStudio({
     const roll = pianoRollRef.current;
     if (!roll) return;
     const delta = event.deltaY || event.deltaX;
-    const nativeEvent = event as WheelEvent & { wheelDelta?: number; wheelDeltaY?: number };
-    const windowsWheelDelta = /Windows/i.test(window.navigator.userAgent)
-      ? nativeEvent.wheelDeltaY ?? nativeEvent.wheelDelta
-      : null;
-    const steps = normalizedWheelSteps(delta, event.deltaMode, roll.clientHeight, windowsWheelDelta);
+    const steps = normalizedWheelSteps(delta, event.deltaMode, roll.clientHeight);
     if (!steps) return;
     const rect = roll.getBoundingClientRect();
     const state = wheelZoomRef.current;
@@ -1858,13 +1855,13 @@ export default function MmlStudio({
         midi: maxMidi + 0.5 - (roll.scrollTop + y) / (PIANO_PITCH_ROW_HEIGHT * pitchZoomRef.current),
         offset: y,
       };
-      state.pitchSteps = Math.max(-24, Math.min(24, state.pitchSteps + steps));
+      state.pitchSteps = Math.max(-6, Math.min(6, state.pitchSteps + steps));
     } else {
       state.timelineAnchor ??= {
         tick: (roll.scrollLeft + x) / (PIANO_PIXELS_PER_TICK * timelineZoomRef.current),
         offset: x,
       };
-      state.timelineSteps = Math.max(-24, Math.min(24, state.timelineSteps + steps));
+      state.timelineSteps = Math.max(-6, Math.min(6, state.timelineSteps + steps));
     }
     if (!state.frame) state.frame = window.requestAnimationFrame(animateWheelZoom);
   };

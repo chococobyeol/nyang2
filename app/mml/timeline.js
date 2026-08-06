@@ -4,18 +4,22 @@ export function clampTimelineZoom(value) {
   return Math.max(0.5, Math.min(4, Number(value) || 1));
 }
 
-export function normalizedWheelSteps(delta, deltaMode = 0, viewportSize = 800, windowsWheelDelta = null) {
-  const legacyDelta = Number(windowsWheelDelta);
-  if (Number.isFinite(legacyDelta) && legacyDelta !== 0) return -legacyDelta / 120;
+export function normalizedWheelSteps(delta, deltaMode = 0, viewportSize = 800) {
   const rawDelta = Number(delta) || 0;
-  const unit = deltaMode === 1 ? 40 : deltaMode === 2 ? Math.max(1, Number(viewportSize) || 800) : 1;
-  return rawDelta * unit / 120;
+  if (!rawDelta) return 0;
+  const unit = deltaMode === 1
+    ? 40
+    : deltaMode === 2
+      ? Math.max(1, Math.min(240, Number(viewportSize) || 800))
+      : 1;
+  const steps = rawDelta * unit / 120;
+  return Math.sign(steps) * Math.min(2, Math.abs(steps));
 }
 
-export function consumeWheelSteps(pendingSteps, maxStep = 0.5, epsilon = 0.001) {
+export function consumeWheelSteps(pendingSteps, maxStep = 0.2, epsilon = 0.001) {
   const pending = Number(pendingSteps) || 0;
   if (Math.abs(pending) <= epsilon) return { step: 0, remaining: 0 };
-  const limit = Math.max(epsilon, Math.abs(Number(maxStep) || 0.5));
+  const limit = Math.max(epsilon, Math.abs(Number(maxStep) || 0.2));
   const step = Math.sign(pending) * Math.min(Math.abs(pending), limit);
   const remaining = pending - step;
   return { step, remaining: Math.abs(remaining) <= epsilon ? 0 : remaining };
