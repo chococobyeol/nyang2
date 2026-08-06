@@ -269,6 +269,7 @@ export default function MmlStudio({
   const [timelineZoom, setTimelineZoom] = useState(1);
   const [pitchZoom, setPitchZoom] = useState(1);
   const [pianoViewportWidth, setPianoViewportWidth] = useState(0);
+  const [pianoViewportHeight, setPianoViewportHeight] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [recordState, setRecordState] = useState<"idle" | "count-in" | "recording">("idle");
   const [recordingMessage, setRecordingMessage] = useState("");
@@ -1799,18 +1800,27 @@ export default function MmlStudio({
   );
   const minMidi = Math.min(12, ...visibleMidi);
   const maxMidi = Math.max(108, ...visibleMidi);
-  const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT * pitchZoom;
+  const unscaledPianoHeight = (maxMidi - minMidi + 1) * PIANO_PITCH_ROW_HEIGHT;
+  const fitPitchScale = pianoViewportHeight > 0
+    ? Math.max(1, (pianoViewportHeight + 1) / unscaledPianoHeight)
+    : 1;
+  const minimumPitchZoom = pianoViewportHeight > 0
+    ? Math.max(0.5, Math.min(3, (pianoViewportHeight + 1) / (unscaledPianoHeight * fitPitchScale)))
+    : 0.5;
+  const clampPianoPitchZoom = (value: number) => Math.max(minimumPitchZoom, Math.max(0.5, Math.min(3, value)));
+  const pitchRenderZoom = pitchZoom * fitPitchScale;
+  const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT * pitchRenderZoom;
   const pianoHeight = (maxMidi - minMidi + 1) * pixelsPerPitch;
 
   const changePitchZoom = (factor: number, anchor?: { midi: number; offset: number }) => {
     const roll = pianoRollRef.current;
     const current = pitchZoomRef.current;
-    const next = Math.max(0.5, Math.min(3, current * factor));
+    const next = clampPianoPitchZoom(current * factor);
     if (next === current) return;
     if (roll) {
       const offset = Math.max(0, Math.min(roll.clientHeight, anchor?.offset ?? roll.clientHeight / 2));
       pitchZoomAnchorRef.current = anchor ?? {
-        midi: maxMidi + 0.5 - (roll.scrollTop + offset) / (PIANO_PITCH_ROW_HEIGHT * current),
+        midi: maxMidi + 0.5 - (roll.scrollTop + offset) / (PIANO_PITCH_ROW_HEIGHT * current * fitPitchScale),
         offset,
       };
     }
@@ -1832,7 +1842,9 @@ export default function MmlStudio({
     if (!roll) return;
     const updateWidth = () => {
       const width = roll.clientWidth;
+      const height = roll.clientHeight;
       setPianoViewportWidth((current) => Math.abs(current - width) < 0.5 ? current : width);
+      setPianoViewportHeight((current) => Math.abs(current - height) < 0.5 ? current : height);
     };
     updateWidth();
     const observer = new ResizeObserver(updateWidth);
@@ -1847,9 +1859,17 @@ export default function MmlStudio({
     setTimelineZoom(minimumTimelineZoom);
   }, [minimumTimelineZoom]);
 
+  useLayoutEffect(() => {
+    const current = pitchZoomRef.current;
+    if (current >= minimumPitchZoom) return;
+    pitchZoomRef.current = minimumPitchZoom;
+    setPitchZoom(minimumPitchZoom);
+  }, [minimumPitchZoom]);
+
   const renderWheelZoomPreview = () => {
     const canvas = pianoCanvasRef.current;
-    if (!canvas) return;
+    const roll = pianoRollRef.current;
+    if (!canvas || !roll) return;
     const state = wheelZoomRef.current;
     const horizontal = state.timelineAnchor
       ? zoomPreviewTransform(
@@ -1859,11 +1879,35 @@ export default function MmlStudio({
       )
       : { origin: 0, scale: 1 };
     const vertical = state.pitchAnchor
-      ? zoomPreviewTransform((maxMidi - state.pitchAnchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT, state.pitchBaseZoom, state.pitchTargetZoom)
+      ? zoomPreviewTransform(
+        (maxMidi - state.pitchAnchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT,
+        state.pitchBaseZoom * fitPitchScale,
+        state.pitchTargetZoom * fitPitchScale,
+      )
       : { origin: 0, scale: 1 };
+    const nextScrollLeft = state.timelineAnchor
+      ? anchoredScrollOffset(
+        state.timelineAnchor.tick * PIANO_PIXELS_PER_TICK,
+        state.timelineTargetZoom * fitTimelineScale,
+        state.timelineAnchor.offset,
+        roll.clientWidth,
+        unscaledPianoWidth * state.timelineTargetZoom * fitTimelineScale,
+      )
+      : roll.scrollLeft;
+    const nextScrollTop = state.pitchAnchor
+      ? anchoredScrollOffset(
+        (maxMidi - state.pitchAnchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT,
+        state.pitchTargetZoom * fitPitchScale,
+        state.pitchAnchor.offset,
+        roll.clientHeight,
+        unscaledPianoHeight * state.pitchTargetZoom * fitPitchScale,
+      )
+      : roll.scrollTop;
+    const translateX = roll.scrollLeft - nextScrollLeft;
+    const translateY = roll.scrollTop - nextScrollTop;
     canvas.style.willChange = "transform";
-    canvas.style.transformOrigin = `${horizontal.origin}px ${vertical.origin}px`;
-    canvas.style.transform = `scale(${horizontal.scale}, ${vertical.scale})`;
+    canvas.style.transformOrigin = "0 0";
+    canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${horizontal.scale}, ${vertical.scale})`;
   };
 
   const commitWheelZoom = () => {
@@ -1915,14 +1959,14 @@ export default function MmlStudio({
     if (!anchor || !roll) return;
     roll.scrollTop = anchoredScrollOffset(
       (maxMidi - anchor.midi + 0.5) * PIANO_PITCH_ROW_HEIGHT,
-      pitchZoom,
+      pitchZoom * fitPitchScale,
       anchor.offset,
       roll.clientHeight,
       roll.scrollHeight,
     );
     pitchZoomAnchorRef.current = null;
     clearWheelPreviewStyle();
-  }, [maxMidi, pitchZoom]);
+  }, [fitPitchScale, maxMidi, pitchZoom]);
 
   const flushWheelZoom = () => {
     const state = wheelZoomRef.current;
@@ -1935,7 +1979,7 @@ export default function MmlStudio({
       state.timelineTargetZoom = clampPianoTimelineZoom(state.timelineTargetZoom * Math.exp(-timelineSteps * 0.045));
     }
     if (pitchSteps) {
-      state.pitchTargetZoom = Math.max(0.5, Math.min(3, state.pitchTargetZoom * Math.exp(-pitchSteps * 0.045)));
+      state.pitchTargetZoom = clampPianoPitchZoom(state.pitchTargetZoom * Math.exp(-pitchSteps * 0.045));
     }
     renderWheelZoomPreview();
     if (state.commitTimer !== null) window.clearTimeout(state.commitTimer);
@@ -1961,7 +2005,7 @@ export default function MmlStudio({
         state.pitchBaseZoom = pitchZoomRef.current;
         state.pitchTargetZoom = pitchZoomRef.current;
         state.pitchAnchor = {
-          midi: maxMidi + 0.5 - (roll.scrollTop + y) / (PIANO_PITCH_ROW_HEIGHT * pitchZoomRef.current),
+          midi: maxMidi + 0.5 - (roll.scrollTop + y) / (PIANO_PITCH_ROW_HEIGHT * pitchZoomRef.current * fitPitchScale),
           offset: y,
         };
       }

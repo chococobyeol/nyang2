@@ -344,11 +344,12 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /state\.timelineSteps = 0/);
   assert.match(studio, /timelineTargetZoom = clampPianoTimelineZoom/);
   assert.match(studio, /minimumTimelineZoom = pianoViewportWidth > 0/);
+  assert.match(studio, /minimumPitchZoom = pianoViewportHeight > 0/);
   assert.match(studio, /new ResizeObserver\(updateWidth\)/);
   assert.match(studio, /renderWheelZoomPreview\(\)/);
   assert.match(studio, /window\.requestAnimationFrame\(flushWheelZoom\)/);
   assert.match(studio, /window\.setTimeout\(commitWheelZoom, 90\)/);
-  assert.match(studio, /canvas\.style\.transform = `scale\(\$\{horizontal\.scale\}, \$\{vertical\.scale\}\)`/);
+  assert.match(studio, /canvas\.style\.transform = `translate\(\$\{translateX\}px, \$\{translateY\}px\) scale\(\$\{horizontal\.scale\}, \$\{vertical\.scale\}\)`/);
   assert.match(studio, /timelineZoomAnchorRef\.current = timelineAnchor/);
   assert.match(studio, /ref=\{pianoCanvasRef\} className="mml-piano-canvas"/);
   assert.match(studio, /Math\.max\(-6, Math\.min\(6, state\.timelineSteps \+ steps\)\)/);
