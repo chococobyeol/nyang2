@@ -16,7 +16,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Ellipsis, GripVertical, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Ellipsis, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
 import {
   combineTracks,
   deleteTempoCommand,
@@ -2434,7 +2434,7 @@ export default function MmlStudio({
                 onPointerDown={(event) => beginTrackReorder(event, track.id)}
                 onKeyDown={(event) => moveTrackWithKeyboard(event, track.id, index)}
               >
-                <GripVertical aria-hidden="true" />
+                <span className="mml-track-grip-dots" aria-hidden="true" />
               </button>
               <label className="mml-track-batch-checkbox" title="여러 트랙을 함께 바꿀 때 선택">
                 <input type="checkbox" checked={batchTrackIds.includes(track.id)} onChange={() => toggleBatchTrack(track.id)} aria-label={`${track.name || `Track ${index + 1}`} 일괄 변경 선택`} />
