@@ -352,6 +352,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /grid\.style\.transform = `translate\(\$\{translateX\}px, \$\{translateY\}px\) scale\(\$\{horizontal\.scale\}, \$\{vertical\.scale\}\)`/);
   assert.match(studio, /timelineZoomAnchorRef\.current = timelineAnchor/);
   assert.match(studio, /ref=\{pianoCanvasRef\} className="mml-piano-canvas"/);
+  assert.match(studio, /window\.addEventListener\("pointermove", onPointerMove, \{ capture: true, passive: false \}\)/);
+  assert.match(studio, /window\.addEventListener\("pointerup", onPointerEnd, true\)/);
+  assert.match(studio, /className="mml-track-reorder-handle"/);
   assert.match(studio, /Math\.max\(-6, Math\.min\(6, state\.timelineSteps \+ steps\)\)/);
   assert.match(studio, /timelineZoomAnchorRef/);
   assert.match(studio, /if \(!state\.timelineAnchor\)/);

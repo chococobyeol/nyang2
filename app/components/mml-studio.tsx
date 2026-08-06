@@ -293,6 +293,8 @@ export default function MmlStudio({
     targetId: string | null;
     placement: "before" | "after";
     list: HTMLElement;
+    handle: HTMLButtonElement;
+    cleanup: () => void;
   } | null>(null);
   const trackDragRef = useRef<{
     pointerId: number;
@@ -388,6 +390,12 @@ export default function MmlStudio({
     && batchSelectedTracks.every((track: any) => track.themeId === batchSelectedTracks[0].themeId)
     ? batchSelectedTracks[0].themeId
     : "";
+
+  useEffect(() => () => {
+    trackReorderRef.current?.cleanup();
+    trackReorderRef.current = null;
+    document.documentElement.classList.remove("is-track-reordering");
+  }, []);
   const recordingShortcuts = Object.assign({
     play: "Space",
     record: "Alt+KeyR",
@@ -1467,60 +1475,76 @@ export default function MmlStudio({
     if (!list) return;
     event.preventDefault();
     event.stopPropagation();
-    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* optional */ }
-    trackReorderRef.current = {
+
+    let drag: NonNullable<typeof trackReorderRef.current>;
+    const updateTarget = (clientX: number, clientY: number) => {
+      if (trackReorderRef.current !== drag) return;
+      const listRect = drag.list.getBoundingClientRect();
+      const horizontal = getComputedStyle(drag.list).display === "flex";
+      const edge = 28;
+      if (horizontal) {
+        if (clientX < listRect.left + edge) drag.list.scrollLeft -= 14;
+        else if (clientX > listRect.right - edge) drag.list.scrollLeft += 14;
+      } else {
+        if (clientY < listRect.top + edge) drag.list.scrollTop -= 14;
+        else if (clientY > listRect.bottom - edge) drag.list.scrollTop += 14;
+      }
+      const card = document.elementFromPoint(clientX, clientY)?.closest(".mml-track-card") as HTMLElement | null;
+      const targetId = card?.dataset.trackId ?? null;
+      if (!card || !targetId || targetId === drag.trackId) {
+        if (drag.targetId !== null) {
+          drag.targetId = null;
+          setTrackReorder({ trackId: drag.trackId, targetId: null, placement: drag.placement });
+        }
+        return;
+      }
+      const rect = card.getBoundingClientRect();
+      const placement = horizontal
+        ? (clientX < rect.left + rect.width / 2 ? "before" : "after")
+        : (clientY < rect.top + rect.height / 2 ? "before" : "after");
+      if (drag.targetId === targetId && drag.placement === placement) return;
+      drag.targetId = targetId;
+      drag.placement = placement;
+      setTrackReorder({ trackId: drag.trackId, targetId, placement });
+    };
+    const finish = (pointerId: number) => {
+      if (trackReorderRef.current !== drag || drag.pointerId !== pointerId) return;
+      const { targetId, placement } = drag;
+      drag.cleanup();
+      trackReorderRef.current = null;
+      setTrackReorder(null);
+      if (targetId) reorderTrack(drag.trackId, targetId, placement);
+    };
+    const onPointerMove = (nativeEvent: PointerEvent) => {
+      if (nativeEvent.pointerId !== drag.pointerId) return;
+      nativeEvent.preventDefault();
+      updateTarget(nativeEvent.clientX, nativeEvent.clientY);
+    };
+    const onPointerEnd = (nativeEvent: PointerEvent) => finish(nativeEvent.pointerId);
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointerup", onPointerEnd, true);
+      window.removeEventListener("pointercancel", onPointerEnd, true);
+      document.documentElement.classList.remove("is-track-reordering");
+      try { drag.handle.releasePointerCapture(drag.pointerId); } catch { /* optional */ }
+    };
+    drag = {
       pointerId: event.pointerId,
       trackId,
       targetId: null,
       placement: "before",
       list,
+      handle: event.currentTarget,
+      cleanup,
     };
+    trackReorderRef.current?.cleanup();
+    trackReorderRef.current = drag;
+    window.addEventListener("pointermove", onPointerMove, { capture: true, passive: false });
+    window.addEventListener("pointerup", onPointerEnd, true);
+    window.addEventListener("pointercancel", onPointerEnd, true);
+    document.documentElement.classList.add("is-track-reordering");
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* optional */ }
     setTrackReorder({ trackId, targetId: null, placement: "before" });
-  };
-
-  const moveTrackReorder = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const drag = trackReorderRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const listRect = drag.list.getBoundingClientRect();
-    const horizontal = getComputedStyle(drag.list).display === "flex";
-    const edge = 28;
-    if (horizontal) {
-      if (event.clientX < listRect.left + edge) drag.list.scrollLeft -= 14;
-      else if (event.clientX > listRect.right - edge) drag.list.scrollLeft += 14;
-    } else {
-      if (event.clientY < listRect.top + edge) drag.list.scrollTop -= 14;
-      else if (event.clientY > listRect.bottom - edge) drag.list.scrollTop += 14;
-    }
-    const card = document.elementFromPoint(event.clientX, event.clientY)?.closest(".mml-track-card") as HTMLElement | null;
-    const targetId = card?.dataset.trackId ?? null;
-    if (!card || !targetId || targetId === drag.trackId) {
-      if (drag.targetId !== null) {
-        drag.targetId = null;
-        setTrackReorder({ trackId: drag.trackId, targetId: null, placement: drag.placement });
-      }
-      return;
-    }
-    const rect = card.getBoundingClientRect();
-    const placement = horizontal
-      ? (event.clientX < rect.left + rect.width / 2 ? "before" : "after")
-      : (event.clientY < rect.top + rect.height / 2 ? "before" : "after");
-    if (drag.targetId === targetId && drag.placement === placement) return;
-    drag.targetId = targetId;
-    drag.placement = placement;
-    setTrackReorder({ trackId: drag.trackId, targetId, placement });
-  };
-
-  const endTrackReorder = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const drag = trackReorderRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (drag.targetId) reorderTrack(drag.trackId, drag.targetId, drag.placement);
-    trackReorderRef.current = null;
-    setTrackReorder(null);
-    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* optional */ }
   };
 
   const moveTrackWithKeyboard = (event: ReactKeyboardEvent<HTMLButtonElement>, trackId: string, index: number) => {
@@ -2377,9 +2401,6 @@ export default function MmlStudio({
                 title="드래그해서 트랙 순서 변경"
                 disabled={recordState !== "idle"}
                 onPointerDown={(event) => beginTrackReorder(event, track.id)}
-                onPointerMove={moveTrackReorder}
-                onPointerUp={endTrackReorder}
-                onPointerCancel={endTrackReorder}
                 onKeyDown={(event) => moveTrackWithKeyboard(event, track.id, index)}
               >
                 <GripHorizontal aria-hidden="true" />
