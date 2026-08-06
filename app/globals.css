@@ -1299,6 +1299,11 @@ button {
   min-width: 100%;
 }
 
+.mml-piano-grid {
+  position: absolute;
+  inset: 0;
+}
+
 .mml-pitch-row {
   position: absolute;
   z-index: 0;
@@ -1312,10 +1317,20 @@ button {
   background: rgba(31, 37, 36, 0.035);
 }
 
-.mml-pitch-row em {
+.mml-pitch-label-layer {
   position: sticky;
+  z-index: 13;
+  left: 0;
+  width: 31px;
+  height: 0;
+  pointer-events: none;
+}
+
+.mml-pitch-label {
+  position: absolute;
   left: 3px;
-  display: inline-block;
+  display: flex;
+  align-items: flex-start;
   width: 27px;
   padding: 0 2px;
   background: rgba(247, 243, 235, 0.88);

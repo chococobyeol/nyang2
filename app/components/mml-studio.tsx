@@ -302,6 +302,9 @@ export default function MmlStudio({
   const trackSettingsRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
   const pianoCanvasRef = useRef<HTMLDivElement | null>(null);
+  const pianoGridRef = useRef<HTMLDivElement | null>(null);
+  const pianoRulerRef = useRef<HTMLDivElement | null>(null);
+  const pianoPitchLabelsRef = useRef<HTMLDivElement | null>(null);
   const timelineZoomRef = useRef(1);
   const pitchZoomRef = useRef(1);
   const timelineZoomAnchorRef = useRef<{ tick: number; offset: number } | null>(null);
@@ -1829,11 +1832,12 @@ export default function MmlStudio({
   };
 
   const clearWheelPreviewStyle = () => {
-    const canvas = pianoCanvasRef.current;
-    if (!canvas) return;
-    canvas.style.removeProperty("transform");
-    canvas.style.removeProperty("transform-origin");
-    canvas.style.removeProperty("will-change");
+    [pianoGridRef.current, pianoRulerRef.current, pianoPitchLabelsRef.current].forEach((element) => {
+      if (!element) return;
+      element.style.removeProperty("transform");
+      element.style.removeProperty("transform-origin");
+      element.style.removeProperty("will-change");
+    });
   };
 
   useLayoutEffect(() => {
@@ -1867,9 +1871,11 @@ export default function MmlStudio({
   }, [minimumPitchZoom]);
 
   const renderWheelZoomPreview = () => {
-    const canvas = pianoCanvasRef.current;
+    const grid = pianoGridRef.current;
+    const ruler = pianoRulerRef.current;
+    const pitchLabels = pianoPitchLabelsRef.current;
     const roll = pianoRollRef.current;
-    if (!canvas || !roll) return;
+    if (!grid || !ruler || !pitchLabels || !roll) return;
     const state = wheelZoomRef.current;
     const horizontal = state.timelineAnchor
       ? zoomPreviewTransform(
@@ -1905,9 +1911,19 @@ export default function MmlStudio({
       : roll.scrollTop;
     const translateX = roll.scrollLeft - nextScrollLeft;
     const translateY = roll.scrollTop - nextScrollTop;
-    canvas.style.willChange = "transform";
-    canvas.style.transformOrigin = "0 0";
-    canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${horizontal.scale}, ${vertical.scale})`;
+    grid.style.willChange = "transform";
+    grid.style.transformOrigin = "0 0";
+    grid.style.transform = `translate(${translateX}px, ${translateY}px) scale(${horizontal.scale}, ${vertical.scale})`;
+
+    // The ruler is sticky on the vertical axis, so only preview horizontal zoom on it.
+    ruler.style.willChange = "transform";
+    ruler.style.transformOrigin = "0 0";
+    ruler.style.transform = `translateX(${translateX}px) scaleX(${horizontal.scale})`;
+
+    // Pitch labels are sticky on the horizontal axis, so only preview vertical zoom on them.
+    pitchLabels.style.willChange = "transform";
+    pitchLabels.style.transformOrigin = "0 0";
+    pitchLabels.style.transform = `translateY(${translateY}px) scaleY(${vertical.scale})`;
   };
 
   const commitWheelZoom = () => {
@@ -2336,7 +2352,15 @@ export default function MmlStudio({
             });
           }}>
             <div ref={pianoCanvasRef} className="mml-piano-canvas" style={{ width: pianoWidth, height: pianoHeight }}>
-              <div className="mml-timeline-ruler">
+              <div ref={pianoPitchLabelsRef} className="mml-pitch-label-layer">
+                {Array.from({ length: maxMidi - minMidi + 1 }, (_, index) => {
+                  const midi = maxMidi - index;
+                  return ((midi % 12) + 12) % 12 === 0
+                    ? <em className="mml-pitch-label" style={{ top: `${index * pixelsPerPitch}px`, height: `${pixelsPerPitch}px` }} key={`pitch-label-${midi}`}>{noteLabel(midi)}</em>
+                    : null;
+                })}
+              </div>
+              <div ref={pianoRulerRef} className="mml-timeline-ruler">
                 {timelineGrid.measures.map((measure: any) => <span className="mml-measure-label" style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-label-${measure.tick}`}>{measure.number}</span>)}
                 {timelineChangeTicks.map((tick) => {
                   const tempos = trackTempoEvents.filter((marker: any) => marker.tick === tick);
@@ -2346,21 +2370,23 @@ export default function MmlStudio({
                   return <button type="button" className="mml-change-marker" style={{ left: `${Math.max(4, tickToPianoX(tick))}px` }} onClick={(event) => { event.stopPropagation(); openTimelineEditor(tick); }} title={`${timelinePositionLabel(tick)} 변경 편집`} key={`change-marker-${tick}`}>{text}</button>;
                 })}
               </div>
-              {Array.from({ length: maxMidi - minMidi + 1 }, (_, index) => {
-                const midi = maxMidi - index;
-                const pitchClass = ((midi % 12) + 12) % 12;
-                return <span className={`mml-pitch-row ${[1, 3, 6, 8, 10].includes(pitchClass) ? "is-accidental" : ""}`} style={{ top: `${index * pixelsPerPitch}px`, height: `${pixelsPerPitch}px` }} key={`pitch-${midi}`}><em>{pitchClass === 0 ? noteLabel(midi) : ""}</em></span>;
-              })}
-              {quantizeLines.map((tick) => <i className="mml-quantize-line" style={{ left: `${tickToPianoX(tick)}px` }} key={`quantize-${tick}`} />)}
-              {timelineGrid.beats.map((beat: any) => <i className="mml-beat-line" style={{ left: `${tickToPianoX(beat.tick)}px` }} key={`beat-${beat.tick}`} />)}
-              {timelineGrid.measures.map((measure: any) => <i className="mml-measure-line" style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-line-${measure.tick}`} />)}
-              {visibleNotes.map((note: any) => {
-                const track = project.tracks[note.trackIndex];
-                const selected = track.id === selectedTrack.id;
-                return <button type="button" className={`mml-note-block ${selected ? "is-selected" : ""}`} style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: track.color }} key={`${track.id}-${note.sourceStart}-${note.tick}`} onClick={() => selectPianoNote(note.trackIndex, note)} title={`${track.name} · ${noteLabel(note.midi)}`} />;
-              })}
-              {liveRecordingNotes.map((note) => <i aria-hidden="true" className="mml-note-block is-live-recording" style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: note.color }} key={`live-${note.id}`} />)}
-              <i className="mml-playhead" style={{ left: `${tickToPianoX(playhead)}px` }} />
+              <div ref={pianoGridRef} className="mml-piano-grid">
+                {Array.from({ length: maxMidi - minMidi + 1 }, (_, index) => {
+                  const midi = maxMidi - index;
+                  const pitchClass = ((midi % 12) + 12) % 12;
+                  return <span className={`mml-pitch-row ${[1, 3, 6, 8, 10].includes(pitchClass) ? "is-accidental" : ""}`} style={{ top: `${index * pixelsPerPitch}px`, height: `${pixelsPerPitch}px` }} key={`pitch-${midi}`} />;
+                })}
+                {quantizeLines.map((tick) => <i className="mml-quantize-line" style={{ left: `${tickToPianoX(tick)}px` }} key={`quantize-${tick}`} />)}
+                {timelineGrid.beats.map((beat: any) => <i className="mml-beat-line" style={{ left: `${tickToPianoX(beat.tick)}px` }} key={`beat-${beat.tick}`} />)}
+                {timelineGrid.measures.map((measure: any) => <i className="mml-measure-line" style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-line-${measure.tick}`} />)}
+                {visibleNotes.map((note: any) => {
+                  const track = project.tracks[note.trackIndex];
+                  const selected = track.id === selectedTrack.id;
+                  return <button type="button" className={`mml-note-block ${selected ? "is-selected" : ""}`} style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: track.color }} key={`${track.id}-${note.sourceStart}-${note.tick}`} onClick={() => selectPianoNote(note.trackIndex, note)} title={`${track.name} · ${noteLabel(note.midi)}`} />;
+                })}
+                {liveRecordingNotes.map((note) => <i aria-hidden="true" className="mml-note-block is-live-recording" style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: note.color }} key={`live-${note.id}`} />)}
+                <i className="mml-playhead" style={{ left: `${tickToPianoX(playhead)}px` }} />
+              </div>
             </div>
           </div>
 
