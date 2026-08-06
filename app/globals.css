@@ -5540,6 +5540,90 @@ summary:focus-visible {
   }
 }
 
+/* Phone portrait MML workspace: editor above, playable keyboard below. */
+@media (orientation: portrait) and (max-width: 600px) {
+  .app-viewport.mml-open {
+    position: fixed;
+    inset: 0;
+    width: 100dvw;
+    height: 100dvh;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    padding: 6px;
+    transform: none;
+  }
+
+  .app-viewport.mml-open .app-stage {
+    width: calc(100dvw - 12px);
+    height: calc(100dvh - 12px);
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
+  }
+
+  .app-viewport.mml-open .mml-studio {
+    min-width: 0;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .app-viewport.mml-open .performance-surface {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-viewport.mml-open .performance-surface .top-bar,
+  .app-viewport.mml-open .performance-surface .cat-zone,
+  .app-viewport.mml-open .performance-surface .performance-footer {
+    display: none;
+  }
+
+  .app-viewport.mml-open .performance-surface .keyboard-deck,
+  .app-viewport.mml-open .performance-surface .keyboard-deck:not(.is-double),
+  .app-viewport.mml-open .performance-surface .keyboard-deck.is-double {
+    position: absolute;
+    inset: 0 6px;
+    display: grid;
+    width: auto;
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0 10px;
+  }
+
+  .app-viewport.mml-open .performance-surface .keyboard-deck:not(.is-double) {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .app-viewport.mml-open .performance-surface .keyboard-deck.is-double {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-viewport.mml-open .performance-surface .keyboard-deck .paw-keyboard-group,
+  .app-viewport.mml-open .performance-surface .keyboard-deck.is-double .paw-keyboard-group,
+  .app-viewport.mml-open .performance-surface .keyboard-deck.is-double .paw-keyboard-group:first-child,
+  .app-viewport.mml-open .performance-surface .keyboard-deck.is-double .paw-keyboard-group:last-child {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    aspect-ratio: 4.5 / 1;
+    transform: none;
+  }
+
+  .app-viewport.mml-open .performance-surface .keyboard-side-code {
+    top: -14px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

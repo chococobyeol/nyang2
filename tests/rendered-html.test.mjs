@@ -603,6 +603,16 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: auto;/s);
 });
 
+test("stacks the MML editor above the playable keyboard on portrait phones", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const portraitMml = css.slice(css.indexOf("/* Phone portrait MML workspace"));
+  assert.match(portraitMml, /@media \(orientation: portrait\) and \(max-width: 600px\)/);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \{[^}]*width: 100dvw;[^}]*height: 100dvh;[^}]*transform: none;/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.app-stage \{[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*grid-template-rows: minmax\(0, 62fr\) minmax\(0, 38fr\);/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar,[\s\S]*?\.performance-footer \{\s*display: none;/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);/s);
+});
+
 test("keeps existing top controls while placing touch rest input with the keyboards", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
