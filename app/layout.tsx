@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 const siteUrl = "https://nyang2.pages.dev";
 const siteTitle = "냥냥";
 const siteDescription = "그냥 마비노기 모바일 작곡 mml 고양이 건반 어쩌구...";
+const cloudflareWebAnalyticsToken = "fea168e344a847a1a796785f7cdf9546";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -76,6 +77,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <script
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon={JSON.stringify({ token: cloudflareWebAnalyticsToken })}
+        />
       </body>
     </html>
   );
