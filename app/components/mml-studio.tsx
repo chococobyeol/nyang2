@@ -1837,7 +1837,14 @@ export default function MmlStudio({
       element.style.removeProperty("transform");
       element.style.removeProperty("transform-origin");
       element.style.removeProperty("will-change");
+      element.style.removeProperty("width");
     });
+    pianoRulerRef.current
+      ?.querySelectorAll<HTMLElement>(".mml-measure-label, .mml-change-marker")
+      .forEach((element) => element.style.removeProperty("transform"));
+    pianoPitchLabelsRef.current
+      ?.querySelectorAll<HTMLElement>(".mml-pitch-label")
+      .forEach((element) => element.style.removeProperty("transform"));
   };
 
   useLayoutEffect(() => {
@@ -1915,15 +1922,24 @@ export default function MmlStudio({
     grid.style.transformOrigin = "0 0";
     grid.style.transform = `translate(${translateX}px, ${translateY}px) scale(${horizontal.scale}, ${vertical.scale})`;
 
-    // The ruler is sticky on the vertical axis, so only preview horizontal zoom on it.
+    // Keep ruler labels and controls at their natural size. Only move their positions.
     ruler.style.willChange = "transform";
     ruler.style.transformOrigin = "0 0";
-    ruler.style.transform = `translateX(${translateX}px) scaleX(${horizontal.scale})`;
+    ruler.style.transform = `translateX(${translateX}px)`;
+    ruler.style.width = `${unscaledPianoWidth * state.timelineTargetZoom * fitTimelineScale}px`;
+    ruler.querySelectorAll<HTMLElement>(".mml-measure-label, .mml-change-marker").forEach((element) => {
+      const currentLeft = Number.parseFloat(element.style.left) || 0;
+      element.style.transform = `translateX(${currentLeft * (horizontal.scale - 1)}px)`;
+    });
 
-    // Pitch labels are sticky on the horizontal axis, so only preview vertical zoom on them.
+    // Keep pitch text at its natural size. Only move each label to its preview row.
     pitchLabels.style.willChange = "transform";
     pitchLabels.style.transformOrigin = "0 0";
-    pitchLabels.style.transform = `translateY(${translateY}px) scaleY(${vertical.scale})`;
+    pitchLabels.style.transform = `translateY(${translateY}px)`;
+    pitchLabels.querySelectorAll<HTMLElement>(".mml-pitch-label").forEach((element) => {
+      const currentTop = Number.parseFloat(element.style.top) || 0;
+      element.style.transform = `translateY(${currentTop * (vertical.scale - 1)}px)`;
+    });
   };
 
   const commitWheelZoom = () => {
