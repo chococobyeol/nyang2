@@ -5545,11 +5545,11 @@ summary:focus-visible {
 
   .mml-studio .mml-track-list-title {
     display: grid;
-    width: 96px;
+    width: 64px;
     height: 52px;
-    flex: 0 0 96px;
-    grid-template-columns: 22px minmax(0, 1fr);
-    grid-template-rows: 26px 26px;
+    flex: 0 0 64px;
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-rows: 1fr;
     align-content: center;
     gap: 0;
     margin: 0;
@@ -5588,16 +5588,7 @@ summary:focus-visible {
   }
 
   .mml-studio .mml-track-list-title strong {
-    display: block;
-    grid-column: 2;
-    grid-row: 1;
-    align-self: end;
-    justify-self: start;
-    margin: 0;
-    padding: 0 0 2px;
-    color: var(--muted);
-    font-size: 9px;
-    line-height: 1;
+    display: none;
   }
 
   .mml-studio .mml-track-list-title .mml-track-select-all {
@@ -5610,17 +5601,17 @@ summary:focus-visible {
     width: 18px;
     height: 18px;
     grid-column: 1;
-    grid-row: 1 / 3;
+    grid-row: 1;
     place-self: center;
   }
 
   .mml-studio .mml-track-list-title .mml-track-select-all span {
     display: block;
     grid-column: 2;
-    grid-row: 2;
-    align-self: start;
+    grid-row: 1;
+    align-self: center;
     overflow: hidden;
-    padding-top: 2px;
+    padding-top: 0;
     font-size: 7px;
     line-height: 1;
     text-overflow: clip;
