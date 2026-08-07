@@ -4676,7 +4676,21 @@ summary:focus-visible {
 
 @media (max-width: 760px) {
   .help-page {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
     padding: 10px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .help-page img,
+  .help-page a {
+    touch-action: pan-y;
   }
 
   .help-card {

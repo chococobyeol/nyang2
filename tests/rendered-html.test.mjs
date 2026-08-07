@@ -118,6 +118,21 @@ test("publishes a privacy policy and links it from settings", async () => {
   assert.doesNotMatch(page, /기기 저장 설정과 마이크 처리 방식을 확인/);
 });
 
+test("keeps the help page vertically scrollable on phones", async () => {
+  const [response, css] = await Promise.all([
+    render("/help"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /class="help-page"/);
+  assert.match(
+    css,
+    /@media \(max-width: 760px\)[\s\S]*?\.help-page \{[^}]*position: fixed;[^}]*height: 100dvh;[^}]*overflow-y: auto;[^}]*touch-action: pan-y;[^}]*-webkit-overflow-scrolling: touch;/s,
+  );
+});
+
 test("includes the MML studio without changing the public route", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

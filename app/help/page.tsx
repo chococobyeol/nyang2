@@ -229,7 +229,7 @@ export default function HelpPage() {
           </div>
           <article className="help-recording-settings-guide">
             <a href="/help/recording-settings-screen.png" target="_blank" rel="noreferrer" aria-label="녹음 설정 화면 크게 보기">
-              <Image src="/help/recording-settings-screen.png" alt="MML 화면 위쪽의 녹음 설정 버튼과 열린 설정창" width={675} height={400} sizes="(max-width: 760px) 100vw, 620px" />
+              <Image src="/help/recording-settings-screen.png" alt="MML 화면 위쪽의 녹음 설정 버튼과 열린 설정창" width={750} height={340} sizes="(max-width: 760px) 100vw, 620px" />
             </a>
             <div>
               <span>MML 화면 위쪽 녹음 설정</span>
