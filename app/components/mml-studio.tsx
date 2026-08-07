@@ -2450,17 +2450,6 @@ export default function MmlStudio({
               <input type="checkbox" checked={project.tracks.length > 0 && batchTrackIds.length === project.tracks.length} onChange={toggleAllBatchTracks} />
               <span>{project.tracks.length > 0 && batchTrackIds.length === project.tracks.length ? "전체 해제" : "전체 선택"}</span>
             </label>
-            <button
-              type="button"
-              className="mml-track-collapse"
-              aria-expanded={!mobileTrackListCollapsed}
-              aria-label={mobileTrackListCollapsed ? "트랙 목록 펼치기" : "트랙 목록 접기"}
-              title={mobileTrackListCollapsed ? "트랙 목록 펼치기" : "트랙 목록 접기"}
-              onClick={() => setMobileTrackListCollapsed((collapsed) => !collapsed)}
-            >
-              {mobileTrackListCollapsed ? <ChevronDown aria-hidden="true" /> : <ChevronUp aria-hidden="true" />}
-              <span>{mobileTrackListCollapsed ? "펼치기" : "접기"}</span>
-            </button>
           </div>
           {renderBatchPanel("sidebar")}
           {project.tracks.map((track: any, index: number) => (
@@ -2502,6 +2491,18 @@ export default function MmlStudio({
           ))}
           <button type="button" className="mml-track-add-button" onClick={addTrack} disabled={recordState !== "idle"}>＋ 트랙 추가</button>
         </aside>
+
+        <button
+          type="button"
+          className="mml-track-collapse"
+          aria-expanded={!mobileTrackListCollapsed}
+          aria-label={mobileTrackListCollapsed ? "트랙 목록 펼치기" : "트랙 목록 접기"}
+          title={mobileTrackListCollapsed ? "트랙 목록 펼치기" : "트랙 목록 접기"}
+          onClick={() => setMobileTrackListCollapsed((collapsed) => !collapsed)}
+        >
+          {mobileTrackListCollapsed ? <ChevronDown aria-hidden="true" /> : <ChevronUp aria-hidden="true" />}
+          <span>{mobileTrackListCollapsed ? "펼치기" : "접기"}</span>
+        </button>
 
         <div className="mml-work-area">
           <div className="mml-zoom-controls" aria-label="피아노롤 확대 축소" title="Alt+휠 시간축 · Alt+Shift+휠 음정 간격">

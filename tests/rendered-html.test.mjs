@@ -550,7 +550,7 @@ test("centers the mobile MML close icon with the shared line-icon style", async 
 test("keeps the complete outline visible around every track card", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.doesNotMatch(css, /\.mml-track-card \{[^}]*border-left:\s*0;/s);
-  assert.match(css, /\.mml-track-reorder-handle \{[^}]*position: static;[^}]*width: 10px;[^}]*grid-column: 1;[^}]*transform: none;/s);
+  assert.match(css, /\.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 3px;[^}]*width: 15px;[^}]*transform: translateY\(-50%\);/s);
   assert.match(css, /\.mml-track-grip-dots \{[^}]*width: 10px;[^}]*height: 15px;[^}]*background-size: 5px 5px;/s);
 });
 
@@ -602,13 +602,15 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*align-items: center;[^}]*scrollbar-width: thin;[^}]*touch-action: none;/s);
   assert.match(studio, /className="mml-track-collapse"/);
   assert.match(studio, /className="mml-track-grip-dots"/);
-  assert.match(mobileMml, /\.mml-studio \.mml-main-grid\.is-track-list-collapsed \{[^}]*grid-template-rows: 40px minmax\(0, 1fr\);/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-reorder-handle \{[^}]*position: static;[^}]*grid-column: 1;[^}]*transform: none;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \{[^}]*width: 104px;[^}]*grid-template-columns: 20px minmax\(0, 1fr\) 26px;[^}]*grid-template-rows: 26px 26px;[^}]*border-right:/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-list\.is-mobile-collapsed \.mml-track-list-title \{[^}]*width: 104px;[^}]*height: 32px;[^}]*grid-template-rows: 32px;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-main-grid\.is-track-list-collapsed \{[^}]*grid-template-rows: 20px minmax\(0, 1fr\);/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-main-grid > \.mml-track-collapse \{[^}]*top: 53px;[^}]*left: 50%;[^}]*width: 34px;[^}]*height: 17px;[^}]*transform: translateX\(-50%\);/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-main-grid\.is-track-list-collapsed > \.mml-track-collapse \{[^}]*top: 12px;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 2px;[^}]*width: 15px;[^}]*transform: translateY\(-50%\);/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \{[^}]*width: 96px;[^}]*grid-template-columns: 22px minmax\(0, 1fr\);[^}]*grid-template-rows: 26px 26px;[^}]*border-right:/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list\.is-mobile-collapsed > \* \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all \{[^}]*display: contents;[^}]*margin: 0;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all input \{[^}]*grid-column: 1;[^}]*grid-row: 1 \/ 3;[^}]*place-self: center;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-card \{[^}]*width: 170px;[^}]*grid-template-columns: 10px 18px minmax\(0, 1fr\) 58px;[^}]*padding: 5px 8px;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-card \{[^}]*width: 164px;[^}]*grid-template-columns: 18px minmax\(0, 1fr\) 58px;[^}]*padding: 5px 8px 5px 19px;/s);
   assert.doesNotMatch(mobileMml, /scroll-snap-(?:type|align)/);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: auto;/s);
@@ -624,7 +626,7 @@ test("stacks the MML editor above the playable keyboard on portrait phones", asy
   assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \{[^}]*display: grid;[^}]*height: 100px;[^}]*grid-template-rows: 46px 46px;/s);
   assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \{[^}]*grid-template-columns: minmax\(0, 1fr\) 46px;[^}]*justify-content: stretch;/s);
   assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \.octave-area \{[^}]*grid-column: 1;[^}]*grid-row: 1;[^}]*justify-self: start;[^}]*margin-left: clamp\(8px, 4vw, 18px\);/s);
-  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \.transpose-panel \{[^}]*grid-column: 1 \/ 3;[^}]*grid-row: 2;[^}]*justify-self: end;[^}]*width: min\(100%, 326px\);/s);
+  assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \.transpose-panel \{[^}]*--mobile-octave-button-row-width: calc\(var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ 9px\);[^}]*width: min\(100%, calc\(98px \+ var\(--mobile-octave-button-row-width\)\)\);[^}]*grid-template-columns: 46px minmax\(0, var\(--mobile-octave-button-row-width\)\) 46px;/s);
   assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.top-bar \.header-actions \{[^}]*grid-column: 2;[^}]*grid-row: 1;/s);
   assert.match(portraitMml, /\.app-viewport\.mml-open \.performance-surface \.keyboard-deck\.is-double \{[^}]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\);/s);
 });
