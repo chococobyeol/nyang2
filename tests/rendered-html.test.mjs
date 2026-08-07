@@ -505,6 +505,11 @@ test("uses the same icon close control across MML panels", async () => {
   assert.match(css, /\.mml-quick-settings-head \.mml-panel-close,[\s\S]*?border-radius: 50%;/);
 });
 
+test("keeps octave labels from covering notes at the start of the piano roll", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.mml-pitch-label \{[\s\S]*?background: transparent;/);
+});
+
 test("offers MML paste choices and configurable recording start positions", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /onPaste=\{\(event\) => \{/);

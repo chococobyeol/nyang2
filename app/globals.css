@@ -1347,11 +1347,16 @@ button {
   align-items: flex-start;
   width: 27px;
   padding: 0 2px;
-  background: rgba(247, 243, 235, 0.88);
+  background: transparent;
   color: var(--muted);
   font-size: 9px;
   font-style: normal;
   font-weight: 900;
+  text-shadow:
+    -1px 0 #f7f3eb,
+    1px 0 #f7f3eb,
+    0 -1px #f7f3eb,
+    0 1px #f7f3eb;
 }
 
 .mml-quantize-line,
