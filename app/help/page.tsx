@@ -138,7 +138,7 @@ export default function HelpPage() {
             <div><small>PLAY</small><h2>건반 연주 화면</h2></div>
           </div>
           <ScreenFigure
-            src="/help/main-screen.png"
+            src="/help/main-screen.png?v=20260807-2"
             alt="냥냥 메인 건반 연주 화면"
             width={1440}
             height={900}
@@ -162,7 +162,7 @@ export default function HelpPage() {
             <div><small>COMPOSE</small><h2>MML 작곡 화면</h2></div>
           </div>
           <ScreenFigure
-            src="/help/mml-screen.png"
+            src="/help/mml-screen.png?v=20260807-2"
             alt="냥냥 MML 작곡과 피아노롤 화면"
             width={1440}
             height={900}
@@ -182,8 +182,8 @@ export default function HelpPage() {
           </div>
           <div className="help-dialog-grid">
             <article>
-              <a href="/help/duration-menu-screen.png" target="_blank" rel="noreferrer" aria-label="선택 음가 변경 메뉴 크게 보기">
-                <Image src="/help/duration-menu-screen.png" alt="MML 텍스트를 선택한 뒤 연 음가 변경 메뉴" width={520} height={365} sizes="(max-width: 760px) 100vw, 540px" />
+              <a href="/help/duration-menu-screen.png?v=20260807-2" target="_blank" rel="noreferrer" aria-label="선택 음가 변경 메뉴 크게 보기">
+                <Image src="/help/duration-menu-screen.png?v=20260807-2" alt="MML 텍스트를 선택한 뒤 연 음가 변경 메뉴" width={520} height={365} sizes="(max-width: 760px) 100vw, 540px" />
               </a>
               <div>
                 <span>텍스트 우클릭</span>
@@ -192,8 +192,8 @@ export default function HelpPage() {
               </div>
             </article>
             <article>
-              <a href="/help/tempo-dialog-screen.png" target="_blank" rel="noreferrer" aria-label="박자와 템포 변경창 크게 보기">
-                <Image src="/help/tempo-dialog-screen.png" alt="피아노롤의 박자와 템포 변경창" width={520} height={370} sizes="(max-width: 760px) 100vw, 540px" />
+              <a href="/help/tempo-dialog-screen.png?v=20260807-2" target="_blank" rel="noreferrer" aria-label="박자와 템포 변경창 크게 보기">
+                <Image src="/help/tempo-dialog-screen.png?v=20260807-2" alt="피아노롤의 박자와 템포 변경창" width={520} height={370} sizes="(max-width: 760px) 100vw, 540px" />
               </a>
               <div>
                 <span>피아노롤 우클릭</span>
@@ -228,8 +228,8 @@ export default function HelpPage() {
             <div><small>RECORD</small><h2>두 가지 녹음 방식</h2></div>
           </div>
           <article className="help-recording-settings-guide">
-            <a href="/help/recording-settings-screen.png" target="_blank" rel="noreferrer" aria-label="녹음 설정 화면 크게 보기">
-              <Image src="/help/recording-settings-screen.png" alt="MML 화면 위쪽의 녹음 설정 버튼과 열린 설정창" width={750} height={340} sizes="(max-width: 760px) 100vw, 620px" />
+            <a href="/help/recording-settings-screen.png?v=20260807-2" target="_blank" rel="noreferrer" aria-label="녹음 설정 화면 크게 보기">
+              <Image src="/help/recording-settings-screen.png?v=20260807-2" alt="MML 화면 위쪽의 녹음 설정 버튼과 열린 설정창" width={750} height={340} sizes="(max-width: 760px) 100vw, 620px" />
             </a>
             <div>
               <span>MML 화면 위쪽 녹음 설정</span>
@@ -250,8 +250,8 @@ export default function HelpPage() {
             </article>
           </div>
           <article className="help-rest-guide">
-            <a href="/help/rest-button-screen.png" target="_blank" rel="noreferrer" aria-label="쉼표 건반 크게 보기">
-              <Image src="/help/rest-button-screen.png" alt="검은 건반 자리에 놓인 쉼표 건반" width={545} height={295} sizes="(max-width: 760px) 100vw, 520px" />
+            <a href="/help/rest-button-screen.png?v=20260807-2" target="_blank" rel="noreferrer" aria-label="쉼표 건반 크게 보기">
+              <Image src="/help/rest-button-screen.png?v=20260807-2" alt="검은 건반 자리에 놓인 쉼표 건반" width={545} height={295} sizes="(max-width: 760px) 100vw, 520px" />
             </a>
             <div>
               <span>이어붙이기 녹음</span>
@@ -279,8 +279,8 @@ export default function HelpPage() {
             <div><small>SETTINGS</small><h2>연주 설정</h2></div>
           </div>
           <div className="help-settings-layout">
-            <a className="help-settings-image" href="/help/settings-screen.png" target="_blank" rel="noreferrer" aria-label="연주 설정 화면 크게 보기">
-              <Image src="/help/settings-screen.png" alt="냥냥 연주 설정 화면" width={1114} height={1662} sizes="(max-width: 760px) 88vw, 430px" />
+            <a className="help-settings-image" href="/help/settings-screen.png?v=20260807-2" target="_blank" rel="noreferrer" aria-label="연주 설정 화면 크게 보기">
+              <Image src="/help/settings-screen.png?v=20260807-2" alt="냥냥 연주 설정 화면" width={560} height={720} sizes="(max-width: 760px) 88vw, 430px" />
               <span>눌러서 크게 보기</span>
             </a>
             <div className="help-settings-list">

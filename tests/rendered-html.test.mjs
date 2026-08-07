@@ -453,6 +453,7 @@ test("changes the instrument for several selected tracks at once", async () => {
   assert.match(studio, /renderBatchPanel\("sidebar"\)/);
   assert.match(studio, /renderBatchPanel\("floating"\)/);
   assert.match(studio, /\? "전체 해제" : "전체 선택"/);
+  assert.match(studio, /setBatchTrackIds\(\[\]\)}>해제<\/button>/);
   assert.match(css, /\.mml-track-batch-panel/);
   assert.match(css, /\.mml-track-select-all/);
   assert.match(css, /\.mml-track-batch-checkbox input:checked/);
@@ -488,6 +489,20 @@ test("supports selection-based MML duration editing and Space playback", async (
   assert.match(page, /onPlayShortcutChange=\{setMmlPlayShortcut\}/);
   assert.match(page, /shortcutCodeLabel\(mmlPlayShortcut\)/);
   assert.match(page, /mmlOpen && event\.code === "Space"/);
+});
+
+test("uses the same icon close control across MML panels", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /aria-label="파일 메뉴 닫기"><X/);
+  assert.match(studio, /aria-label="녹음 설정 닫기"><X/);
+  assert.match(studio, /aria-label="트랙 설정 닫기"><X/);
+  assert.match(studio, /aria-label="선택 음가 변경 닫기"><X/);
+  assert.match(studio, /aria-label="박자·템포 변경 닫기"><X/);
+  assert.doesNotMatch(studio, />닫기<\/button>/);
+  assert.match(css, /\.mml-quick-settings-head \.mml-panel-close,[\s\S]*?border-radius: 50%;/);
 });
 
 test("offers MML paste choices and configurable recording start positions", async () => {

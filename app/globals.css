@@ -1881,6 +1881,31 @@ button {
   font-weight: 900;
 }
 
+.mml-quick-settings-head .mml-panel-close,
+.mml-action-menu-head .mml-panel-close,
+.mml-duration-menu header .mml-panel-close,
+.mml-timeline-editor header > .mml-panel-close {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fffdf7;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.mml-panel-close svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+
 .mml-action-menu > button {
   display: grid;
   grid-template-columns: 29px minmax(0, 1fr);

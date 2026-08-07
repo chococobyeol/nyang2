@@ -2347,7 +2347,7 @@ export default function MmlStudio({
 
       {fileMenuView && (
         <div className="mml-action-menu" role="dialog" aria-label="MML 파일 메뉴">
-          <div className="mml-action-menu-head"><strong>파일</strong><button type="button" onClick={() => setFileMenuView(false)}>닫기</button></div>
+          <div className="mml-action-menu-head"><strong>파일</strong><button type="button" className="mml-panel-close" onClick={() => setFileMenuView(false)} aria-label="파일 메뉴 닫기"><X aria-hidden="true" /></button></div>
           <button type="button" onClick={resetProject}><b><Plus aria-hidden="true" /></b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
           <button type="button" onClick={() => fileInputRef.current?.click()}><b><Upload aria-hidden="true" /></b><span><strong>불러오기</strong><small>MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
           <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b><FileMusic aria-hidden="true" /></b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
@@ -2371,7 +2371,7 @@ export default function MmlStudio({
 
       {settingsView && (
         <div className="mml-quick-settings" role="dialog" aria-label="MML 세부 설정">
-          <div className="mml-quick-settings-head"><span><strong>녹음 설정</strong><small>입력 방식과 박자 보정</small></span><button type="button" onClick={() => setSettingsView(false)}>닫기</button></div>
+          <div className="mml-quick-settings-head"><span><strong>녹음 설정</strong><small>입력 방식과 박자 보정</small></span><button type="button" className="mml-panel-close" onClick={() => setSettingsView(false)} aria-label="녹음 설정 닫기"><X aria-hidden="true" /></button></div>
           <label>녹음 방식<select value={project.recording.mode} onChange={(event) => commit((draft: any) => { draft.recording.mode = event.target.value; return draft; })}><option value="realtime">실시간</option><option value="append">이어붙이기</option></select></label>
           <label>녹음 시작 위치<select value={project.recording.startPosition} onChange={(event) => commit((draft: any) => { draft.recording.startPosition = event.target.value; return draft; })}><option value="playhead">현재 재생 위치</option><option value="beginning">처음부터</option><option value="empty">연결 트랙의 빈 끝부분</option></select></label>
           <label>편집 방식<select value={project.recording.editMode} onChange={(event) => commit((draft: any) => { draft.recording.editMode = event.target.value; return draft; })}><option value="overwrite">수정</option><option value="insert">삽입</option></select></label>
@@ -2403,7 +2403,7 @@ export default function MmlStudio({
           aria-label={`${selectedTrack.name} 설정`}
           style={trackSettingsAnchor ? { left: trackSettingsAnchor.x, top: trackSettingsAnchor.y, right: "auto", transform: "none" } : undefined}
         >
-          <div className="mml-quick-settings-head"><span><strong>트랙 설정</strong><small>선택한 트랙의 녹음·재생 속성</small></span><button type="button" onClick={() => { setTrackSettingsView(false); setTrackSettingsAnchor(null); }}>닫기</button></div>
+          <div className="mml-quick-settings-head"><span><strong>트랙 설정</strong><small>선택한 트랙의 녹음·재생 속성</small></span><button type="button" className="mml-panel-close" onClick={() => { setTrackSettingsView(false); setTrackSettingsAnchor(null); }} aria-label="트랙 설정 닫기"><X aria-hidden="true" /></button></div>
           <label className="mml-track-name-field">이름<input value={selectedTrack.name} onChange={(event) => updateTrack(selectedTrack.id, { name: event.target.value })} /></label>
           <label>색상<input type="color" value={selectedTrack.color} onChange={(event) => updateTrack(selectedTrack.id, { color: event.target.value })} /></label>
           <label>음색<select value={selectedTrack.themeId} onChange={(event) => changeTrackThemes([selectedTrack.id], event.target.value)}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
@@ -2417,7 +2417,7 @@ export default function MmlStudio({
 
       {durationMenu && (
         <div className="mml-duration-menu" role="menu" aria-label="선택한 음표 길이 변경" style={{ left: durationMenu.x, top: durationMenu.y }} onContextMenu={(event) => event.preventDefault()}>
-          <header><strong>선택 음가 변경</strong><button type="button" onClick={() => setDurationMenu(null)} aria-label="닫기"><X aria-hidden="true" /></button></header>
+          <header><strong>선택 음가 변경</strong><button type="button" className="mml-panel-close" onClick={() => setDurationMenu(null)} aria-label="선택 음가 변경 닫기"><X aria-hidden="true" /></button></header>
           <div className="mml-duration-grid">
             {[0, 1].flatMap((dots) => MML_NOTE_LENGTHS.map((length) => (
               <button type="button" role="menuitem" onClick={() => setSelectionDuration(length, dots)} key={`${length}-${dots}`}>
@@ -2529,7 +2529,7 @@ export default function MmlStudio({
             >
               <header>
                 <span><strong>박자·템포 변경</strong><small>{timelinePositionLabel(timelineEditor.tick)} · {Math.round(timelineEditor.tick)} tick · {timelineTempoTrack?.name ?? selectedTrack.name}</small></span>
-                <button type="button" onClick={() => setTimelineEditor(null)} aria-label="닫기"><X aria-hidden="true" /></button>
+                <button type="button" className="mml-panel-close" onClick={() => setTimelineEditor(null)} aria-label="박자·템포 변경 닫기"><X aria-hidden="true" /></button>
               </header>
               <section>
                 <label>템포<input aria-label="변경 템포" type="number" min="1" value={timelineEditor.bpm} onChange={(event) => setTimelineEditor({ ...timelineEditor, bpm: Math.max(1, Number(event.target.value) || 1) })} /></label>
