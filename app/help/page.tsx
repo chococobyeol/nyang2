@@ -232,7 +232,7 @@ export default function HelpPage() {
               <Image src="/help/recording-settings-screen.png" alt="MML 화면 위쪽의 녹음 설정 버튼과 열린 설정창" width={675} height={400} sizes="(max-width: 760px) 100vw, 620px" />
             </a>
             <div>
-              <span>MML 화면 위쪽 ⚙</span>
+              <span>MML 화면 위쪽 녹음 설정</span>
               <h3>녹음 방식은 ‘녹음 설정’에서 바꿉니다</h3>
               <p>MML 화면 위쪽의 톱니바퀴 버튼을 누르고 첫 번째 <b>녹음 방식</b>에서 실시간 또는 이어붙이기를 고릅니다. 시작 위치·수정/삽입·박자 보정·음 배정·트랙 템포·카운트인과 단축키도 같은 창에 있습니다.</p>
             </div>

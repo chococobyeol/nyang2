@@ -16,7 +16,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Ellipsis, Music2, Pause, Play, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, ClipboardCopy, Ellipsis, FileMusic, Maximize2, Minimize2, MoveHorizontal, MoveVertical, Music2, Pause, Play, Plus, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, Upload, X } from "lucide-react";
 import {
   combineTracks,
   deleteTempoCommand,
@@ -2309,7 +2309,7 @@ export default function MmlStudio({
             </div>
           </div>
         </div>
-        <button type="button" className="mml-expand" onClick={() => onExpandedChange(!expanded)} aria-label={expanded ? "작곡창 축소" : "작곡창 전체화면"} title={expanded ? "작곡창 축소" : "작곡창 전체화면"}>{expanded ? "▣" : "⛶"}</button>
+        <button type="button" className="mml-expand" onClick={() => onExpandedChange(!expanded)} aria-label={expanded ? "작곡창 축소" : "작곡창 전체화면"} title={expanded ? "작곡창 축소" : "작곡창 전체화면"}>{expanded ? <Minimize2 className="mml-header-icon" aria-hidden="true" /> : <Maximize2 className="mml-header-icon" aria-hidden="true" />}</button>
         <button type="button" className="mml-close" onClick={closeStudio} aria-label="MML 닫기" disabled={recordState !== "idle"}><X className="mml-header-icon" aria-hidden="true" /></button>
       </header>
 
@@ -2348,11 +2348,11 @@ export default function MmlStudio({
       {fileMenuView && (
         <div className="mml-action-menu" role="dialog" aria-label="MML 파일 메뉴">
           <div className="mml-action-menu-head"><strong>파일</strong><button type="button" onClick={() => setFileMenuView(false)}>닫기</button></div>
-          <button type="button" onClick={resetProject}><b>＋</b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}><b>↥</b><span><strong>불러오기</strong><small>MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
-          <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b>♪</b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
+          <button type="button" onClick={resetProject}><b><Plus aria-hidden="true" /></b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}><b><Upload aria-hidden="true" /></b><span><strong>불러오기</strong><small>MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
+          <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b><FileMusic aria-hidden="true" /></b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
           <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
-          <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b>⧉</b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
+          <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b><ClipboardCopy aria-hidden="true" /></b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
           <button type="button" onClick={() => { exportProject(); setFileMenuView(false); }}><b>냥</b><span><strong>프로젝트 저장</strong><small>설정과 트랙을 함께 보관</small></span></button>
         </div>
       )}
@@ -2417,7 +2417,7 @@ export default function MmlStudio({
 
       {durationMenu && (
         <div className="mml-duration-menu" role="menu" aria-label="선택한 음표 길이 변경" style={{ left: durationMenu.x, top: durationMenu.y }} onContextMenu={(event) => event.preventDefault()}>
-          <header><strong>선택 음가 변경</strong><button type="button" onClick={() => setDurationMenu(null)} aria-label="닫기">×</button></header>
+          <header><strong>선택 음가 변경</strong><button type="button" onClick={() => setDurationMenu(null)} aria-label="닫기"><X aria-hidden="true" /></button></header>
           <div className="mml-duration-grid">
             {[0, 1].flatMap((dots) => MML_NOTE_LENGTHS.map((length) => (
               <button type="button" role="menuitem" onClick={() => setSelectionDuration(length, dots)} key={`${length}-${dots}`}>
@@ -2507,13 +2507,13 @@ export default function MmlStudio({
         <div className="mml-work-area">
           <div className="mml-zoom-controls" aria-label="피아노롤 확대 축소" title="Alt+휠 시간축 · Alt+Shift+휠 음정 간격">
             <div className="mml-zoom-group" aria-label="시간축 확대 축소">
-              <span aria-hidden="true">↔</span>
+              <span aria-hidden="true"><MoveHorizontal /></span>
               <button type="button" onClick={() => changeTimelineZoom(1 / 1.25)} aria-label="타임라인 축소" title="타임라인 축소">−</button>
               <output aria-live="polite">{Math.round(timelineZoom * 100)}%</output>
               <button type="button" onClick={() => changeTimelineZoom(1.25)} aria-label="타임라인 확대" title="타임라인 확대">＋</button>
             </div>
             <div className="mml-zoom-group" aria-label="음정 간격 확대 축소">
-              <span aria-hidden="true">↕</span>
+              <span aria-hidden="true"><MoveVertical /></span>
               <button type="button" onClick={() => changePitchZoom(1 / 1.2)} aria-label="음정 간격 축소" title="음정 간격 축소">−</button>
               <output aria-live="polite">{Math.round(pitchZoom * 100)}%</output>
               <button type="button" onClick={() => changePitchZoom(1.2)} aria-label="음정 간격 확대" title="음정 간격 확대">＋</button>
@@ -2529,7 +2529,7 @@ export default function MmlStudio({
             >
               <header>
                 <span><strong>박자·템포 변경</strong><small>{timelinePositionLabel(timelineEditor.tick)} · {Math.round(timelineEditor.tick)} tick · {timelineTempoTrack?.name ?? selectedTrack.name}</small></span>
-                <button type="button" onClick={() => setTimelineEditor(null)} aria-label="닫기">×</button>
+                <button type="button" onClick={() => setTimelineEditor(null)} aria-label="닫기"><X aria-hidden="true" /></button>
               </header>
               <section>
                 <label>템포<input aria-label="변경 템포" type="number" min="1" value={timelineEditor.bpm} onChange={(event) => setTimelineEditor({ ...timelineEditor, bpm: Math.max(1, Number(event.target.value) || 1) })} /></label>

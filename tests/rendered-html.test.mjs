@@ -538,6 +538,22 @@ test("uses one line-icon family for playback, recording, metronome, and loop con
   assert.doesNotMatch(studio, /<b>(?:■|●|♩|↻)<\/b>/);
 });
 
+test("uses device-independent line icons for the performance and MML utility controls", async () => {
+  const [page, studio] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /<SettingsIcon className="settings-icon"/);
+  assert.match(page, /<RotateCcw className="reset-icon"/);
+  assert.doesNotMatch(page, />⚙<|>↺</);
+  assert.match(studio, /<Maximize2 className="mml-header-icon"/);
+  assert.match(studio, /<Minimize2 className="mml-header-icon"/);
+  assert.match(studio, /<Upload aria-hidden="true"/);
+  assert.match(studio, /<FileMusic aria-hidden="true"/);
+  assert.match(studio, /<ClipboardCopy aria-hidden="true"/);
+  assert.doesNotMatch(studio, />⛶<|>▣<|<b>↥<\/b>|<b>♪<\/b>|<b>⧉<\/b>/);
+});
+
 test("centers the mobile MML close icon with the shared line-icon style", async () => {
   const [studio, css] = await Promise.all([
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
@@ -572,7 +588,7 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  const mobileMml = css.slice(css.indexOf("@media (max-height: 550px)"));
+  const mobileMml = css.slice(css.indexOf("@media (max-height: 650px)"));
   assert.match(studio, /aria-label="녹음 설정"/);
   assert.match(studio, /aria-label="파일 메뉴"/);
   assert.match(studio, /const closeStudio = \(\) => \{[\s\S]*?setTrackSettingsView\(false\);[\s\S]*?setFileMenuView\(false\);[\s\S]*?onClose\(\);/);
@@ -586,7 +602,8 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-transport-primary,[\s\S]*?\.mml-studio \.mml-transport-tools \{[^}]*display: contents;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-transport-tools button:nth-child\(-n \+ 2\) \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-main-grid \{[^}]*overflow: hidden;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*min-height: 0;[^}]*grid-template-rows: minmax\(104px, 1\.45fr\) 30px minmax\(84px, 0\.85fr\) 22px;[^}]*overflow: hidden;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*min-height: 0;[^}]*grid-template-rows: minmax\(0, 1\.45fr\) 30px minmax\(0, 0\.85fr\) 22px;[^}]*overflow: hidden;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-status-line \{[^}]*min-height: 22px;[^}]*overflow: hidden;[^}]*background: #fffdf7;/s);
   assert.match(studio, /className="mml-editor-done" onClick=\{\(\) => editorRef\.current\?\.blur\(\)\}>완료<\/button>/);
   assert.match(studio, /const moveTrackDrag = \(event: ReactPointerEvent<HTMLElement>\) =>/);
   assert.match(studio, /drag\.axis = Math\.abs\(deltaX\) >= Math\.abs\(deltaY\) \? "x" : "y"/);
@@ -601,7 +618,8 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-action-menu \{[^}]*top: 96px;[^}]*max-height: calc\(100% - 104px\);[^}]*overflow-y: auto;[^}]*scrollbar-width: thin;/s);
   assert.match(css, /\.mml-action-menu-head \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: #f0e8dc;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 62px 16px minmax\(0, 1fr\);/s);
-  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*align-items: center;[^}]*scrollbar-width: thin;[^}]*touch-action: none;/s);
+  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*align-items: center;[^}]*scrollbar-width: none;[^}]*touch-action: none;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list::\-webkit-scrollbar \{[^}]*display: none;[^}]*height: 0;/s);
   assert.match(studio, /className="mml-track-collapse"/);
   assert.match(studio, /className="mml-track-grip-dots"/);
   assert.match(mobileMml, /\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 62px 16px minmax\(0, 1fr\);/s);
@@ -618,6 +636,7 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.doesNotMatch(mobileMml, /scroll-snap-(?:type|align)/);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: auto;/s);
+  assert.match(mobileMml, /\.mml-open \.performance-surface \.transpose-panel \{[^}]*--compact-octave-row-width: calc\(var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ 6px\);[^}]*width: calc\(var\(--compact-octave-row-width\) \+ 92px\);[^}]*justify-self: end;/s);
 });
 
 test("stacks the MML editor above the playable keyboard on portrait phones", async () => {

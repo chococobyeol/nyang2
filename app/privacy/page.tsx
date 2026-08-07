@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 
 const EFFECTIVE_DATE = "2026년 8월 1일";
 
@@ -48,7 +49,7 @@ export default function PrivacyPage() {
             <div>
               <h2>호스팅과 방문 통계</h2>
               <p>사이트 제공과 보안, 기본 방문 통계 확인을 위해 Cloudflare가 접속 IP, 방문 페이지, 유입 경로, 브라우저·기기 종류, 운영체제, 요청 시각 같은 기술 정보를 처리할 수 있습니다. Cloudflare Web Analytics는 쿠키를 사용하지 않으며, 냥냥은 맞춤 이벤트를 수집하거나 이 정보를 광고, 이용자 프로파일링 또는 개인정보 판매에 사용하지 않습니다.</p>
-              <p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noreferrer">Cloudflare 개인정보처리방침 ↗</a></p>
+              <p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noreferrer">Cloudflare 개인정보처리방침 <ExternalLink aria-hidden="true" /></a></p>
             </div>
           </section>
 

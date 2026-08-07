@@ -14,6 +14,7 @@ import {
 } from "react";
 import type { WorkletSynthesizer } from "spessasynth_lib";
 import spessaProcessorUrl from "spessasynth_lib/dist/spessasynth_processor.min.js?url";
+import { ExternalLink, RotateCcw, Settings as SettingsIcon, X } from "lucide-react";
 import { chooseSecondKeyboardOctave } from "./octave-selection";
 import MmlStudio, { type MmlInputSink } from "./components/mml-studio";
 import RangeControl from "./components/range-control";
@@ -1806,7 +1807,7 @@ export default function Home() {
               </button>
             </div>
             <button type="button" className="transpose-reset control-button" onClick={resetTranspose} aria-label="조성을 C로 초기화">
-              <span aria-hidden="true">↺</span>
+              <RotateCcw className="reset-icon" aria-hidden="true" />
               <small>초기화</small>
               <kbd className="control-shortcut">{codeLabel(settings.transposeShortcuts.reset)}</kbd>
             </button>
@@ -1814,7 +1815,7 @@ export default function Home() {
 
           <div className="header-actions">
             <button type="button" className="settings-button" onClick={() => setSettingsOpen(true)} aria-label="설정 열기">
-              <span aria-hidden="true">⚙</span>
+              <SettingsIcon className="settings-icon" aria-hidden="true" />
               설정
             </button>
           </div>
@@ -1904,7 +1905,7 @@ export default function Home() {
                 <span>냥냥</span>
                 <h2 id="settings-title">연주 설정</h2>
               </div>
-              <button type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기">×</button>
+              <button type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기"><X aria-hidden="true" /></button>
             </div>
 
             <div className="settings-content">
@@ -2054,11 +2055,11 @@ export default function Home() {
               <div className="settings-legal">
                 <a href="/help" target="_blank" rel="noreferrer">
                   <span>도움말</span>
-                  <strong aria-hidden="true">↗</strong>
+                  <ExternalLink aria-hidden="true" />
                 </a>
                 <a href="/privacy" target="_blank" rel="noreferrer">
                   <span>개인정보처리방침</span>
-                  <strong aria-hidden="true">↗</strong>
+                  <ExternalLink aria-hidden="true" />
                 </a>
               </div>
             </div>
