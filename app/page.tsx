@@ -2057,6 +2057,14 @@ export default function Home() {
                   <span>도움말</span>
                   <ExternalLink aria-hidden="true" />
                 </a>
+                <a
+                  href="https://docs.google.com/forms/d/e/1FAIpQLSfwJVXnlAzQoZKInD5pQS1K6r5pwHwpSWi8yC5cdNTJT_DiIw/viewform"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>문의 / 버그 제보</span>
+                  <ExternalLink aria-hidden="true" />
+                </a>
                 <a href="/privacy" target="_blank" rel="noreferrer">
                   <span>개인정보처리방침</span>
                   <ExternalLink aria-hidden="true" />

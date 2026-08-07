@@ -115,6 +115,8 @@ test("publishes a privacy policy and links it from settings", async () => {
   assert.match(html, /mailto:chaamu\.channel@gmail\.com/);
   assert.doesNotMatch(html, /github\.com\/chococobyeol\/nyang2\/issues/);
   assert.match(page, /href="\/privacy"/);
+  assert.match(page, /문의 \/ 버그 제보/);
+  assert.match(page, /https:\/\/docs\.google\.com\/forms\/d\/e\/1FAIpQLSfwJVXnlAzQoZKInD5pQS1K6r5pwHwpSWi8yC5cdNTJT_DiIw\/viewform/);
   assert.doesNotMatch(page, /기기 저장 설정과 마이크 처리 방식을 확인/);
 });
 
