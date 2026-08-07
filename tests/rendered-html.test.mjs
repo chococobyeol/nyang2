@@ -669,6 +669,8 @@ test("keeps recording controls recoverable and preserves per-note velocity", asy
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /velocity:\s*note\.velocity/);
   assert.match(studio, /velocityByTrack:\s*Object\.fromEntries/);
-  assert.match(studio, /disabled=\{recordState === "idle" && Boolean\(parseError \|\| tempoConflict\)\}/);
+  assert.match(studio, /disabled=\{recordState === "idle" && Boolean\(parseError\)\}/);
+  assert.match(studio, /disabled=\{Boolean\(parseError\)\}/);
+  assert.doesNotMatch(studio, /if \(parseError \|\| tempoConflict/);
   assert.doesNotMatch(studio, /tempo:\s*writesTempo \? options\.bpm/);
 });

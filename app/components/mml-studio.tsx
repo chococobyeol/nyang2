@@ -625,7 +625,7 @@ export default function MmlStudio({
       byTick.set(event.tick, values);
     }
     const conflict = [...byTick.entries()].find(([, values]) => values.size > 1);
-    return conflict ? `${Math.round(conflict[0])} tick에 서로 다른 템포가 있습니다.` : "";
+    return conflict ? `${Math.round(conflict[0])} tick의 템포가 트랙마다 다릅니다. 위쪽 트랙의 템포를 사용합니다.` : "";
   }, [trackTempoEvents]);
 
   const recordTempo = tempoAtTick(playhead, allTempoEvents, 120);
@@ -661,7 +661,7 @@ export default function MmlStudio({
   }, [stopMmlAudio]);
 
   const schedulePlayback = useCallback((fromTick = playhead) => {
-    if (parseError || tempoConflict || !displayTracks.length) return;
+    if (parseError || !displayTracks.length) return;
     const runningMetronomeClock = metronomeClockRef.current;
     const replayFromTick = fromTick >= songDuration ? 0 : fromTick;
     const requestedStartTick = Math.max(0, Math.min(replayFromTick, songDuration));
@@ -767,10 +767,10 @@ export default function MmlStudio({
       playRafRef.current = window.requestAnimationFrame(follow);
     };
     playRafRef.current = window.requestAnimationFrame(follow);
-  }, [allTempoEvents, baseTempo, clearPlayback, clickMetronome, displayTracks, parseError, playMidi, playhead, project, releaseMidi, songDuration, tempoConflict]);
+  }, [allTempoEvents, baseTempo, clearPlayback, clickMetronome, displayTracks, parseError, playMidi, playhead, project, releaseMidi, songDuration]);
 
   const startPlayback = useCallback((fromTick = playhead) => {
-    if (parseError || tempoConflict || !displayTracks.length) return;
+    if (parseError || !displayTracks.length) return;
     const soloed = project.tracks.some((track: any) => track.solo);
     const themeIds = project.tracks
       .filter((track: any) => !track.muted && (!soloed || track.solo))
@@ -788,7 +788,7 @@ export default function MmlStudio({
         clearPlayback();
         setRecordingMessage(error instanceof Error ? error.message : "음색을 준비하지 못했습니다.");
       });
-  }, [clearPlayback, displayTracks.length, parseError, playhead, prepareThemes, project.tracks, schedulePlayback, tempoConflict]);
+  }, [clearPlayback, displayTracks.length, parseError, playhead, prepareThemes, project.tracks, schedulePlayback]);
 
   useEffect(() => {
     startPlaybackRef.current = startPlayback;
@@ -982,7 +982,7 @@ export default function MmlStudio({
 
   const beginRecording = useCallback(() => {
     setRestInputActive(false);
-    if (parseError || tempoConflict) return;
+    if (parseError) return;
     clearPlayback();
     const current = clone(projectRef.current);
     const currentParsedTracks = current.tracks.map((track: any, index: number) => {
@@ -1102,7 +1102,7 @@ export default function MmlStudio({
     } else {
       begin(plan.plannedStart);
     }
-  }, [appendTimelineSecondsAt, clearBeatVisualTimers, clearPlayback, clickMetronome, displayTracks, parseError, scheduleBeatVisual, startMetronomeClock, stopMetronomeClock, tempoConflict]);
+  }, [appendTimelineSecondsAt, clearBeatVisualTimers, clearPlayback, clickMetronome, displayTracks, parseError, scheduleBeatVisual, startMetronomeClock, stopMetronomeClock]);
 
   const beginRestInput = useCallback((at: number) => {
     const current = projectRef.current;
@@ -2315,7 +2315,7 @@ export default function MmlStudio({
 
       <div className="mml-transport" aria-label="MML 재생과 녹음">
         <div className="mml-transport-primary">
-          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError || tempoConflict)}>{playing ? <Pause className="mml-tool-icon" aria-hidden="true" /> : <Play className="mml-tool-icon" aria-hidden="true" />}<span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
+          <button type="button" className="is-primary" onClick={() => (playing ? clearPlayback() : startPlayback())} disabled={Boolean(parseError)}>{playing ? <Pause className="mml-tool-icon" aria-hidden="true" /> : <Play className="mml-tool-icon" aria-hidden="true" />}<span>{playing ? "일시정지" : "재생"}</span><kbd>{shortcutLabel(recordingShortcuts.play)}</kbd></button>
           <button type="button" onClick={() => {
             if (recordState !== "idle") finishRecording();
             else {
@@ -2324,7 +2324,7 @@ export default function MmlStudio({
               setPlayhead(0);
             }
           }}><Square className="mml-tool-icon" aria-hidden="true" /><span>정지</span><kbd>{shortcutLabel(recordingShortcuts.stop)}</kbd></button>
-          <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={recordState === "idle" && Boolean(parseError || tempoConflict)}><Circle className="mml-tool-icon mml-record-icon" aria-hidden="true" /><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
+          <button type="button" className={`is-record ${recordState !== "idle" ? "is-active" : ""}`} onClick={() => recordState === "idle" ? beginRecording() : finishRecording()} disabled={recordState === "idle" && Boolean(parseError)}><Circle className="mml-tool-icon mml-record-icon" aria-hidden="true" /><span>{recordState === "idle" ? "녹음" : "끝내기"}</span><kbd>{shortcutLabel(recordingShortcuts.record)}</kbd></button>
         </div>
         <nav className="mml-transport-navigation" aria-label="재생 위치 이동">
           <button type="button" aria-label="맨앞으로 이동" title="맨앞으로 이동" disabled={recordState !== "idle"} onClick={() => seekPlayhead(0)}><SkipBack className="mml-tool-icon" aria-hidden="true" /></button>
