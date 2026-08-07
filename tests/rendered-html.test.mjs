@@ -607,7 +607,7 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-main-grid > \.mml-track-collapse \{[^}]*position: static;[^}]*width: 100%;[^}]*height: 16px;[^}]*grid-row: 2;[^}]*border-radius: 0;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*grid-row: 3;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 2px;[^}]*width: 15px;[^}]*transform: translateY\(-50%\);/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \{[^}]*width: 64px;[^}]*grid-template-columns: 20px minmax\(0, 1fr\);[^}]*grid-template-rows: 1fr;[^}]*border-right:/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \{[^}]*box-sizing: border-box;[^}]*width: 76px;[^}]*grid-template-columns: 18px minmax\(0, 1fr\);[^}]*grid-template-rows: 1fr;[^}]*column-gap: 4px;[^}]*padding: 0 6px;[^}]*border-right:/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title strong \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list\.is-mobile-collapsed > \* \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all \{[^}]*display: contents;[^}]*margin: 0;/s);
