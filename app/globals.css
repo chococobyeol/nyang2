@@ -1649,6 +1649,7 @@ button {
   display: grid;
   grid-template-columns: auto auto auto minmax(0, 1fr);
   overflow: hidden;
+  align-items: center;
   gap: 7px;
   padding: 6px 8px;
   background: rgba(255, 253, 247, 0.9);
@@ -1668,7 +1669,7 @@ button {
 }
 
 .mml-transport-navigation {
-  padding-left: 3px;
+  padding-left: 6px;
   border-left: 1px solid var(--line);
 }
 
@@ -2775,6 +2776,10 @@ button {
     grid-template-columns: auto auto auto minmax(0, 1fr);
     gap: 4px;
     padding: 4px;
+  }
+
+  .mml-transport-navigation {
+    padding-left: 3px;
   }
 
   .mml-transport-primary,

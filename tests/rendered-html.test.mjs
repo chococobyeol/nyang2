@@ -167,6 +167,8 @@ test("keeps the MML workspace text readable in the split layout", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(css, /\.mml-project-title input \{[^}]*font-size: 18px;/s);
   assert.match(css, /\.mml-transport button \{[^}]*font-size: 13px;/s);
+  assert.match(css, /\.mml-transport \{[^}]*align-items: center;[^}]*gap: 7px;/s);
+  assert.match(css, /\.mml-transport-navigation \{[^}]*padding-left: 6px;[^}]*border-left: 1px solid var\(--line\);/s);
   assert.match(css, /\.mml-track-card strong \{\s*font-size: 12px;/s);
   assert.match(css, /\.mml-work-area textarea \{[^}]*font-size: 15px;/s);
   assert.match(css, /\.mml-status-line \{[^}]*font-size: 10px;/s);
