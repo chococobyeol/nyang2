@@ -5509,11 +5509,11 @@ summary:focus-visible {
 
 @container mml-studio (max-width: 560px) {
   .mml-studio .mml-main-grid {
-    grid-template-rows: 62px minmax(0, 1fr);
+    grid-template-rows: 62px 16px minmax(0, 1fr);
   }
 
   .mml-studio .mml-main-grid.is-track-list-collapsed {
-    grid-template-rows: 20px minmax(0, 1fr);
+    grid-template-rows: 0 16px minmax(0, 1fr);
   }
 
   .mml-studio .mml-track-list {
@@ -5530,6 +5530,8 @@ summary:focus-visible {
 
   .mml-studio .mml-track-list.is-mobile-collapsed {
     overflow: hidden;
+    padding: 0;
+    border-bottom: 0;
     touch-action: auto;
   }
 
@@ -5556,30 +5558,24 @@ summary:focus-visible {
   }
 
   .mml-studio .mml-main-grid > .mml-track-collapse {
-    position: absolute;
-    top: 53px;
-    left: 50%;
-    z-index: 24;
+    position: static;
+    z-index: 19;
     display: inline-grid;
-    width: 34px;
-    height: 17px;
+    width: 100%;
+    height: 16px;
+    grid-row: 2;
     place-items: center;
     padding: 0;
-    border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
-    border-top: 0;
-    border-radius: 0 0 7px 7px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+    border-radius: 0;
     background: #f0e9dd;
     color: var(--ink);
-    transform: translateX(-50%);
-  }
-
-  .mml-studio .mml-main-grid.is-track-list-collapsed > .mml-track-collapse {
-    top: 12px;
   }
 
   .mml-studio .mml-main-grid > .mml-track-collapse svg {
-    width: 15px;
-    height: 15px;
+    width: 13px;
+    height: 13px;
   }
 
   .mml-studio .mml-main-grid > .mml-track-collapse span {
@@ -5629,6 +5625,10 @@ summary:focus-visible {
     line-height: 1;
     text-overflow: clip;
     white-space: nowrap;
+  }
+
+  .mml-studio .mml-work-area {
+    grid-row: 3;
   }
 
   .mml-studio .mml-track-card {
