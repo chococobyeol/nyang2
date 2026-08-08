@@ -421,6 +421,9 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(studio, /minimumPitchZoom = pianoViewportHeight > 0/);
   assert.match(studio, /new ResizeObserver\(updateWidth\)/);
   assert.match(studio, /renderWheelZoomPreview\(\)/);
+  assert.match(studio, /zoomPreviewPositionOffset\(/);
+  assert.match(studio, /data-tick=\{tick\}/);
+  assert.match(css, /\.mml-change-marker \{[^}]*transition: filter 90ms ease, background-color 90ms ease, border-color 90ms ease, box-shadow 90ms ease;/s);
   assert.match(studio, /window\.requestAnimationFrame\(flushWheelZoom\)/);
   assert.match(studio, /window\.setTimeout\(commitWheelZoom, 90\)/);
   assert.match(studio, /grid\.style\.transform = `translate\(\$\{translateX\}px, \$\{translateY\}px\) scale\(\$\{horizontal\.scale\}, \$\{vertical\.scale\}\)`/);

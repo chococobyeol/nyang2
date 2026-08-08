@@ -33,6 +33,14 @@ export function zoomPreviewTransform(contentPosition, baseScale, targetScale) {
   return { origin: position * base, scale: target / base };
 }
 
+export function zoomPreviewPositionOffset(contentPosition, baseScale, targetScale, minimum = 0) {
+  const position = Math.max(0, Number(contentPosition) || 0);
+  const base = Math.max(0, Number(baseScale) || 0);
+  const target = Math.max(0, Number(targetScale) || 0);
+  const floor = Math.max(0, Number(minimum) || 0);
+  return Math.max(floor, position * target) - Math.max(floor, position * base);
+}
+
 function validSignature(signature, fallback) {
   return {
     numerator: Math.max(1, Number(signature?.numerator) || fallback.numerator),

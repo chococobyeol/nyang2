@@ -4,7 +4,7 @@ import test from "node:test";
 import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, transposeMmlText, transposeMmlTextRange, transposeMmlTextRangeWithSelection, upsertTempoCommand } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { applyMmlImport, createProject, importedMmlTitle, reorderProjectTrack, sanitizeProject, trackAudibilityPatch, trackMixStates } from "../app/mml/project.js";
-import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewTransform } from "../app/mml/timeline.js";
+import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewPositionOffset, zoomPreviewTransform } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
 import { createMidiFile, createProjectFromMidi, midiFilename } from "../app/mml/midi.js";
@@ -150,6 +150,13 @@ test("keeps the content beneath the pointer fixed while zooming", () => {
   assert.equal(contentPosition * targetScale - nextScroll, pointerOffset);
   assert.equal(anchoredScrollOffset(10, 0.5, 200, 500, 2000), 0);
   assert.equal(anchoredScrollOffset(2000, 2, 100, 500, 2500), 2000);
+});
+
+test("keeps clamped timeline markers still while previewing zoom at the beginning", () => {
+  assert.equal(zoomPreviewPositionOffset(0, 1, 2, 4), 0);
+  assert.equal(zoomPreviewPositionOffset(1, 1, 2, 4), 0);
+  assert.equal(zoomPreviewPositionOffset(2, 2, 3, 4), 2);
+  assert.equal(zoomPreviewPositionOffset(96, 1, 1.5, 4), 48);
 });
 
 test("changes note and rest lengths only inside the selected MML text", () => {

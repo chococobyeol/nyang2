@@ -38,7 +38,7 @@ import {
 import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, reorderProjectTrack, sanitizeProject, trackAudibilityPatch, trackMixStates } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
-import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewTransform } from "../mml/timeline.js";
+import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewPositionOffset, zoomPreviewTransform } from "../mml/timeline.js";
 import { MML_NOTE_LENGTHS, setSelectedMmlLength, shiftSelectedMmlLength } from "../mml/editing.js";
 import { expandMmlText, optimizeMmlText } from "../mml/optimization.js";
 import { createProjectFromMmi } from "../mml/mmi.js";
@@ -2380,8 +2380,15 @@ export default function MmlStudio({
     ruler.style.transform = `translateX(${translateX}px)`;
     ruler.style.width = `${unscaledPianoWidth * state.timelineTargetZoom * fitTimelineScale}px`;
     ruler.querySelectorAll<HTMLElement>(".mml-measure-label, .mml-change-marker").forEach((element) => {
-      const currentLeft = Number.parseFloat(element.style.left) || 0;
-      element.style.transform = `translateX(${currentLeft * (horizontal.scale - 1)}px)`;
+      const tick = Number(element.dataset.tick) || 0;
+      const minimum = element.classList.contains("mml-change-marker") ? 4 : 0;
+      const offset = zoomPreviewPositionOffset(
+        tick * PIANO_PIXELS_PER_TICK,
+        state.timelineBaseZoom * fitTimelineScale,
+        state.timelineTargetZoom * fitTimelineScale,
+        minimum,
+      );
+      element.style.transform = offset ? `translateX(${offset}px)` : "none";
     });
 
     // Keep pitch text at its natural size. Only move each label to its preview row.
@@ -2956,13 +2963,13 @@ export default function MmlStudio({
                 })}
               </div>
               <div ref={pianoRulerRef} className="mml-timeline-ruler">
-                {timelineGrid.measures.map((measure: any) => <span className="mml-measure-label" style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-label-${measure.tick}`}>{measure.number}</span>)}
+                {timelineGrid.measures.map((measure: any) => <span className="mml-measure-label" data-tick={measure.tick} style={{ left: `${tickToPianoX(measure.tick)}px` }} key={`measure-label-${measure.tick}`}>{measure.number}</span>)}
                 {timelineChangeTicks.map((tick) => {
                   const tempos = trackTempoEvents.filter((marker: any) => marker.tick === tick);
                   const meter = project.timeSignatureMap.find((marker: any) => marker.tick === tick);
                   const tempoText = tempos.length > 1 ? `♩${tempos.length}` : tempos[0] ? `♩${tempos[0].bpm}` : "";
                   const text = [tempoText, meter ? `${meter.numerator}/${meter.denominator}` : ""].filter(Boolean).join(" · ");
-                  return <button type="button" className="mml-change-marker" style={{ left: `${Math.max(4, tickToPianoX(tick))}px` }} onClick={(event) => { event.stopPropagation(); openTimelineEditor(tick); }} title={`${timelinePositionLabel(tick)} 변경 편집`} key={`change-marker-${tick}`}>{text}</button>;
+                  return <button type="button" className="mml-change-marker" data-tick={tick} style={{ left: `${Math.max(4, tickToPianoX(tick))}px` }} onClick={(event) => { event.stopPropagation(); openTimelineEditor(tick); }} title={`${timelinePositionLabel(tick)} 변경 편집`} key={`change-marker-${tick}`}>{text}</button>;
                 })}
               </div>
               <div ref={pianoGridRef} className="mml-piano-grid">

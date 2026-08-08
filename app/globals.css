@@ -1459,6 +1459,7 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):not(.
   font-weight: 900;
   line-height: 1;
   pointer-events: auto;
+  transition: filter 90ms ease, background-color 90ms ease, border-color 90ms ease, box-shadow 90ms ease;
   white-space: nowrap;
 }
 
