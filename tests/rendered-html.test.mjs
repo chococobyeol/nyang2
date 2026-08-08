@@ -135,6 +135,21 @@ test("keeps the help page vertically scrollable on phones", async () => {
   );
 });
 
+test("documents the current track and note editing workflow", async () => {
+  const response = await render("/help");
+
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /트랙 순서와 일괄 설정/);
+  assert.match(html, /선택한 음가·음높이 변경/);
+  assert.match(html, /트랙 개별 설정/);
+  assert.match(html, /여러 트랙 일괄 설정/);
+  assert.match(html, /모바일에서는 피아노롤의/);
+  assert.match(html, /main-screen-current\.jpg/);
+  assert.match(html, /batch-settings-screen-crop\.jpg/);
+  assert.match(html, /track-settings-screen-crop\.jpg/);
+});
+
 test("includes the MML studio without changing the public route", async () => {
   const [page, studio, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -202,7 +217,7 @@ test("shows useful track length and clock progress instead of raw ticks", async 
   assert.doesNotMatch(studio, /음이름과 음가를 읽기 좋게 풀어썼습니다/);
 });
 
-test("keeps the time-signature preset and direct inputs in one settings cell", async () => {
+test("aligns the time-signature preset and direct inputs to the settings grid", async () => {
   const [studio, css] = await Promise.all([
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -212,7 +227,33 @@ test("keeps the time-signature preset and direct inputs in one settings cell", a
   assert.match(studio, /aria-label="박자표 선택"/);
   assert.match(studio, /aria-label="박자 분자"/);
   assert.match(studio, /aria-label="박자 분모"/);
-  assert.match(css, /\.mml-meter-controls \{[^}]*grid-template-columns: minmax\(0, 1fr\) 116px;/s);
+  assert.match(css, /\.mml-quick-settings \.mml-meter-setting \{[^}]*grid-column: span 2;/s);
+  assert.match(css, /\.mml-meter-controls \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[^}]*width: 100%;[^}]*gap: 10px;/s);
+  assert.match(css, /\.mml-quick-settings \.mml-meter-controls > select \{[^}]*min-width: 0;[^}]*padding-right: 30px;/s);
+});
+
+test("scrolls the mobile file list without sliding items behind its header", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /className="mml-action-menu-list"/);
+  assert.match(css, /\.mml-action-menu \{[^}]*grid-template-rows: auto minmax\(0, 1fr\);[^}]*overflow: hidden;/s);
+  assert.match(css, /\.mml-action-menu-list \{[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/s);
+  assert.doesNotMatch(css, /\.mml-action-menu-head \{[^}]*position: sticky;/s);
+});
+
+test("keeps repeat start and end measures together as one settings group", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /<div className="mml-loop-setting" role="group" aria-label="반복 구간">\s*<div className="mml-loop-controls">/s);
+  assert.match(studio, /<label>반복 시작 마디<input aria-label="반복 시작 마디"/);
+  assert.match(studio, /<label>반복 끝 마디<input aria-label="반복 끝 마디"/);
+  assert.match(css, /\.mml-loop-setting \{[^}]*grid-column: span 2;/s);
+  assert.match(css, /\.mml-loop-controls \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[^}]*gap: 10px;/s);
+  assert.match(css, /\.mml-quick-settings \.mml-loop-controls input\[type="number"\] \{[^}]*width: 100%;[^}]*min-width: 0;/s);
 });
 
 test("aligns compact octave, key, and settings controls", async () => {
@@ -271,7 +312,7 @@ test("keeps the live recording playhead independent from quantized note previews
   assert.match(studio, /const elapsedTick = recordingStartTickRef\.current[\s\S]*?setPlayhead\(tick\)/);
   assert.match(studio, /liveNotesEndTick\(nextLiveNotes, elapsedTick\)/);
   assert.match(studio, /if \(!playing && recordState !== "recording"\) return/);
-  assert.match(studio, /\[pianoPixelsPerTick, playhead, playing, recordState\]/);
+  assert.match(studio, /\[playheadX, playing, recordState\]/);
   assert.match(studio, /appendLegatoContinuation\([\s\S]*?appendWallStartRef\.current = at/);
   assert.match(studio, /syncedPlaybackStartAt\(project\.recording\.metronome, runningMetronomeClock, now, \{/);
   assert.match(studio, /meterStartTick: currentMeter\.tick/);
@@ -317,7 +358,7 @@ test("cancels pending and active playback audio immediately on pause or stop", a
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(studio, /item\.track\.themeId\.startsWith\("soundpack:"\) && delaySeconds > 0/);
-  assert.match(studio, /playTimersRef\.current\.push\(window\.setTimeout\(\(\) => \{\s*playMidi\([\s\S]*?volume, 0\)/);
+  assert.match(studio, /playTimersRef\.current\.push\(window\.setTimeout\(\(\) => \{\s*playMidi\([\s\S]*?volume, item\.track\.id, 0\)/);
   assert.match(studio, /playTimersRef\.current\.forEach\(\(timer\) => window\.clearTimeout\(timer\)\)/);
   assert.match(page, /const cancelBeforeStart = immediate && voice\.scheduledStartAt > now \+ 0\.003/);
   assert.match(page, /source\.stop\(cancelBeforeStart \? now : now \+ \(immediate \? 0\.012 : 0\.2\)\)/);
@@ -326,6 +367,20 @@ test("cancels pending and active playback audio immediately on pause or stop", a
   assert.match(studio, /replaceLoadedProject\(imported\)/);
   assert.match(studio, /setImportPayload\(\{ ranges, replacementTitle: importedMmlTitle\(file\.name\) \}\)/);
   assert.match(studio, /const next = applyMmlImport\(projectRef\.current, importPayload, mode, currentThemeId\)/);
+});
+
+test("applies mute, solo, and track volume to active playback", async () => {
+  const [studio, page] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /syncTrackMix\(trackMixStates\(project\.tracks\)\)/);
+  assert.match(studio, /Object\.assign\(track, patch\);[\s\S]*?syncTrackMix\(trackMixStates\(draft\.tracks\)\)/);
+  assert.match(studio, /trackAudibilityPatch\(track, "mute"\)/);
+  assert.match(studio, /trackAudibilityPatch\(track, "solo"\)/);
+  assert.match(page, /const target = state\.audible \? state\.volume : 0/);
+  assert.match(page, /gain\.gain\.linearRampToValueAtTime\(target, now \+ 0\.005\)/);
+  assert.match(page, /controllerChange\(channel, 7, Math\.round\(127 \* \(state\.audible \? state\.volume : 0\)\)/);
 });
 
 test("uses the piano-roll context action instead of a redundant meter and tempo button", async () => {
@@ -433,31 +488,59 @@ test("provides direct track controls, timeline zoom, and full-screen composing",
   assert.match(css, /\.mml-track-visibility\.is-hidden::after/);
 });
 
-test("changes the instrument for several selected tracks at once", async () => {
+test("opens a separate bulk settings window for selected tracks", async () => {
   const [studio, css] = await Promise.all([
     readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(studio, /const \[batchTrackIds, setBatchTrackIds\] = useState<string\[\]>\(\[\]\)/);
   assert.match(studio, /const changeTrackThemes = \(trackIds: string\[\], themeId: string\) =>/);
-  assert.match(studio, /const updateBatchTheme = \(themeId: string\) =>/);
-  assert.match(studio, /resumeAfterThemeChangeRef\.current = playheadRef\.current;[\s\S]*?clearPlayback\(\);[\s\S]*?track\.themeId = themeId/);
+  assert.match(studio, /const \[batchSettingsView, setBatchSettingsView\] = useState\(false\)/);
+  assert.match(studio, /const \[batchSettingsAnchor, setBatchSettingsAnchor\] = useState<\{ x: number; y: number \} \| null>\(null\)/);
+  assert.match(studio, /resumeAfterThemeChangeRef\.current = playheadRef\.current;[\s\S]*?clearPlayback\(\);[\s\S]*?updateTracks\(trackIds, \{ themeId \}\)/);
   assert.match(studio, /<label>음색<select[^>]*onChange=\{\(event\) => changeTrackThemes\(\[selectedTrack\.id\], event\.target\.value\)\}/);
   assert.match(studio, /const replayFromTick = fromTick >= songDuration \? 0 : fromTick;/);
   assert.match(studio, /prepareThemes\(themeIds\)[\s\S]*?schedulePlayback\(fromTick\)/);
   assert.match(studio, /startPlaybackRef\.current\(resumeTick\)/);
-  assert.match(studio, /if \(selectedIds\.has\(track\.id\)\) track\.themeId = themeId/);
-  assert.match(studio, /aria-label="선택한 트랙 음색"/);
+  assert.match(studio, /선택 트랙 일괄 설정/);
+  assert.match(studio, /className="mml-track-settings mml-batch-settings"/);
+  assert.match(studio, /const openBatchSettings = \(event: ReactMouseEvent<HTMLButtonElement>\) =>/);
+  assert.match(studio, /panelRect\.right - studioRect\.left \+ 10/);
+  assert.match(studio, /ref=\{batchSettingsRef\}/);
+  assert.match(studio, /style=\{batchSettingsAnchor \? \{ left: batchSettingsAnchor\.x, top: batchSettingsAnchor\.y, right: "auto", transform: "none" \} : undefined\}/);
+  assert.doesNotMatch(css, /\.mml-batch-settings \{[^}]*top: 50%;/s);
+  assert.doesNotMatch(studio, /batchSettingsTab/);
+  assert.doesNotMatch(studio, /aria-label="일괄 설정 종류"/);
+  assert.match(studio, /ariaLabel="선택 트랙 재생 음량"[\s\S]*?updateTracks\(batchTrackIds, \{ mixerVolume \}\)/);
+  assert.doesNotMatch(studio, /MML 코드 변경/);
+  assert.doesNotMatch(studio, /선택한 트랙의 MML 텍스트를 반음 단위로 직접 바꿉니다/);
+  assert.match(studio, /transposeTrackTexts\(batchTrackIds, -1\)/);
+  assert.match(studio, /<strong>이조<\/strong>/);
+  assert.doesNotMatch(studio, /<strong>전조<\/strong>/);
+  assert.match(studio, /\[track\.id, transposeMmlText\(track\.sourceText, delta\)\]/);
+  assert.match(studio, /track\.sourceText = transposedTexts\.get\(track\.id\)/);
   assert.match(studio, /className="mml-track-batch-checkbox"/);
   assert.match(studio, /const toggleAllBatchTracks = \(\) =>/);
   assert.match(studio, /renderBatchPanel\("sidebar"\)/);
   assert.match(studio, /renderBatchPanel\("floating"\)/);
   assert.match(studio, /\? "전체 해제" : "전체 선택"/);
+  assert.match(studio, /\{batchSelectedTracks\.length\}개 선택/);
+  assert.match(studio, /aria-label="일괄 설정"[\s\S]*?>설정<\/button>/);
   assert.match(studio, /setBatchTrackIds\(\[\]\)}>해제<\/button>/);
   assert.match(css, /\.mml-track-batch-panel/);
   assert.match(css, /\.mml-track-select-all/);
   assert.match(css, /\.mml-track-batch-checkbox input:checked/);
+  assert.match(css, /\.mml-track-select-all \{[\s\S]*?font-size: 10px;/);
+  assert.doesNotMatch(css, /\.mml-track-list-title > strong \{[\s\S]*?font-size: 15px;/);
+  assert.match(css, /\.mml-track-select-all \{[\s\S]*?font-weight: 700;/);
+  assert.match(css, /\.mml-track-batch-panel \{[\s\S]*?min-height: 28px;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(css, /\.mml-track-batch-panel strong \{[\s\S]*?font-size: 10px;/);
+  assert.match(css, /\.mml-track-batch-panel button \{[\s\S]*?height: 22px;[\s\S]*?font-size: 10px;/);
+  assert.match(css, /\.mml-track-batch-panel button\.mml-batch-open \{[\s\S]*?background: #fffdf7;[\s\S]*?color: var\(--ink\);/);
+  assert.match(css, /\.mml-track-batch-panel button:not\(\.mml-batch-open\) \{[\s\S]*?background: transparent;/);
   assert.match(css, /\.mml-track-card\.is-batch-selected/);
+  assert.match(css, /@media \(hover: hover\) and \(pointer: fine\) \{[\s\S]*?button:not\(:disabled\):hover/);
+  assert.match(css, /button:not\(:disabled\):not\(\.paw-note\):not\(\.control-button\):not\(\.brand-mark\):active/);
 });
 
 test("defaults repeat to the whole song and presents repeat positions as measures", async () => {
@@ -467,8 +550,9 @@ test("defaults repeat to the whole song and presents repeat positions as measure
   ]);
   assert.match(project, /loopStart: 0, loopEnd: 0/);
   assert.match(project, /Number\(value\.version\) < 5[\s\S]*?view\.loopEnd = 0/);
-  assert.match(studio, /반복 시작 마디/);
-  assert.match(studio, /반복 끝 마디/);
+  assert.match(studio, /aria-label="반복 구간"/);
+  assert.match(studio, /<label>반복 시작 마디<input aria-label="반복 시작 마디"/);
+  assert.match(studio, /<label>반복 끝 마디<input aria-label="반복 끝 마디"/);
   assert.match(studio, /project\.view\.loopEnd > loopStartTick[\s\S]*?: songDuration/);
 });
 
@@ -499,7 +583,9 @@ test("uses the same icon close control across MML panels", async () => {
   assert.match(studio, /aria-label="파일 메뉴 닫기"><X/);
   assert.match(studio, /aria-label="녹음 설정 닫기"><X/);
   assert.match(studio, /aria-label="트랙 설정 닫기"><X/);
-  assert.match(studio, /aria-label="선택 음가 변경 닫기"><X/);
+  assert.match(studio, /aria-label="선택 편집 닫기"><X/);
+  assert.match(studio, /transposeMmlTextRange\(track\.sourceText, delta, durationMenu\.start, durationMenu\.end\)/);
+  assert.match(studio, /선택 영역 반음 올림/);
   assert.match(studio, /aria-label="박자·템포 변경 닫기"><X/);
   assert.doesNotMatch(studio, />닫기<\/button>/);
   assert.match(css, /\.mml-quick-settings-head \.mml-panel-close,[\s\S]*?border-radius: 50%;/);
@@ -652,8 +738,8 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-track-batch-sidebar \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-batch-panel\.mml-track-batch-floating \{[^}]*position: absolute;[^}]*left: 162px;[^}]*display: grid;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*left: 162px;[^}]*max-height: calc\(100% - 104px\);/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-action-menu \{[^}]*top: 96px;[^}]*max-height: calc\(100% - 104px\);[^}]*overflow-y: auto;[^}]*scrollbar-width: thin;/s);
-  assert.match(css, /\.mml-action-menu-head \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: #f0e8dc;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-action-menu \{[^}]*top: 96px;[^}]*max-height: calc\(100% - 104px\);[^}]*overflow: hidden;/s);
+  assert.match(css, /\.mml-action-menu-list \{[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-main-grid \{[^}]*grid-template-rows: 62px 16px minmax\(0, 1fr\);/s);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-track-list \{[^}]*align-items: center;[^}]*scrollbar-width: none;[^}]*touch-action: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list::\-webkit-scrollbar \{[^}]*display: none;[^}]*height: 0;/s);
@@ -664,7 +750,7 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-main-grid > \.mml-track-collapse \{[^}]*position: static;[^}]*width: 100%;[^}]*height: 16px;[^}]*grid-row: 2;[^}]*border-radius: 0;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*grid-row: 3;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 2px;[^}]*width: 15px;[^}]*transform: translateY\(-50%\);/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \{[^}]*box-sizing: border-box;[^}]*width: 76px;[^}]*grid-template-columns: 18px minmax\(0, 1fr\);[^}]*grid-template-rows: 1fr;[^}]*column-gap: 4px;[^}]*padding: 0 6px;[^}]*border-right:/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \{[^}]*box-sizing: border-box;[^}]*width: 92px;[^}]*grid-template-columns: 18px minmax\(0, 1fr\);[^}]*grid-template-rows: 1fr;[^}]*column-gap: 4px;[^}]*padding: 0 6px;[^}]*border-right:/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title strong \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list\.is-mobile-collapsed > \* \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all \{[^}]*display: contents;[^}]*margin: 0;/s);
@@ -672,7 +758,7 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-track-card \{[^}]*width: 164px;[^}]*grid-template-columns: 18px minmax\(0, 1fr\) 58px;[^}]*padding: 5px 8px 5px 19px;/s);
   assert.doesNotMatch(mobileMml, /scroll-snap-(?:type|align)/);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
-  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: auto;/s);
+  assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-action-menu \{[^}]*top: 144px;[^}]*overflow: hidden;/s);
   assert.match(mobileMml, /\.mml-open \.performance-surface \.transpose-panel \{[^}]*--compact-octave-row-width: calc\(var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ var\(--octave-button-size\) \+ 6px\);[^}]*width: calc\(var\(--compact-octave-row-width\) \+ 92px\);[^}]*justify-self: end;/s);
 });
 
@@ -735,4 +821,30 @@ test("keeps recording controls recoverable and preserves per-note velocity", asy
   assert.match(studio, /disabled=\{Boolean\(parseError\)\}/);
   assert.doesNotMatch(studio, /if \(parseError \|\| tempoConflict/);
   assert.doesNotMatch(studio, /tempo:\s*writesTempo \? options\.bpm/);
+});
+
+test("keeps piano-roll and MML text selections synchronized", async () => {
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(studio, /const \[sourceSelection, setSourceSelection\]/);
+  assert.match(studio, /const selectNotesInMarquee =/);
+  assert.match(studio, /onPointerDown=\{beginPianoSelection\}/);
+  assert.match(studio, /onPointerMove=\{movePianoSelection\}/);
+  assert.match(studio, /className=\{`mml-note-block[\s\S]*?is-range-selected/);
+  assert.match(studio, /const syncSourceSelectionFromEditor = useCallback/);
+  assert.match(studio, /document\.addEventListener\("selectionchange", syncActiveEditorSelection\)/);
+  assert.match(studio, /onSelect=\{\(event\) => syncSourceSelectionFromEditor/);
+  assert.match(studio, /onKeyUp=\{\(event\) => syncSourceSelectionFromEditor/);
+  assert.match(studio, /const clearSourceSelection = useCallback/);
+  assert.match(studio, /document\.addEventListener\("pointerdown", dismissSelection, true\)/);
+  assert.match(studio, /target\?\.closest\("\.mml-note-block"\)/);
+  assert.match(studio, /relatedTarget as HTMLElement \| null\)\?\.closest\("\.mml-note-block"\)/);
+  assert.match(studio, /className=\{`mml-note-select-toggle/);
+  assert.match(studio, /pianoTouchPointersRef\.current\.size >= 2/);
+  assert.match(css, /\.mml-note-block\.is-range-selected/);
+  assert.match(css, /\.mml-note-marquee/);
+  assert.match(css, /@media \(hover: none\), \(pointer: coarse\) \{[\s\S]*?\.mml-note-select-toggle \{[^}]*display: inline-flex;/s);
+  assert.match(css, /\.mml-studio \.mml-piano-roll\.is-note-select-mode \{[^}]*touch-action: none;/s);
 });

@@ -100,6 +100,7 @@ type Voice = {
   baseMidi: number;
   pitchClass: number;
   gain?: GainNode;
+  outputNode?: AudioNode;
   sources: AudioScheduledSourceNode[];
   scheduledStartAt: number;
   sampleState?: SampleVoiceState;
@@ -127,6 +128,15 @@ type NoteStartOptions = {
   skipRecording?: boolean;
   recordingAt?: number;
   audioDelaySeconds?: number;
+  mmlTrackId?: string;
+  outputNode?: AudioNode;
+};
+
+type MmlTrackMixState = {
+  trackId: string;
+  themeId: string;
+  volume: number;
+  audible: boolean;
 };
 
 function inputEventSeconds(event: { timeStamp: number }) {
@@ -672,6 +682,8 @@ export default function Home() {
   const mmlInputSinkRef = useRef<MmlInputSink | null>(null);
   const soundPackInputRef = useRef<HTMLInputElement | null>(null);
   const soundPackRef = useRef<StoredSoundPack | null>(null);
+  const mmlTrackMixRef = useRef<Map<string, MmlTrackMixState>>(new Map());
+  const mmlTrackGainRef = useRef<Map<string, GainNode>>(new Map());
   const soundPackSynthRef = useRef<{
     importedAt: number;
     synth: WorkletSynthesizer;
@@ -875,14 +887,14 @@ export default function Home() {
     return next;
   }, [disposeSoundPackSynth]);
 
-  const soundPackChannel = useCallback((loaded: NonNullable<typeof soundPackSynthRef.current>, themeId: string, at: number) => {
-    const existing = loaded.channelByTheme.get(themeId);
+  const soundPackChannel = useCallback((loaded: NonNullable<typeof soundPackSynthRef.current>, themeId: string, at: number, channelKey = themeId) => {
+    const existing = loaded.channelByTheme.get(channelKey);
     if (existing !== undefined) return existing;
     const patch = parseSoundPackThemeId(themeId);
     if (!patch) throw new Error("사운드팩 악기 정보를 읽지 못했습니다.");
     const channel = loaded.nextChannel % 16;
     loaded.nextChannel += 1;
-    loaded.channelByTheme.set(themeId, channel);
+    loaded.channelByTheme.set(channelKey, channel);
     loaded.synth.midiChannels[channel].setDrums(patch.isDrum);
     loaded.synth.controllerChange(channel, 0, patch.bankMSB, { time: at });
     loaded.synth.controllerChange(channel, 32, patch.bankLSB, { time: at });
@@ -956,7 +968,7 @@ export default function Home() {
     tailGain.gain.value = 0.38;
     source.connect(convolver);
     convolver.connect(tailGain);
-    tailGain.connect(graph.master);
+    tailGain.connect(voice.outputNode ?? graph.master);
     source.start(startAt, offset, duration);
     voice.sources.push(source);
     state.tailGain = tailGain;
@@ -1088,7 +1100,10 @@ export default function Home() {
           if (pendingNoteRef.current.get(inputId) !== requestId) return;
           pendingNoteRef.current.delete(inputId);
           const now = Math.max(graph.context.currentTime, scheduledStartAt);
-          const channel = soundPackChannel(loaded, selectedThemeId, now);
+          const channelKey = options.mmlTrackId ? `${selectedThemeId}:${options.mmlTrackId}` : selectedThemeId;
+          const channel = soundPackChannel(loaded, selectedThemeId, now, channelKey);
+          const mix = options.mmlTrackId ? mmlTrackMixRef.current.get(options.mmlTrackId) : null;
+          if (mix) loaded.synth.controllerChange(channel, 7, Math.round(127 * (mix.audible ? mix.volume : 0)), { time: now });
           const midi = Math.max(0, Math.min(127, Math.round(soundingMidi)));
           const velocity = Math.max(1, Math.min(127, Math.round(127 * Math.max(0, Math.min(1, options.volume ?? 1)))));
           loaded.synth.noteOn(channel, midi, velocity, { time: now });
@@ -1137,7 +1152,7 @@ export default function Home() {
 
       const gain = graph.context.createGain();
       gain.gain.value = 0.0001;
-      gain.connect(graph.master);
+      gain.connect(options.outputNode ?? graph.master);
       const now = Math.max(graph.context.currentTime, scheduledStartAt);
       const sources: AudioScheduledSourceNode[] = [];
       let sampleSource: AudioBufferSourceNode | null = null;
@@ -1189,6 +1204,7 @@ export default function Home() {
         baseMidi,
         pitchClass: mod(baseMidi, 12),
         gain,
+        outputNode: options.outputNode,
         sources,
         scheduledStartAt: now,
         sampleState: sampleSource && sampleBuffer
@@ -1518,7 +1534,49 @@ export default function Home() {
     mmlInputSinkRef.current = sink;
   }, []);
 
-  const playMmlMidi = useCallback((sourceId: string, midi: number, themeId: string, volume: number, delaySeconds = 0) => {
+  const getMmlTrackOutput = useCallback((trackId: string) => {
+    const graph = initAudio();
+    const existing = mmlTrackGainRef.current.get(trackId);
+    if (existing) return existing;
+    const gain = graph.context.createGain();
+    const mix = mmlTrackMixRef.current.get(trackId);
+    gain.gain.value = mix && mix.audible ? mix.volume : 0;
+    gain.connect(graph.master);
+    mmlTrackGainRef.current.set(trackId, gain);
+    return gain;
+  }, [initAudio]);
+
+  const syncMmlTrackMix = useCallback((states: MmlTrackMixState[]) => {
+    const next = new Map(states.map((state) => [state.trackId, state]));
+    mmlTrackMixRef.current = next;
+    const graph = audioRef.current;
+    if (graph) {
+      mmlTrackGainRef.current.forEach((gain, trackId) => {
+        const state = next.get(trackId);
+        if (!state) {
+          gain.disconnect();
+          mmlTrackGainRef.current.delete(trackId);
+          return;
+        }
+        const now = graph.context.currentTime;
+        const target = state.audible ? state.volume : 0;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(target, now + 0.005);
+      });
+    }
+    const loaded = soundPackSynthRef.current;
+    if (loaded) {
+      const at = graph?.context.currentTime;
+      states.forEach((state) => {
+        const channel = loaded.channelByTheme.get(`${state.themeId}:${state.trackId}`);
+        if (channel === undefined) return;
+        loaded.synth.controllerChange(channel, 7, Math.round(127 * (state.audible ? state.volume : 0)), at === undefined ? undefined : { time: at });
+      });
+    }
+  }, []);
+
+  const playMmlMidi = useCallback((sourceId: string, midi: number, themeId: string, volume: number, trackId: string, delaySeconds = 0) => {
     void startNote(sourceId, "left", 0, {
       soundingMidi: midi,
       themeId,
@@ -1526,8 +1584,10 @@ export default function Home() {
       keyId: `mml:${midi}`,
       skipRecording: true,
       audioDelaySeconds: delaySeconds,
+      mmlTrackId: trackId,
+      outputNode: getMmlTrackOutput(trackId),
     });
-  }, [startNote]);
+  }, [getMmlTrackOutput, startNote]);
 
   const prepareMmlThemes = useCallback(async (themeIds: string[]) => {
     const graph = initAudio();
@@ -1753,6 +1813,7 @@ export default function Home() {
           playMidi={playMmlMidi}
           releaseMidi={releaseMmlMidi}
           stopMmlAudio={stopMmlAudio}
+          syncTrackMix={syncMmlTrackMix}
           clickMetronome={clickMetronome}
           onPlayShortcutChange={setMmlPlayShortcut}
           onRestShortcutChange={setMmlRestShortcut}

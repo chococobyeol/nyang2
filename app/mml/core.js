@@ -200,6 +200,226 @@ export function parseTrack(source, options = {}) {
   return { notes, rests, tempos, duration: state.tick, source };
 }
 
+export function transposeMmlText(source, semitones) {
+  const original = String(source ?? "");
+  const delta = Math.trunc(Number(semitones) || 0);
+  const before = parseTrack(original);
+  if (delta === 0) return original;
+
+  let sourceOctave = 4;
+  let outputOctave = 4;
+  let index = 0;
+  let result = "";
+  const appendTargetNote = (midi, suffix) => {
+    const targetMidi = midi + delta;
+    const noteNumber = midiToMmlNoteNumber(targetMidi);
+    if (noteNumber < 0 || noteNumber > 107) {
+      throw new Error(`이조 결과가 지원 음역(C0~B8)을 벗어납니다: ${noteNumber < 0 ? "C0 아래" : "B8 위"}`);
+    }
+    const octave = Math.floor(targetMidi / 12) - 1;
+    const pitchClass = ((targetMidi % 12) + 12) % 12;
+    if (octave !== outputOctave) {
+      result += `o${octave}`;
+      outputOctave = octave;
+    }
+    result += `${NOTE_NAMES[pitchClass]}${suffix}`;
+  };
+
+  while (index < original.length) {
+    if (original.startsWith("//", index)) {
+      const end = original.indexOf("\n", index);
+      const boundary = end < 0 ? original.length : end;
+      result += original.slice(index, boundary);
+      index = boundary;
+      continue;
+    }
+    if (original.startsWith("/*", index)) {
+      const end = original.indexOf("*/", index + 2);
+      if (end < 0) throw new MmlSyntaxError("닫히지 않은 여러 줄 주석입니다.", index, 2);
+      result += original.slice(index, end + 2);
+      index = end + 2;
+      continue;
+    }
+
+    const character = original[index].toLowerCase();
+    if (character === "<" || character === ">") {
+      sourceOctave += character === ">" ? 1 : -1;
+      index += 1;
+      continue;
+    }
+    if (character === "o") {
+      const number = readNumber(original, index + 1);
+      if (number.value === null) throw new MmlSyntaxError("o 뒤에 숫자가 필요합니다.", index);
+      sourceOctave = number.value;
+      index = number.end;
+      continue;
+    }
+    if (["l", "t", "v"].includes(character)) {
+      const number = readNumber(original, index + 1);
+      if (number.value === null) throw new MmlSyntaxError(`${character} 뒤에 숫자가 필요합니다.`, index);
+      let end = number.end;
+      if (character === "l") while (original[end] === ".") end += 1;
+      result += original.slice(index, end);
+      index = end;
+      continue;
+    }
+    if (character === "n") {
+      const number = readNumber(original, index + 1);
+      if (number.value === null) throw new MmlSyntaxError("n 뒤에 음 번호가 필요합니다.", index);
+      appendTargetNote(mmlNoteNumberToMidi(number.value), "");
+      index = number.end;
+      continue;
+    }
+    if (Object.hasOwn(NOTE_CLASS, character)) {
+      let end = index + 1;
+      let accidental = 0;
+      if (["+", "#", "-"].includes(original[end])) {
+        accidental = original[end] === "-" ? -1 : 1;
+        end += 1;
+      }
+      const suffixStart = end;
+      while (/[0-9]/.test(original[end] ?? "")) end += 1;
+      while (original[end] === ".") end += 1;
+      const midi = 12 * (sourceOctave + 1) + NOTE_CLASS[character] + accidental;
+      appendTargetNote(midi, original.slice(suffixStart, end));
+      index = end;
+      continue;
+    }
+
+    result += original[index];
+    index += 1;
+  }
+
+  const after = parseTrack(result);
+  if (before.notes.length !== after.notes.length
+    || before.notes.some((note, noteIndex) => {
+      const shifted = after.notes[noteIndex];
+      return shifted.midi !== note.midi + delta
+        || shifted.tick !== note.tick
+        || shifted.duration !== note.duration
+        || shifted.velocity !== note.velocity;
+    })
+    || before.duration !== after.duration
+    || JSON.stringify(before.tempos.map(({ tick, bpm }) => ({ tick, bpm }))) !== JSON.stringify(after.tempos.map(({ tick, bpm }) => ({ tick, bpm })))) {
+    throw new Error("이조 후 MML 검증에 실패했습니다.");
+  }
+  return result;
+}
+
+export function transposeMmlTextRange(source, semitones, selectionStart, selectionEnd) {
+  const original = String(source ?? "");
+  const delta = Math.trunc(Number(semitones) || 0);
+  const rangeStart = Math.max(0, Math.min(original.length, Math.trunc(Number(selectionStart) || 0)));
+  const rangeEnd = Math.max(rangeStart, Math.min(original.length, Math.trunc(Number(selectionEnd) || 0)));
+  if (delta === 0 || rangeStart === rangeEnd) return original;
+
+  const before = parseTrack(original);
+  const selectedNotes = before.notes.filter((note) => note.sourceStart < rangeEnd && note.sourceEnd > rangeStart);
+  if (!selectedNotes.length) throw new Error("선택한 범위에 이조할 음표가 없습니다.");
+  const selectedRanges = selectedNotes.map((note) => ({ start: note.sourceStart, end: note.sourceEnd }));
+  const tokenIsSelected = (start) => selectedRanges.some((range) => start >= range.start && start < range.end);
+  const shiftedMidiAt = (midi, tokenStart) => {
+    if (!tokenIsSelected(tokenStart)) return midi;
+    const targetMidi = midi + delta;
+    const noteNumber = midiToMmlNoteNumber(targetMidi);
+    if (noteNumber < 0 || noteNumber > 107) {
+      throw new Error(`이조 결과가 지원 음역(C0~B8)을 벗어납니다: ${noteNumber < 0 ? "C0 아래" : "B8 위"}`);
+    }
+    return targetMidi;
+  };
+
+  let sourceOctave = 4;
+  let index = 0;
+  let result = "";
+  while (index < original.length) {
+    if (original.startsWith("//", index)) {
+      const end = original.indexOf("\n", index);
+      const boundary = end < 0 ? original.length : end;
+      result += original.slice(index, boundary);
+      index = boundary;
+      continue;
+    }
+    if (original.startsWith("/*", index)) {
+      const end = original.indexOf("*/", index + 2);
+      if (end < 0) throw new MmlSyntaxError("닫히지 않은 여러 줄 주석입니다.", index, 2);
+      result += original.slice(index, end + 2);
+      index = end + 2;
+      continue;
+    }
+
+    const tokenStart = index;
+    const character = original[index].toLowerCase();
+    if (character === "<" || character === ">") {
+      sourceOctave += character === ">" ? 1 : -1;
+      result += original[index];
+      index += 1;
+      continue;
+    }
+    if (character === "o") {
+      const number = readNumber(original, index + 1);
+      if (number.value === null) throw new MmlSyntaxError("o 뒤에 숫자가 필요합니다.", index);
+      sourceOctave = number.value;
+      result += original.slice(index, number.end);
+      index = number.end;
+      continue;
+    }
+    if (character === "n") {
+      const number = readNumber(original, index + 1);
+      if (number.value === null) throw new MmlSyntaxError("n 뒤에 음 번호가 필요합니다.", index);
+      if (tokenIsSelected(tokenStart)) {
+        const shiftedMidi = shiftedMidiAt(mmlNoteNumberToMidi(number.value), tokenStart);
+        result += `n${midiToMmlNoteNumber(shiftedMidi)}`;
+      } else {
+        result += original.slice(index, number.end);
+      }
+      index = number.end;
+      continue;
+    }
+    if (Object.hasOwn(NOTE_CLASS, character)) {
+      let end = index + 1;
+      let accidental = 0;
+      if (["+", "#", "-"].includes(original[end])) {
+        accidental = original[end] === "-" ? -1 : 1;
+        end += 1;
+      }
+      const suffixStart = end;
+      while (/[0-9]/.test(original[end] ?? "")) end += 1;
+      while (original[end] === ".") end += 1;
+      if (tokenIsSelected(tokenStart)) {
+        const midi = 12 * (sourceOctave + 1) + NOTE_CLASS[character] + accidental;
+        const shiftedMidi = shiftedMidiAt(midi, tokenStart);
+        const shiftedOctave = Math.floor(shiftedMidi / 12) - 1;
+        const pitchClass = ((shiftedMidi % 12) + 12) % 12;
+        const shiftedNote = `${NOTE_NAMES[pitchClass]}${original.slice(suffixStart, end)}`;
+        result += shiftedOctave === sourceOctave ? shiftedNote : `o${shiftedOctave}${shiftedNote}o${sourceOctave}`;
+      } else {
+        result += original.slice(index, end);
+      }
+      index = end;
+      continue;
+    }
+
+    result += original[index];
+    index += 1;
+  }
+
+  const after = parseTrack(result);
+  if (before.notes.length !== after.notes.length
+    || before.notes.some((note, noteIndex) => {
+      const shifted = after.notes[noteIndex];
+      const selected = note.sourceStart < rangeEnd && note.sourceEnd > rangeStart;
+      return shifted.midi !== note.midi + (selected ? delta : 0)
+        || shifted.tick !== note.tick
+        || shifted.duration !== note.duration
+        || shifted.velocity !== note.velocity;
+    })
+    || before.duration !== after.duration
+    || JSON.stringify(before.tempos.map(({ tick, bpm }) => ({ tick, bpm }))) !== JSON.stringify(after.tempos.map(({ tick, bpm }) => ({ tick, bpm })))) {
+    throw new Error("선택 영역 이조 후 MML 검증에 실패했습니다.");
+  }
+  return result;
+}
+
 function splitTracks(source) {
   const clean = stripComments(source);
   const trimmedStart = clean.search(/\S/);

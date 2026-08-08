@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, upsertTempoCommand } from "../app/mml/core.js";
+import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, transposeMmlText, transposeMmlTextRange, upsertTempoCommand } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
-import { applyMmlImport, createProject, importedMmlTitle, reorderProjectTrack, sanitizeProject } from "../app/mml/project.js";
+import { applyMmlImport, createProject, importedMmlTitle, reorderProjectTrack, sanitizeProject, trackAudibilityPatch, trackMixStates } from "../app/mml/project.js";
 import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewTransform } from "../app/mml/timeline.js";
 import { setSelectedMmlLength, shiftSelectedMmlLength } from "../app/mml/editing.js";
 import { createProjectFromMmi, parseMmiDocument } from "../app/mml/mmi.js";
@@ -46,6 +46,50 @@ test("reorders tracks together with their keyboard routing order", () => {
   assert.deepEqual(project.routing.left, [third.id, first.id]);
   assert.deepEqual(project.routing.right, [third.id, first.id, second.id]);
   assert.equal(project.tracks[0].sourceText, third.sourceText);
+});
+
+test("keeps mute and solo mutually exclusive while deriving live track audibility", () => {
+  assert.deepEqual(trackAudibilityPatch({ muted: false, solo: true }, "mute"), { muted: true, solo: false });
+  assert.deepEqual(trackAudibilityPatch({ muted: true, solo: false }, "solo"), { solo: true, muted: false });
+
+  const tracks = [
+    { id: "one", themeId: "nyang-voice", mixerVolume: 0.6, muted: false, solo: false },
+    { id: "two", themeId: "nyang-voice", mixerVolume: 0.8, muted: false, solo: true },
+    { id: "three", themeId: "nyang-voice", mixerVolume: 1, muted: true, solo: false },
+  ];
+  assert.deepEqual(trackMixStates(tracks), [
+    { trackId: "one", themeId: "nyang-voice", volume: 0.6, audible: false },
+    { trackId: "two", themeId: "nyang-voice", volume: 0.8, audible: true },
+    { trackId: "three", themeId: "nyang-voice", volume: 1, audible: false },
+  ]);
+
+  assert.deepEqual(trackMixStates([
+    { id: "one", themeId: "nyang-voice", mixerVolume: 0.25, muted: false, solo: false },
+    { id: "two", themeId: "nyang-voice", mixerVolume: 0.5, muted: true, solo: false },
+    { id: "three", themeId: "nyang-voice", mixerVolume: 0.75, muted: false, solo: false },
+  ]), [
+    { trackId: "one", themeId: "nyang-voice", volume: 0.25, audible: true },
+    { trackId: "two", themeId: "nyang-voice", volume: 0.5, audible: false },
+    { trackId: "three", themeId: "nyang-voice", volume: 0.75, audible: true },
+  ]);
+
+  assert.deepEqual(trackMixStates([
+    { id: "one", themeId: "nyang-voice", mixerVolume: 1, muted: false, solo: true },
+    { id: "two", themeId: "nyang-voice", mixerVolume: 1, muted: false, solo: true },
+    { id: "three", themeId: "nyang-voice", mixerVolume: 1, muted: false, solo: false },
+  ]).map(({ trackId, audible }) => ({ trackId, audible })), [
+    { trackId: "one", audible: true },
+    { trackId: "two", audible: true },
+    { trackId: "three", audible: false },
+  ]);
+
+  const contradictory = createProject();
+  contradictory.tracks[0].muted = true;
+  contradictory.tracks[0].solo = true;
+  assert.deepEqual(
+    { muted: sanitizeProject(contradictory).tracks[0].muted, solo: sanitizeProject(contradictory).tracks[0].solo },
+    { muted: false, solo: true },
+  );
 });
 
 test("imports wrapped 3MLE channel files without reading extension data as MML", () => {
@@ -395,6 +439,56 @@ test("optimizes absolute notes and restores compact MML as readable named notes"
     parseTrack(optimized.source).notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
   );
   assert.equal(parseTrack(restored.source).duration, parseTrack(optimized.source).duration);
+});
+
+test("transposes the MML text itself while preserving timing, tempo, volume, ties, and comments", () => {
+  const source = "// melody\nt152v12o3l8b>c+4&c+4r8n46";
+  const shifted = transposeMmlText(source, 1);
+  const before = parseTrack(source);
+  const after = parseTrack(shifted);
+  assert.match(shifted, /\/\/ melody/);
+  assert.equal(shifted.includes("n46"), false);
+  assert.deepEqual(
+    after.notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi, velocity })),
+    before.notes.map(({ tick, duration, midi, velocity }) => ({ tick, duration, midi: midi + 1, velocity })),
+  );
+  assert.deepEqual(after.tempos.map(({ tick, bpm }) => ({ tick, bpm })), before.tempos.map(({ tick, bpm }) => ({ tick, bpm })));
+  assert.equal(after.duration, before.duration);
+});
+
+test("rejects text transposition outside the Mabinogi note range", () => {
+  assert.throws(() => transposeMmlText("n0", -1), /지원 음역/);
+  assert.throws(() => transposeMmlText("n107", 1), /지원 음역/);
+});
+
+test("transposes only notes in the selected MML range and restores the surrounding octave", () => {
+  const source = "// keep\nt120v11o4l8abcde";
+  const start = source.indexOf("b");
+  const shifted = transposeMmlTextRange(source, 1, start, start + 1);
+  const before = parseTrack(source);
+  const after = parseTrack(shifted);
+  assert.deepEqual(after.notes.map((note) => note.midi), [69, 72, 60, 62, 64]);
+  assert.deepEqual(after.notes.map(({ tick, duration, velocity }) => ({ tick, duration, velocity })), before.notes.map(({ tick, duration, velocity }) => ({ tick, duration, velocity })));
+  assert.match(shifted, /\/\/ keep/);
+  assert.match(shifted, /o5co4c/);
+});
+
+test("transposes selected absolute notes and complete tied notes without touching neighbors", () => {
+  const source = "o4c8n46d8&d8e8";
+  const absoluteStart = source.indexOf("n46");
+  const absoluteShifted = transposeMmlTextRange(source, -1, absoluteStart, absoluteStart + 3);
+  assert.match(absoluteShifted, /n45/);
+  assert.deepEqual(parseTrack(absoluteShifted).notes.map((note) => note.midi), [60, 57, 62, 64]);
+
+  const tiedStart = source.indexOf("d8");
+  const tiedShifted = transposeMmlTextRange(source, 1, tiedStart, tiedStart + 1);
+  assert.deepEqual(parseTrack(tiedShifted).notes.map((note) => note.midi), [60, 58, 63, 64]);
+  assert.equal(parseTrack(tiedShifted).notes[2].duration, parseTrack(source).notes[2].duration);
+});
+
+test("rejects selected-range transposition when no note is selected or the result is out of range", () => {
+  assert.throws(() => transposeMmlTextRange("o4c8r8", 1, 4, 6), /이조할 음표/);
+  assert.throws(() => transposeMmlTextRange("n107", 1, 0, 4), /지원 음역/);
 });
 
 test("chooses absolute notes when they are shorter than repeated octave jumps", () => {

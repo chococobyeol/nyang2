@@ -16,7 +16,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, ClipboardCopy, Ellipsis, FileMusic, Maximize2, Minimize2, MoveHorizontal, MoveVertical, Music2, Pause, Play, Plus, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, Upload, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, ClipboardCopy, Ellipsis, FileMusic, Maximize2, Minimize2, MousePointer2, MoveHorizontal, MoveVertical, Music2, Pause, Play, Plus, Redo2, Repeat2, Settings, SkipBack, SkipForward, Square, Undo2, Upload, X } from "lucide-react";
 import {
   combineTracks,
   deleteTempoCommand,
@@ -31,9 +31,11 @@ import {
   tempoAtTick,
   tickToSeconds,
   TICKS_PER_QUARTER,
+  transposeMmlText,
+  transposeMmlTextRange,
   upsertTempoCommand,
 } from "../mml/core.js";
-import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, reorderProjectTrack, sanitizeProject } from "../mml/project.js";
+import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, reorderProjectTrack, sanitizeProject, trackAudibilityPatch, trackMixStates } from "../mml/project.js";
 import { appendLegatoContinuation, armedInputStartAt, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../mml/recording.js";
 import { loadAutosave, saveAutosave } from "../mml/storage.js";
 import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewTransform } from "../mml/timeline.js";
@@ -68,9 +70,10 @@ type Props = {
   onClose: () => void;
   registerInputSink: (sink: MmlInputSink | null) => void;
   prepareThemes: (themeIds: string[]) => Promise<void>;
-  playMidi: (sourceId: string, midi: number, themeId: string, volume: number, delaySeconds?: number) => void;
+  playMidi: (sourceId: string, midi: number, themeId: string, volume: number, trackId: string, delaySeconds?: number) => void;
   releaseMidi: (sourceId: string) => void;
   stopMmlAudio: () => void;
+  syncTrackMix: (states: Array<{ trackId: string; themeId: string; volume: number; audible: boolean }>) => void;
   clickMetronome: (accent: boolean, volume: number, delaySeconds?: number, preparing?: boolean) => () => void;
   onPlayShortcutChange?: (shortcut: string) => void;
   onRestShortcutChange?: (shortcut: string) => void;
@@ -265,6 +268,7 @@ export default function MmlStudio({
   playMidi,
   releaseMidi,
   stopMmlAudio,
+  syncTrackMix,
   clickMetronome,
   onPlayShortcutChange,
   onRestShortcutChange,
@@ -293,12 +297,17 @@ export default function MmlStudio({
   const [trackSettingsView, setTrackSettingsView] = useState(false);
   const [trackSettingsAnchor, setTrackSettingsAnchor] = useState<{ x: number; y: number } | null>(null);
   const [batchTrackIds, setBatchTrackIds] = useState<string[]>([]);
+  const [batchSettingsView, setBatchSettingsView] = useState(false);
+  const [batchSettingsAnchor, setBatchSettingsAnchor] = useState<{ x: number; y: number } | null>(null);
   const [fileMenuView, setFileMenuView] = useState(false);
   const [importPayload, setImportPayload] = useState<MmlImportPayload | null>(null);
   const [durationMenu, setDurationMenu] = useState<{ x: number; y: number; trackId: string; start: number; end: number } | null>(null);
   const [timelineEditor, setTimelineEditor] = useState<{ tick: number; bpm: number; numerator: number; denominator: number; tempoTrackId: string; x?: number; y?: number } | null>(null);
   const [trackReorder, setTrackReorder] = useState<{ trackId: string; targetId: string | null; placement: "before" | "after" } | null>(null);
   const [mobileTrackListCollapsed, setMobileTrackListCollapsed] = useState(false);
+  const [noteSelectMode, setNoteSelectMode] = useState(false);
+  const [sourceSelection, setSourceSelection] = useState<{ trackId: string; start: number; end: number } | null>(null);
+  const [noteMarquee, setNoteMarquee] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const trackReorderRef = useRef<{
     pointerId: number;
@@ -321,8 +330,13 @@ export default function MmlStudio({
   } | null>(null);
   const suppressTrackClickRef = useRef(false);
   const pianoRollRef = useRef<HTMLDivElement | null>(null);
+  const pianoSelectionRef = useRef<{ pointerId: number; pointerType: string; startX: number; startY: number; endX: number; endY: number; moved: boolean } | null>(null);
+  const pianoTouchPointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pianoTouchPanRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
+  const suppressPianoClickRef = useRef(false);
   const timelineEditorRef = useRef<HTMLDivElement | null>(null);
   const trackSettingsRef = useRef<HTMLDivElement | null>(null);
+  const batchSettingsRef = useRef<HTMLDivElement | null>(null);
   const pianoRollCenteredRef = useRef(false);
   const pianoCanvasRef = useRef<HTMLDivElement | null>(null);
   const pianoGridRef = useRef<HTMLDivElement | null>(null);
@@ -330,6 +344,16 @@ export default function MmlStudio({
   const pianoPitchLabelsRef = useRef<HTMLDivElement | null>(null);
   const timelineZoomRef = useRef(1);
   const pitchZoomRef = useRef(1);
+
+  const clearSourceSelection = useCallback((collapseEditor = true) => {
+    setSourceSelection(null);
+    setNoteMarquee(null);
+    if (!collapseEditor) return;
+    const editor = editorRef.current;
+    if (editor && editor.selectionStart !== editor.selectionEnd) {
+      editor.setSelectionRange(editor.selectionEnd, editor.selectionEnd);
+    }
+  }, []);
   const timelineZoomAnchorRef = useRef<{ tick: number; offset: number } | null>(null);
   const pitchZoomAnchorRef = useRef<{ midi: number; offset: number } | null>(null);
   const wheelZoomRef = useRef<{
@@ -395,6 +419,21 @@ export default function MmlStudio({
   const restStartedRef = useRef<number | null>(null);
 
   const selectedTrack = project.tracks.find((track: any) => track.id === project.view.selectedTrackId) ?? project.tracks[0];
+  const syncSourceSelectionFromEditor = useCallback((editor: HTMLTextAreaElement) => {
+    setSourceSelection(editor.selectionStart === editor.selectionEnd
+      ? null
+      : { trackId: selectedTrack.id, start: editor.selectionStart, end: editor.selectionEnd });
+  }, [selectedTrack.id]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const syncActiveEditorSelection = () => {
+      const editor = editorRef.current;
+      if (editor && document.activeElement === editor) syncSourceSelectionFromEditor(editor);
+    };
+    document.addEventListener("selectionchange", syncActiveEditorSelection);
+    return () => document.removeEventListener("selectionchange", syncActiveEditorSelection);
+  }, [syncSourceSelectionFromEditor, visible]);
   const batchSelectedTracks = useMemo(
     () => project.tracks.filter((track: any) => batchTrackIds.includes(track.id)),
     [batchTrackIds, project.tracks],
@@ -403,6 +442,11 @@ export default function MmlStudio({
     && batchSelectedTracks.every((track: any) => track.themeId === batchSelectedTracks[0].themeId)
     ? batchSelectedTracks[0].themeId
     : "";
+  const batchRecordVelocity = batchSelectedTracks.length > 0
+    && batchSelectedTracks.every((track: any) => track.recordVelocity === batchSelectedTracks[0].recordVelocity)
+    ? String(batchSelectedTracks[0].recordVelocity)
+    : "";
+  const batchMixerVolume = batchSelectedTracks[0]?.mixerVolume ?? 1;
 
   useEffect(() => () => {
     trackReorderRef.current?.cleanup();
@@ -420,11 +464,22 @@ export default function MmlStudio({
   }, [project]);
 
   useEffect(() => {
+    syncTrackMix(trackMixStates(project.tracks));
+  }, [project.tracks, syncTrackMix]);
+
+  useEffect(() => {
     setBatchTrackIds((current) => {
       const existing = current.filter((id) => project.tracks.some((track: any) => track.id === id));
       return existing.length === current.length ? current : existing;
     });
   }, [project.tracks]);
+
+  useEffect(() => {
+    if (batchSelectedTracks.length === 0) {
+      setBatchSettingsView(false);
+      setBatchSettingsAnchor(null);
+    }
+  }, [batchSelectedTracks.length]);
 
   useEffect(() => {
     onRestShortcutChange?.(project.recording.restKey);
@@ -525,6 +580,25 @@ export default function MmlStudio({
     if (!track) return;
     applyDurationResult(track.id, setSelectedMmlLength(track.sourceText, durationMenu.start, durationMenu.end, denominator, dots));
   }, [applyDurationResult, durationMenu]);
+
+  const transposeSelection = useCallback((delta: number) => {
+    if (!durationMenu || !delta || recordState !== "idle") return;
+    const track = projectRef.current.tracks.find((item: any) => item.id === durationMenu.trackId);
+    if (!track) return;
+    try {
+      const sourceText = transposeMmlTextRange(track.sourceText, delta, durationMenu.start, durationMenu.end);
+      commit((draft: any) => {
+        const target = draft.tracks.find((item: any) => item.id === track.id);
+        if (target) target.sourceText = sourceText;
+        return draft;
+      });
+      setDurationMenu(null);
+      setRecordingMessage(`선택한 음을 ${delta > 0 ? "+" : ""}${delta}반음 이조했습니다.`);
+      window.requestAnimationFrame(() => editorRef.current?.focus());
+    } catch (error) {
+      setRecordingMessage((error as Error).message || "선택한 음을 이조하지 못했습니다.");
+    }
+  }, [commit, durationMenu, recordState]);
 
   const shiftEditorSelectionDuration = useCallback((direction: number) => {
     const editor = editorRef.current;
@@ -673,7 +747,6 @@ export default function MmlStudio({
     const startSeconds = tickToSeconds(startTick, allTempoEvents, baseTempo);
     const endTick = project.view.loop ? Math.max(loopEndTick, startTick + 1) : songDuration;
     const endSeconds = tickToSeconds(endTick, allTempoEvents, baseTempo);
-    const soloed = project.tracks.some((track: any) => track.solo);
     const now = performance.now() / 1000;
     const currentMeter = [...project.timeSignatureMap]
       .filter((marker: any) => marker.tick <= startTick)
@@ -691,7 +764,6 @@ export default function MmlStudio({
 
     const scheduledNotes: Array<{ note: any; track: any; noteStart: number; noteEnd: number; sourceId: string }> = [];
     project.tracks.forEach((track: any, trackIndex: number) => {
-      if (track.muted || (soloed && !track.solo)) return;
       for (const note of displayTracks[trackIndex]?.notes ?? []) {
         if (note.tick + note.duration <= startTick || note.tick >= endTick) continue;
         const noteStart = Math.max(note.tick, startTick);
@@ -713,17 +785,17 @@ export default function MmlStudio({
         if (startsIn > 0.35) break;
         const duration = Math.max(0.01, tickToSeconds(item.noteEnd, allTempoEvents, baseTempo) - tickToSeconds(item.noteStart, allTempoEvents, baseTempo));
         const delaySeconds = Math.max(0, startsIn);
-        const volume = item.track.mixerVolume * item.note.velocity / 15;
+        const volume = item.note.velocity / 15;
         if (item.track.themeId.startsWith("soundpack:") && delaySeconds > 0) {
           // SpessaSynth queues future MIDI events inside its AudioWorklet and does
           // not expose a way to remove them. Keep the start timer on the main
           // thread so pause/stop can cancel it before the note reaches the worklet.
           playTimersRef.current.push(window.setTimeout(() => {
-            playMidi(item.sourceId, item.note.midi, item.track.themeId, volume, 0);
+            playMidi(item.sourceId, item.note.midi, item.track.themeId, volume, item.track.id, 0);
             playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), duration * 1000));
           }, delaySeconds * 1000));
         } else {
-          playMidi(item.sourceId, item.note.midi, item.track.themeId, volume, delaySeconds);
+          playMidi(item.sourceId, item.note.midi, item.track.themeId, volume, item.track.id, delaySeconds);
           playTimersRef.current.push(window.setTimeout(() => releaseMidi(item.sourceId), (delaySeconds + duration) * 1000));
         }
         scheduleCursor += 1;
@@ -771,10 +843,7 @@ export default function MmlStudio({
 
   const startPlayback = useCallback((fromTick = playhead) => {
     if (parseError || !displayTracks.length) return;
-    const soloed = project.tracks.some((track: any) => track.solo);
-    const themeIds = project.tracks
-      .filter((track: any) => !track.muted && (!soloed || track.solo))
-      .map((track: any) => track.themeId);
+    const themeIds = project.tracks.map((track: any) => track.themeId);
     clearPlayback();
     const generation = playbackGenerationRef.current;
     setPlaying(true);
@@ -1238,6 +1307,17 @@ export default function MmlStudio({
   }, [registerInputSink, sink]);
 
   useEffect(() => {
+    if (!visible || !sourceSelection) return;
+    const dismissSelection = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target === editorRef.current || target?.closest(".mml-note-block")) return;
+      clearSourceSelection();
+    };
+    document.addEventListener("pointerdown", dismissSelection, true);
+    return () => document.removeEventListener("pointerdown", dismissSelection, true);
+  }, [clearSourceSelection, sourceSelection, visible]);
+
+  useEffect(() => {
     if (!visible) return;
     const down = (event: KeyboardEvent) => {
       const typing = Boolean((event.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable='true']"));
@@ -1329,6 +1409,7 @@ export default function MmlStudio({
         const track = next.tracks.find((item: any) => item.id === id);
         if (track) Object.assign(track, patch);
         projectRef.current = next;
+        syncTrackMix(trackMixStates(next.tracks));
         return next;
       });
       return;
@@ -1336,6 +1417,36 @@ export default function MmlStudio({
     commit((draft: any) => {
       const track = draft.tracks.find((item: any) => item.id === id);
       if (track) Object.assign(track, patch);
+      projectRef.current = draft;
+      syncTrackMix(trackMixStates(draft.tracks));
+      return draft;
+    });
+  };
+
+  const updateTracks = (ids: string[], patch: Record<string, unknown> | ((track: any) => void)) => {
+    if (!ids.length) return;
+    const selectedIds = new Set(ids);
+    const apply = (track: any) => {
+      if (!selectedIds.has(track.id)) return;
+      if (typeof patch === "function") patch(track);
+      else Object.assign(track, patch);
+    };
+    const recordingBase = recordingBaseProjectRef.current;
+    if (recordingBase) {
+      recordingBase.tracks.forEach(apply);
+      setProject((current: any) => {
+        const next = clone(current);
+        next.tracks.forEach(apply);
+        projectRef.current = next;
+        syncTrackMix(trackMixStates(next.tracks));
+        return next;
+      });
+      return;
+    }
+    commit((draft: any) => {
+      draft.tracks.forEach(apply);
+      projectRef.current = draft;
+      syncTrackMix(trackMixStates(draft.tracks));
       return draft;
     });
   };
@@ -1404,29 +1515,59 @@ export default function MmlStudio({
       resumeAfterThemeChangeRef.current = playheadRef.current;
       clearPlayback();
     }
-    const selectedIds = new Set(trackIds);
-    commit((draft: any) => {
-      draft.tracks.forEach((track: any) => {
-        if (selectedIds.has(track.id)) track.themeId = themeId;
-      });
-      return draft;
-    });
+    updateTracks(trackIds, { themeId });
   };
 
-  const updateBatchTheme = (themeId: string) => changeTrackThemes(batchTrackIds, themeId);
+  const openBatchSettings = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    const studio = event.currentTarget.closest(".mml-studio") as HTMLElement | null;
+    const panel = event.currentTarget.closest(".mml-track-batch-panel") as HTMLElement | null;
+    let anchor: { x: number; y: number } | null = null;
+    if (studio && panel && studio.clientWidth > 680) {
+      const studioRect = studio.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      anchor = {
+        x: panelRect.right - studioRect.left + 10,
+        y: panelRect.top - studioRect.top,
+      };
+    }
+    setSettingsView(false);
+    setTrackSettingsView(false);
+    setTrackSettingsAnchor(null);
+    setFileMenuView(false);
+    setBatchSettingsAnchor(anchor);
+    setBatchSettingsView(true);
+  };
 
   const renderBatchPanel = (placement: "sidebar" | "floating") => batchSelectedTracks.length > 0 && (
     <div className={`mml-track-batch-panel mml-track-batch-${placement}`} role="dialog" aria-label="선택한 트랙 일괄 변경">
-      <div><strong>{batchSelectedTracks.length}개 트랙 선택</strong><button type="button" onClick={() => setBatchTrackIds([])}>해제</button></div>
-      <label>
-        <span>음색 한 번에 변경</span>
-        <select aria-label="선택한 트랙 음색" value={batchThemeId} onChange={(event) => updateBatchTheme(event.target.value)}>
-          <option value="">{batchThemeId ? "음색 선택" : "서로 다른 음색"}</option>
-          {themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}
-        </select>
-      </label>
+      <strong>{batchSelectedTracks.length}개 선택</strong>
+      <div>
+        <button type="button" className="mml-batch-open" aria-label="일괄 설정" onClick={openBatchSettings}>설정</button>
+        <button type="button" onClick={() => setBatchTrackIds([])}>해제</button>
+      </div>
     </div>
   );
+
+  const transposeTrackTexts = (trackIds: string[], delta: number) => {
+    if (!trackIds.length || !delta || recordState !== "idle") return;
+    try {
+      const selectedIds = new Set(trackIds);
+      const transposedTexts = new Map(
+        project.tracks
+          .filter((track: any) => selectedIds.has(track.id))
+          .map((track: any) => [track.id, transposeMmlText(track.sourceText, delta)]),
+      );
+      commit((draft: any) => {
+        draft.tracks.forEach((track: any) => {
+          if (transposedTexts.has(track.id)) track.sourceText = transposedTexts.get(track.id);
+        });
+        return draft;
+      });
+      setRecordingMessage(`${transposedTexts.size}개 트랙을 ${delta > 0 ? "+" : ""}${delta}반음 이조했습니다.`);
+    } catch (error) {
+      setRecordingMessage((error as Error).message || "이조하지 못했습니다.");
+    }
+  };
 
   const beginTrackDrag = (event: ReactPointerEvent<HTMLElement>) => {
     if ((event.target as HTMLElement | null)?.closest(".mml-track-reorder-handle")) return;
@@ -1697,6 +1838,8 @@ export default function MmlStudio({
     selectTrack(trackId);
     setTrackSettingsAnchor(anchor);
     setTrackSettingsView(true);
+    setBatchSettingsView(false);
+    setBatchSettingsAnchor(null);
     setSettingsView(false);
     setFileMenuView(false);
   };
@@ -1714,9 +1857,23 @@ export default function MmlStudio({
     setTrackSettingsAnchor({ x, y });
   }, [trackSettingsAnchor, trackSettingsView]);
 
+  useLayoutEffect(() => {
+    if (!batchSettingsView || !batchSettingsAnchor) return;
+    const dialog = batchSettingsRef.current;
+    const parent = dialog?.offsetParent as HTMLElement | null;
+    if (!dialog || !parent) return;
+    const maxX = Math.max(8, parent.clientWidth - dialog.offsetWidth - 8);
+    const maxY = Math.max(8, parent.clientHeight - dialog.offsetHeight - 8);
+    const x = Math.max(8, Math.min(batchSettingsAnchor.x, maxX));
+    const y = Math.max(8, Math.min(batchSettingsAnchor.y, maxY));
+    if (x === batchSettingsAnchor.x && y === batchSettingsAnchor.y) return;
+    setBatchSettingsAnchor({ x, y });
+  }, [batchSettingsAnchor, batchSettingsView]);
+
   const selectPianoNote = (trackIndex: number, note: any) => {
     const track = project.tracks[trackIndex];
     selectTrack(track.id);
+    setSourceSelection({ trackId: track.id, start: note.sourceStart, end: note.sourceEnd });
     window.requestAnimationFrame(() => {
       editorRef.current?.focus();
       editorRef.current?.setSelectionRange(note.sourceStart, note.sourceEnd);
@@ -1846,6 +2003,8 @@ export default function MmlStudio({
   const loopEndBoundary = timelineGrid.measures.findIndex((measure: any) => measure.tick >= effectiveLoopEnd);
   const loopEndMeasure = Math.max(loopStartMeasure, loopEndBoundary > 0 ? loopEndBoundary : songMeasures.length);
   const tickToPianoX = (tick: number) => tick * pianoPixelsPerTick;
+  const displayPixelRatio = typeof window === "undefined" ? 1 : Math.max(1, window.devicePixelRatio || 1);
+  const playheadX = Math.round(playhead * pianoPixelsPerTick * displayPixelRatio) / displayPixelRatio;
   const timelinePositionLabel = (tick: number) => {
     const measureIndex = Math.max(0, timelineGrid.measures.findLastIndex((measure: any) => measure.tick <= tick));
     const measure = timelineGrid.measures[measureIndex] ?? { tick: 0, number: 1, denominator: project.timeSignature.denominator };
@@ -1982,6 +2141,132 @@ export default function MmlStudio({
   const pitchRenderZoom = pitchZoom * fitPitchScale;
   const pixelsPerPitch = PIANO_PITCH_ROW_HEIGHT * pitchRenderZoom;
   const pianoHeight = (maxMidi - minMidi + 1) * pixelsPerPitch;
+
+  const pianoContentPoint = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left + event.currentTarget.scrollLeft,
+      y: event.clientY - rect.top + event.currentTarget.scrollTop,
+    };
+  };
+
+  const selectNotesInMarquee = (range: { startX: number; startY: number; endX: number; endY: number }, pointerType: string) => {
+    const left = Math.min(range.startX, range.endX);
+    const right = Math.max(range.startX, range.endX);
+    const top = Math.min(range.startY, range.endY);
+    const bottom = Math.max(range.startY, range.endY);
+    const track = displayTracks[selectedTrackIndex];
+    const selectedNotes = (track?.notes ?? []).filter((note: any) => {
+      const noteLeft = tickToPianoX(note.tick);
+      const noteRight = noteLeft + Math.max(4, tickToPianoX(note.duration));
+      const noteTop = (maxMidi - note.midi) * pixelsPerPitch;
+      const noteBottom = noteTop + Math.max(5, pixelsPerPitch - 1);
+      return noteRight >= left && noteLeft <= right && noteBottom >= top && noteTop <= bottom;
+    }).sort((a: any, b: any) => a.sourceStart - b.sourceStart);
+
+    if (!selectedNotes.length) {
+      setSourceSelection(null);
+      return;
+    }
+
+    const start = selectedNotes[0].sourceStart;
+    const end = Math.max(...selectedNotes.map((note: any) => note.sourceEnd));
+    setSourceSelection({ trackId: selectedTrack.id, start, end });
+    window.requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.setSelectionRange(start, end);
+      if (pointerType === "mouse") editor.focus({ preventScroll: true });
+    });
+  };
+
+  const beginPianoSelection = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    if ((event.target as HTMLElement).closest(".mml-change-marker, .mml-zoom-controls, .mml-note-select-toggle")) return;
+    if ((event.target as HTMLElement).closest(".mml-note-block") && !noteSelectMode) return;
+    if (event.pointerType === "touch" && !noteSelectMode) return;
+
+    if (event.pointerType === "touch") {
+      pianoTouchPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pianoTouchPointersRef.current.size >= 2) {
+        const points = [...pianoTouchPointersRef.current.values()];
+        pianoTouchPanRef.current = {
+          x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+          y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+          scrollLeft: event.currentTarget.scrollLeft,
+          scrollTop: event.currentTarget.scrollTop,
+        };
+        pianoSelectionRef.current = null;
+        setNoteMarquee(null);
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+        return;
+      }
+    }
+
+    const point = pianoContentPoint(event);
+    pianoSelectionRef.current = {
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      startX: point.x,
+      startY: point.y,
+      endX: point.x,
+      endY: point.y,
+      moved: false,
+    };
+    setNoteMarquee({ startX: point.x, startY: point.y, endX: point.x, endY: point.y });
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+
+  const movePianoSelection = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch" && pianoTouchPointersRef.current.has(event.pointerId)) {
+      pianoTouchPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const pan = pianoTouchPanRef.current;
+      if (pan && pianoTouchPointersRef.current.size >= 2) {
+        const points = [...pianoTouchPointersRef.current.values()];
+        const x = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+        const y = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+        event.currentTarget.scrollLeft = pan.scrollLeft - (x - pan.x);
+        event.currentTarget.scrollTop = pan.scrollTop - (y - pan.y);
+        event.preventDefault();
+        return;
+      }
+    }
+
+    const selection = pianoSelectionRef.current;
+    if (!selection || selection.pointerId !== event.pointerId) return;
+    const point = pianoContentPoint(event);
+    selection.endX = point.x;
+    selection.endY = point.y;
+    selection.moved ||= Math.hypot(point.x - selection.startX, point.y - selection.startY) >= 4;
+    setNoteMarquee({ startX: selection.startX, startY: selection.startY, endX: point.x, endY: point.y });
+    event.preventDefault();
+  };
+
+  const endPianoSelection = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") {
+      pianoTouchPointersRef.current.delete(event.pointerId);
+      if (pianoTouchPanRef.current) {
+        if (pianoTouchPointersRef.current.size < 2) pianoTouchPanRef.current = null;
+        pianoSelectionRef.current = null;
+        setNoteMarquee(null);
+        suppressPianoClickRef.current = true;
+        window.setTimeout(() => { suppressPianoClickRef.current = false; }, 0);
+        return;
+      }
+    }
+
+    const selection = pianoSelectionRef.current;
+    if (!selection || selection.pointerId !== event.pointerId) return;
+    pianoSelectionRef.current = null;
+    setNoteMarquee(null);
+    if (selection.moved || noteSelectMode) {
+      selectNotesInMarquee(selection, selection.pointerType);
+      suppressPianoClickRef.current = true;
+      window.setTimeout(() => { suppressPianoClickRef.current = false; }, 0);
+    }
+  };
 
   const changePitchZoom = (factor: number, anchor?: { midi: number; offset: number }) => {
     const roll = pianoRollRef.current;
@@ -2245,7 +2530,7 @@ export default function MmlStudio({
     pianoRollCenteredRef.current = true;
   }, [hydrated, maxMidi, minMidi, pixelsPerPitch, visibleMidi]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!playing && recordState !== "recording") return;
     if (performance.now() < wheelZoomRef.current.activeUntil) return;
     const roll = pianoRollRef.current;
@@ -2254,9 +2539,9 @@ export default function MmlStudio({
       roll.scrollLeft,
       roll.clientWidth,
       roll.scrollWidth,
-      playhead * pianoPixelsPerTick,
+      playheadX,
     );
-  }, [pianoPixelsPerTick, playhead, playing, recordState]);
+  }, [playheadX, playing, recordState]);
 
   const timelineContext = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -2277,6 +2562,8 @@ export default function MmlStudio({
     setSettingsView(false);
     setTrackSettingsView(false);
     setTrackSettingsAnchor(null);
+    setBatchSettingsView(false);
+    setBatchSettingsAnchor(null);
     setFileMenuView(false);
     setImportPayload(null);
     setDurationMenu(null);
@@ -2348,12 +2635,14 @@ export default function MmlStudio({
       {fileMenuView && (
         <div className="mml-action-menu" role="dialog" aria-label="MML 파일 메뉴">
           <div className="mml-action-menu-head"><strong>파일</strong><button type="button" className="mml-panel-close" onClick={() => setFileMenuView(false)} aria-label="파일 메뉴 닫기"><X aria-hidden="true" /></button></div>
-          <button type="button" onClick={resetProject}><b><Plus aria-hidden="true" /></b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}><b><Upload aria-hidden="true" /></b><span><strong>불러오기</strong><small>MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
-          <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b><FileMusic aria-hidden="true" /></b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
-          <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
-          <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b><ClipboardCopy aria-hidden="true" /></b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
-          <button type="button" onClick={() => { exportProject(); setFileMenuView(false); }}><b>냥</b><span><strong>프로젝트 저장</strong><small>설정과 트랙을 함께 보관</small></span></button>
+          <div className="mml-action-menu-list">
+            <button type="button" onClick={resetProject}><b><Plus aria-hidden="true" /></b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
+            <button type="button" onClick={() => fileInputRef.current?.click()}><b><Upload aria-hidden="true" /></b><span><strong>불러오기</strong><small>MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
+            <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b><FileMusic aria-hidden="true" /></b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
+            <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
+            <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b><ClipboardCopy aria-hidden="true" /></b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
+            <button type="button" onClick={() => { exportProject(); setFileMenuView(false); }}><b>냥</b><span><strong>프로젝트 저장</strong><small>설정과 트랙을 함께 보관</small></span></button>
+          </div>
         </div>
       )}
 
@@ -2389,8 +2678,12 @@ export default function MmlStudio({
           <label>메트로놈 음량<RangeControl ariaLabel="메트로놈 음량" min={0} max={1} step={0.05} value={project.recording.metronomeVolume} onValueChange={(metronomeVolume) => commit((draft: any) => { draft.recording.metronomeVolume = metronomeVolume; return draft; })} /></label>
           {project.recording.mode === "append" && <label>쉼표 키<input value={project.recording.restKey.replace(/^Key/, "")} readOnly onKeyDown={(event) => { event.preventDefault(); commit((draft: any) => { draft.recording.restKey = event.code; return draft; }); }} /></label>}
           {(["play", "record", "stop"] as const).map((action) => <label key={action}>{action === "play" ? "재생 키" : action === "record" ? "녹음 키" : "정지 키"}<input value={shortcutLabel(recordingShortcuts[action])} readOnly onKeyDown={(event) => captureShortcut(action, event)} /></label>)}
-          <label>반복 시작 마디<input type="number" min="1" max={songMeasures.length} value={loopStartMeasure} onChange={(event) => commit((draft: any) => { const measure = Math.max(1, Math.min(songMeasures.length, Number(event.target.value) || 1)); draft.view.loopStart = songMeasures[measure - 1]?.tick ?? 0; if (draft.view.loopEnd > 0 && draft.view.loopEnd <= draft.view.loopStart) draft.view.loopEnd = songMeasures[measure]?.tick ?? 0; return draft; })} /></label>
-          <label>반복 끝 마디<input type="number" min={loopStartMeasure} max={songMeasures.length} value={loopEndMeasure} onChange={(event) => commit((draft: any) => { const measure = Math.max(loopStartMeasure, Math.min(songMeasures.length, Number(event.target.value) || songMeasures.length)); draft.view.loopEnd = measure >= songMeasures.length ? 0 : songMeasures[measure]?.tick ?? 0; return draft; })} /></label>
+          <div className="mml-loop-setting" role="group" aria-label="반복 구간">
+            <div className="mml-loop-controls">
+              <label>반복 시작 마디<input aria-label="반복 시작 마디" type="number" min="1" max={songMeasures.length} value={loopStartMeasure} onChange={(event) => commit((draft: any) => { const measure = Math.max(1, Math.min(songMeasures.length, Number(event.target.value) || 1)); draft.view.loopStart = songMeasures[measure - 1]?.tick ?? 0; if (draft.view.loopEnd > 0 && draft.view.loopEnd <= draft.view.loopStart) draft.view.loopEnd = songMeasures[measure]?.tick ?? 0; return draft; })} /></label>
+              <label>반복 끝 마디<input aria-label="반복 끝 마디" type="number" min={loopStartMeasure} max={songMeasures.length} value={loopEndMeasure} onChange={(event) => commit((draft: any) => { const measure = Math.max(loopStartMeasure, Math.min(songMeasures.length, Number(event.target.value) || songMeasures.length)); draft.view.loopEnd = measure >= songMeasures.length ? 0 : songMeasures[measure]?.tick ?? 0; return draft; })} /></label>
+            </div>
+          </div>
           <button type="button" onClick={() => window.alert(parseError ? parseError.message : tempoConflict || "냥냥에서 재생할 수 있는 MML입니다.")}>호환성 검사</button>
         </div>
       )}
@@ -2409,15 +2702,54 @@ export default function MmlStudio({
           <label>음색<select value={selectedTrack.themeId} onChange={(event) => changeTrackThemes([selectedTrack.id], event.target.value)}>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
           <label>기록 음량<input type="number" min="0" max="15" value={selectedTrack.recordVelocity} onChange={(event) => updateTrack(selectedTrack.id, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) })} /></label>
           <label className="mml-track-volume-field">재생 음량<RangeControl ariaLabel={`${selectedTrack.name} 재생 음량`} min={0} max={1} step={0.01} value={selectedTrack.mixerVolume} onValueChange={(mixerVolume) => updateTrack(selectedTrack.id, { mixerVolume })} /></label>
+          <div className="mml-track-transpose-field">
+            <strong>이조</strong>
+            <div>
+              <button type="button" aria-label="한 옥타브 내림" title="한 옥타브 내림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts([selectedTrack.id], -12)}>−12</button>
+              <button type="button" aria-label="반음 내림" title="반음 내림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts([selectedTrack.id], -1)}>−1</button>
+              <button type="button" aria-label="반음 올림" title="반음 올림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts([selectedTrack.id], 1)}>+1</button>
+              <button type="button" aria-label="한 옥타브 올림" title="한 옥타브 올림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts([selectedTrack.id], 12)}>+12</button>
+            </div>
+          </div>
           <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); setTrackSettingsAnchor(null); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
         </div>
       )}
 
       {renderBatchPanel("floating")}
 
+      {batchSettingsView && batchSelectedTracks.length > 0 && (
+        <div
+          ref={batchSettingsRef}
+          className="mml-track-settings mml-batch-settings"
+          role="dialog"
+          aria-label="선택 트랙 일괄 설정"
+          style={batchSettingsAnchor ? { left: batchSettingsAnchor.x, top: batchSettingsAnchor.y, right: "auto", transform: "none" } : undefined}
+        >
+          <div className="mml-quick-settings-head">
+            <span><strong>선택 트랙 일괄 설정</strong><small>{batchSelectedTracks.length}개 트랙</small></span>
+            <button type="button" className="mml-panel-close" onClick={() => { setBatchSettingsView(false); setBatchSettingsAnchor(null); }} aria-label="일괄 설정 닫기"><X aria-hidden="true" /></button>
+          </div>
+          <div className="mml-batch-settings-body">
+            <label>음색<select value={batchThemeId} onChange={(event) => { if (event.target.value) changeTrackThemes(batchTrackIds, event.target.value); }}><option value="">{batchThemeId ? "음색 선택" : "서로 다른 음색"}</option>{themes.map((theme) => <option value={theme.id} key={theme.id}>{theme.name}</option>)}</select></label>
+            <label>기록 음량<input type="number" min="0" max="15" value={batchRecordVelocity} placeholder="혼합" onChange={(event) => { if (event.target.value !== "") updateTracks(batchTrackIds, { recordVelocity: Math.max(0, Math.min(15, Number(event.target.value))) }); }} /></label>
+            <label className="mml-track-volume-field">재생 음량<RangeControl ariaLabel="선택 트랙 재생 음량" min={0} max={1} step={0.01} value={batchMixerVolume} onValueChange={(mixerVolume) => updateTracks(batchTrackIds, { mixerVolume })} /></label>
+          </div>
+          <div className="mml-track-transpose-field">
+            <strong>이조</strong>
+            <div>
+              <button type="button" aria-label="선택 트랙 한 옥타브 내림" title="한 옥타브 내림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts(batchTrackIds, -12)}>−12</button>
+              <button type="button" aria-label="선택 트랙 반음 내림" title="반음 내림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts(batchTrackIds, -1)}>−1</button>
+              <button type="button" aria-label="선택 트랙 반음 올림" title="반음 올림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts(batchTrackIds, 1)}>+1</button>
+              <button type="button" aria-label="선택 트랙 한 옥타브 올림" title="한 옥타브 올림" disabled={recordState !== "idle"} onClick={() => transposeTrackTexts(batchTrackIds, 12)}>+12</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {durationMenu && (
-        <div className="mml-duration-menu" role="menu" aria-label="선택한 음표 길이 변경" style={{ left: durationMenu.x, top: durationMenu.y }} onContextMenu={(event) => event.preventDefault()}>
-          <header><strong>선택 음가 변경</strong><button type="button" className="mml-panel-close" onClick={() => setDurationMenu(null)} aria-label="선택 음가 변경 닫기"><X aria-hidden="true" /></button></header>
+        <div className="mml-duration-menu" role="menu" aria-label="선택 편집" style={{ left: durationMenu.x, top: durationMenu.y }} onContextMenu={(event) => event.preventDefault()}>
+          <header><strong>선택 편집</strong><button type="button" className="mml-panel-close" onClick={() => setDurationMenu(null)} aria-label="선택 편집 닫기"><X aria-hidden="true" /></button></header>
+          <b className="mml-selection-section-title">음가</b>
           <div className="mml-duration-grid">
             {[0, 1].flatMap((dots) => MML_NOTE_LENGTHS.map((length) => (
               <button type="button" role="menuitem" onClick={() => setSelectionDuration(length, dots)} key={`${length}-${dots}`}>
@@ -2426,6 +2758,15 @@ export default function MmlStudio({
             )))}
           </div>
           <small><kbd>Alt</kbd>+<kbd>,</kbd> 길게 · <kbd>Alt</kbd>+<kbd>.</kbd> 짧게</small>
+          <div className="mml-selection-transpose">
+            <b className="mml-selection-section-title">이조</b>
+            <div>
+              <button type="button" role="menuitem" onClick={() => transposeSelection(-12)} disabled={recordState !== "idle"} aria-label="선택 영역 한 옥타브 내림">−12</button>
+              <button type="button" role="menuitem" onClick={() => transposeSelection(-1)} disabled={recordState !== "idle"} aria-label="선택 영역 반음 내림">−1</button>
+              <button type="button" role="menuitem" onClick={() => transposeSelection(1)} disabled={recordState !== "idle"} aria-label="선택 영역 반음 올림">+1</button>
+              <button type="button" role="menuitem" onClick={() => transposeSelection(12)} disabled={recordState !== "idle"} aria-label="선택 영역 한 옥타브 올림">+12</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2482,8 +2823,8 @@ export default function MmlStudio({
                   <button type="button" className={project.routing.right.includes(track.id) ? "is-on" : ""} aria-pressed={project.routing.right.includes(track.id)} aria-label="오른쪽 건반 연결" title="오른쪽 건반 연결" onClick={() => toggleRoute("right", track.id)}>R</button>
                 </div>
                 <div className="mml-track-play-actions">
-                  <button type="button" className={track.muted ? "is-on" : ""} aria-pressed={track.muted} aria-label="음소거" title="음소거" onClick={() => updateTrack(track.id, { muted: !track.muted })}>M</button>
-                  <button type="button" className={track.solo ? "is-on" : ""} aria-pressed={track.solo} aria-label="솔로" title="솔로" onClick={() => updateTrack(track.id, { solo: !track.solo })}>S</button>
+                  <button type="button" className={track.muted ? "is-on" : ""} aria-pressed={track.muted} aria-label="음소거" title="음소거" onClick={() => updateTrack(track.id, trackAudibilityPatch(track, "mute"))}>M</button>
+                  <button type="button" className={track.solo ? "is-on" : ""} aria-pressed={track.solo} aria-label="솔로" title="솔로" onClick={() => updateTrack(track.id, trackAudibilityPatch(track, "solo"))}>S</button>
                   <button type="button" className={`mml-track-visibility ${!track.pianoRollVisible ? "is-on is-hidden" : ""}`} aria-pressed={!track.pianoRollVisible} aria-label={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} title={track.pianoRollVisible ? "피아노롤 숨기기" : "피아노롤 보이기"} onClick={() => updateTrack(track.id, { pianoRollVisible: !track.pianoRollVisible })}><span aria-hidden="true" /></button>
                 </div>
               </div>
@@ -2505,6 +2846,21 @@ export default function MmlStudio({
         </button>
 
         <div className="mml-work-area">
+          <button
+            type="button"
+            className={`mml-note-select-toggle ${noteSelectMode ? "is-active" : ""}`}
+            aria-pressed={noteSelectMode}
+            aria-label={noteSelectMode ? "노트 범위 선택 끄기" : "노트 범위 선택"}
+            title={noteSelectMode ? "선택 모드 끄기" : "드래그로 노트 선택"}
+            onClick={() => {
+              setNoteSelectMode((active) => !active);
+              setNoteMarquee(null);
+              pianoSelectionRef.current = null;
+            }}
+          >
+            <MousePointer2 aria-hidden="true" />
+            <span>{noteSelectMode ? "선택 중" : "선택"}</span>
+          </button>
           <div className="mml-zoom-controls" aria-label="피아노롤 확대 축소" title="Alt+휠 시간축 · Alt+Shift+휠 음정 간격">
             <div className="mml-zoom-group" aria-label="시간축 확대 축소">
               <span aria-hidden="true"><MoveHorizontal /></span>
@@ -2554,7 +2910,19 @@ export default function MmlStudio({
               <p>템포는 MML 트랙의 t 코드로 기록됩니다. 피아노롤에서 원하는 위치를 오른쪽 클릭해 변경 지점을 만들 수 있습니다.</p>
             </div>
           )}
-          <div ref={pianoRollRef} className={`mml-piano-roll ${parseError ? "has-error" : ""}`} onContextMenu={timelineContext} onClick={(event) => {
+          <div
+            ref={pianoRollRef}
+            className={`mml-piano-roll ${parseError ? "has-error" : ""} ${noteSelectMode ? "is-note-select-mode" : ""} ${noteMarquee ? "is-range-selecting" : ""}`}
+            onContextMenu={timelineContext}
+            onPointerDown={beginPianoSelection}
+            onPointerMove={movePianoSelection}
+            onPointerUp={endPianoSelection}
+            onPointerCancel={endPianoSelection}
+            onClick={(event) => {
+            if (suppressPianoClickRef.current) {
+              event.preventDefault();
+              return;
+            }
             if ((event.target as HTMLElement).closest(".mml-note-block")) return;
             const rect = event.currentTarget.getBoundingClientRect();
             const rawTick = Math.round((event.clientX - rect.left + event.currentTarget.scrollLeft) / pianoPixelsPerTick);
@@ -2602,10 +2970,27 @@ export default function MmlStudio({
                 {visibleNotes.map((note: any) => {
                   const track = project.tracks[note.trackIndex];
                   const selected = track.id === selectedTrack.id;
-                  return <button type="button" className={`mml-note-block ${selected ? "is-selected" : ""}`} style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: track.color }} key={`${track.id}-${note.sourceStart}-${note.tick}`} onClick={() => selectPianoNote(note.trackIndex, note)} title={`${track.name} · ${noteLabel(note.midi)}`} />;
+                  const rangeSelected = selected
+                    && sourceSelection?.trackId === track.id
+                    && note.sourceStart < sourceSelection.end
+                    && note.sourceEnd > sourceSelection.start;
+                  return <button type="button" className={`mml-note-block ${selected ? "is-selected" : ""} ${rangeSelected ? "is-range-selected" : ""}`} style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: track.color }} key={`${track.id}-${note.sourceStart}-${note.tick}`} onClick={(event) => {
+                    if (suppressPianoClickRef.current) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      return;
+                    }
+                    selectPianoNote(note.trackIndex, note);
+                  }} title={`${track.name} · ${noteLabel(note.midi)}`} />;
                 })}
                 {liveRecordingNotes.map((note) => <i aria-hidden="true" className="mml-note-block is-live-recording" style={{ left: `${tickToPianoX(note.tick)}px`, width: `${Math.max(4, tickToPianoX(note.duration))}px`, top: `${(maxMidi - note.midi) * pixelsPerPitch}px`, height: `${Math.max(5, pixelsPerPitch - 1)}px`, background: note.color }} key={`live-${note.id}`} />)}
-                <i className="mml-playhead" style={{ left: `${tickToPianoX(playhead)}px` }} />
+                {noteMarquee && <i aria-hidden="true" className="mml-note-marquee" style={{
+                  left: `${Math.min(noteMarquee.startX, noteMarquee.endX)}px`,
+                  top: `${Math.min(noteMarquee.startY, noteMarquee.endY)}px`,
+                  width: `${Math.max(1, Math.abs(noteMarquee.endX - noteMarquee.startX))}px`,
+                  height: `${Math.max(1, Math.abs(noteMarquee.endY - noteMarquee.startY))}px`,
+                }} />}
+                <i className="mml-playhead" style={{ left: `${playheadX}px` }} />
               </div>
             </div>
           </div>
@@ -2625,7 +3010,10 @@ export default function MmlStudio({
             <pre className="mml-playback-source" aria-label={`${selectedTrack.name} MML 재생 위치`}>
               {playbackSourceRange ? <>{selectedTrack.sourceText.slice(0, playbackSourceRange.start)}<mark>{selectedTrack.sourceText.slice(playbackSourceRange.start, playbackSourceRange.end)}</mark>{selectedTrack.sourceText.slice(playbackSourceRange.end)}</> : selectedTrack.sourceText}
             </pre>
-          ) : <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onContextMenu={(event) => {
+          ) : <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onSelect={(event) => syncSourceSelectionFromEditor(event.currentTarget)} onKeyUp={(event) => syncSourceSelectionFromEditor(event.currentTarget)} onPointerUp={(event) => syncSourceSelectionFromEditor(event.currentTarget)} onBlur={(event) => {
+            if ((event.relatedTarget as HTMLElement | null)?.closest(".mml-note-block")) return;
+            clearSourceSelection();
+          }} onContextMenu={(event) => {
             const editor = event.currentTarget;
             if (editor.selectionStart === editor.selectionEnd) return;
             event.preventDefault();
@@ -2633,8 +3021,8 @@ export default function MmlStudio({
             const studio = editor.closest(".mml-studio")?.getBoundingClientRect();
             if (!studio) return;
             setDurationMenu({
-              x: Math.max(8, Math.min(studio.width - 224, event.clientX - studio.left)),
-              y: Math.max(8, Math.min(studio.height - 292, event.clientY - studio.top)),
+              x: Math.max(8, Math.min(studio.width - 244, event.clientX - studio.left)),
+              y: Math.max(8, Math.min(studio.height - 382, event.clientY - studio.top)),
               trackId: selectedTrack.id,
               start: editor.selectionStart,
               end: editor.selectionEnd,

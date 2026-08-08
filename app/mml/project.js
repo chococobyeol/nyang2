@@ -50,6 +50,25 @@ export function createProject(themeId = "nyang-voice") {
   };
 }
 
+export function trackAudibilityPatch(track, control) {
+  if (control === "mute") {
+    const muted = !track.muted;
+    return muted ? { muted: true, solo: false } : { muted: false };
+  }
+  const solo = !track.solo;
+  return solo ? { solo: true, muted: false } : { solo: false };
+}
+
+export function trackMixStates(tracks) {
+  const soloed = tracks.some((track) => track.solo);
+  return tracks.map((track) => ({
+    trackId: track.id,
+    themeId: track.themeId,
+    volume: Math.max(0, Math.min(1, Number(track.mixerVolume) || 0)),
+    audible: !track.muted && (!soloed || track.solo),
+  }));
+}
+
 export function sanitizeProject(value, themeId = "nyang-voice") {
   if (!value || value.format !== "nyangmml" || !Array.isArray(value.tracks) || value.tracks.length === 0) {
     return createProject(themeId);
@@ -63,6 +82,7 @@ export function sanitizeProject(value, themeId = "nyang-voice") {
       name: typeof track.name === "string" ? track.name : `Track ${index + 1}`,
       sourceText: typeof track.sourceText === "string" ? track.sourceText : "",
     };
+    if (normalized.muted && normalized.solo) normalized.muted = false;
     delete normalized.optimizationRestore;
     return normalized;
   });
