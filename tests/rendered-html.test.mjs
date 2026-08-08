@@ -521,26 +521,36 @@ test("opens a separate bulk settings window for selected tracks", async () => {
   assert.match(studio, /track\.sourceText = transposedTexts\.get\(track\.id\)/);
   assert.match(studio, /className="mml-track-batch-checkbox"/);
   assert.match(studio, /const toggleAllBatchTracks = \(\) =>/);
-  assert.match(studio, /renderBatchPanel\("sidebar"\)/);
-  assert.match(studio, /renderBatchPanel\("floating"\)/);
-  assert.match(studio, /\? "전체 해제" : "전체 선택"/);
-  assert.match(studio, /\{batchSelectedTracks\.length\}개 선택/);
-  assert.match(studio, /aria-label="일괄 설정"[\s\S]*?>설정<\/button>/);
-  assert.match(studio, /setBatchTrackIds\(\[\]\)}>해제<\/button>/);
-  assert.match(css, /\.mml-track-batch-panel/);
+  assert.match(studio, /setBatchTrackIds\(\(current\) => current\.length > 0[\s\S]*?\? \[\][\s\S]*?: project\.tracks\.map/);
+  assert.doesNotMatch(studio, /renderBatchPanel/);
+  assert.match(studio, /input\.indeterminate = batchSelectedTracks\.length > 0 && batchSelectedTracks\.length < project\.tracks\.length/);
+  assert.match(studio, /checked=\{batchSelectedTracks\.length === project\.tracks\.length && project\.tracks\.length > 0\}/);
+  assert.match(studio, /mml-track-select-label-wide[\s\S]*?`\$\{batchSelectedTracks\.length\}개 선택됨` : "전체 선택"/);
+  assert.match(studio, /mml-track-select-label-compact[\s\S]*?`\$\{batchSelectedTracks\.length\}개` : "전체 선택"/);
+  assert.match(studio, /batchSelectedTracks\.length > 0 && <button[^>]*className="mml-batch-open"[^>]*aria-label="일괄 설정"[\s\S]*?>설정<\/button>/);
+  assert.doesNotMatch(css, /\.mml-track-batch-panel/);
   assert.match(css, /\.mml-track-select-all/);
   assert.match(css, /\.mml-track-batch-checkbox input:checked/);
   assert.match(css, /\.mml-track-select-all \{[\s\S]*?font-size: 10px;/);
   assert.doesNotMatch(css, /\.mml-track-list-title > strong \{[\s\S]*?font-size: 15px;/);
   assert.match(css, /\.mml-track-select-all \{[\s\S]*?font-weight: 700;/);
-  assert.match(css, /\.mml-track-batch-panel \{[\s\S]*?min-height: 28px;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;/);
-  assert.match(css, /\.mml-track-batch-panel strong \{[\s\S]*?font-size: 10px;/);
-  assert.match(css, /\.mml-track-batch-panel button \{[\s\S]*?height: 22px;[\s\S]*?font-size: 10px;/);
-  assert.match(css, /\.mml-track-batch-panel button\.mml-batch-open \{[\s\S]*?background: #fffdf7;[\s\S]*?color: var\(--ink\);/);
-  assert.match(css, /\.mml-track-batch-panel button:not\(\.mml-batch-open\) \{[\s\S]*?background: transparent;/);
+  assert.match(css, /\.mml-track-list-title \.mml-batch-open \{[\s\S]*?width: 38px;[\s\S]*?background: #f0e8dc;/);
+  assert.match(css, /\.mml-track-select-all input:indeterminate \{[\s\S]*?background: var\(--ink\);/);
+  assert.match(css, /\.mml-track-select-all input:indeterminate::after \{[\s\S]*?width: 8px;[\s\S]*?height: 2px;/);
+  assert.doesNotMatch(studio, /mml-track-list-dot/);
+  assert.match(css, /\.mml-track-list-title \{[\s\S]*?min-height: 24px;[\s\S]*?grid-template-columns: 15px minmax\(0, 1fr\) auto;[\s\S]*?column-gap: 3px;[\s\S]*?margin-bottom: 6px;[\s\S]*?padding: 0 4px;/);
+  assert.doesNotMatch(css, /\.mml-track-list-dot \{/);
+  assert.match(css, /\.mml-studio \.mml-track-list-title\.has-selection \{[\s\S]*?width: 92px;[\s\S]*?flex-basis: 92px;[\s\S]*?grid-template-columns: 18px minmax\(0, 1fr\) 32px;[\s\S]*?column-gap: 2px;[\s\S]*?padding: 0 6px;/);
   assert.match(css, /\.mml-track-card\.is-batch-selected/);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\) \{[\s\S]*?button:not\(:disabled\):hover/);
-  assert.match(css, /button:not\(:disabled\):not\(\.paw-note\):not\(\.control-button\):not\(\.brand-mark\):active/);
+  assert.match(css, /button:not\(:disabled\):not\(\.paw-note\):not\(\.control-button\):not\(\.brand-mark\):not\(\.mml-track-reorder-handle\):active/);
+  assert.match(css, /\.mml-track-reorder-handle:active \{[\s\S]*?transform: translateY\(-50%\);/);
+  assert.match(studio, /onPointerDown=\{\(event\) => beginTrackReorder\(event, track\.id\)\}/);
+  assert.match(studio, /const touchPointer = event\.pointerType === "touch";/);
+  assert.match(studio, /window\.addEventListener\("pointermove", onPointerMove, \{ capture: true, passive: false \}\)/);
+  assert.match(studio, /window\.addEventListener\("pointerup", onPointerEnd, true\)/);
+  assert.match(studio, /document\.elementFromPoint\(clientX, clientY\)\?\.closest\("\.mml-track-card"\)/);
+  assert.doesNotMatch(studio, /draggable=\{recordState === "idle"\}/);
 });
 
 test("defaults repeat to the whole song and presents repeat positions as measures", async () => {
@@ -584,7 +594,10 @@ test("uses the same icon close control across MML panels", async () => {
   assert.match(studio, /aria-label="녹음 설정 닫기"><X/);
   assert.match(studio, /aria-label="트랙 설정 닫기"><X/);
   assert.match(studio, /aria-label="선택 편집 닫기"><X/);
-  assert.match(studio, /transposeMmlTextRange\(track\.sourceText, delta, durationMenu\.start, durationMenu\.end\)/);
+  assert.match(studio, /transposeMmlTextRangeWithSelection\(track\.sourceText, delta, durationMenu\.start, durationMenu\.end\)/);
+  assert.match(studio, /editor\.setSelectionRange\(result\.selectionStart, result\.selectionEnd\)/);
+  assert.match(studio, /setSourceSelection\(\{ trackId: track\.id, start: result\.selectionStart, end: result\.selectionEnd \}\)/);
+  assert.match(studio, /closest\("\.mml-note-block, \.mml-duration-menu"\)/);
   assert.match(studio, /선택 영역 반음 올림/);
   assert.match(studio, /aria-label="박자·템포 변경 닫기"><X/);
   assert.doesNotMatch(studio, />닫기<\/button>/);
@@ -597,10 +610,15 @@ test("keeps octave labels from covering notes at the start of the piano roll", a
 });
 
 test("offers MML paste choices and configurable recording start positions", async () => {
-  const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
+  const [studio, css] = await Promise.all([
+    readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
   assert.match(studio, /onPaste=\{\(event\) => \{/);
   assert.match(studio, /const ranges = parsed\.tracks\.map[\s\S]*?setImportPayload\(\{ ranges \}\)/);
   assert.match(studio, /MML을 어떻게 넣을까요\?/);
+  assert.match(studio, /className="mml-panel-close" onClick=\{\(\) => setImportPayload\(null\)\} aria-label="MML 불러오기 취소"><X/);
+  assert.match(css, /\.mml-import-card \{[^}]*background: #f0e8dc;/s);
   assert.match(studio, /선택 트랙만 교체/);
   assert.match(studio, /녹음 시작 위치/);
   assert.match(studio, /현재 재생 위치/);
@@ -618,14 +636,14 @@ test("accepts MabiIcco MMI files from the project file menu", async () => {
   assert.match(studio, /createProjectFromMmi/);
   assert.match(studio, /endsWith\("\.mmi"\)/);
   assert.match(studio, /accept="\.mml,\.mmi,\.nyangmml/);
-  assert.match(studio, /MML·(?:3MLE·)?마비꼬 MMI·냥 프로젝트/);
+  assert.match(studio, /MML·3MLE·MMI·냥·MIDI/);
 });
 
 test("recognizes channel-based 3MLE files from the MML file picker", async () => {
   const studio = await readFile(new URL("../app/components/mml-studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /isThreeMleDocument\(text\)/);
   assert.match(studio, /parseThreeMleDocument\(text\)/);
-  assert.match(studio, /MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI/);
+  assert.match(studio, /MML·3MLE·MMI·냥·MIDI/);
 });
 
 test("highlights the active MML source token while playback advances", async () => {
@@ -691,7 +709,7 @@ test("centers the mobile MML close icon with the shared line-icon style", async 
 test("keeps the complete outline visible around every track card", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.doesNotMatch(css, /\.mml-track-card \{[^}]*border-left:\s*0;/s);
-  assert.match(css, /\.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 3px;[^}]*width: 15px;[^}]*transform: translateY\(-50%\);/s);
+  assert.match(css, /\.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 1px;[^}]*width: 18px;[^}]*transform: translateY\(-50%\);/s);
   assert.match(css, /\.mml-track-grip-dots \{[^}]*width: 10px;[^}]*height: 15px;[^}]*background-size: 5px 5px;/s);
 });
 
@@ -735,8 +753,6 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(studio, /onPointerDown=\{beginTrackDrag\}/);
   assert.match(studio, /onWheel=\{scrollTrackListWithWheel\}/);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list \{[^}]*overflow: auto;[^}]*touch-action: auto;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-batch-sidebar \{[^}]*display: none;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-batch-panel\.mml-track-batch-floating \{[^}]*position: absolute;[^}]*left: 162px;[^}]*display: grid;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*left: 162px;[^}]*max-height: calc\(100% - 104px\);/s);
   assert.match(mobileMml, /\.mml-studio \.mml-action-menu \{[^}]*top: 96px;[^}]*max-height: calc\(100% - 104px\);[^}]*overflow: hidden;/s);
   assert.match(css, /\.mml-action-menu-list \{[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/s);
@@ -749,12 +765,15 @@ test("keeps the mobile MML toolbar clear and the full editor reachable by touch"
   assert.match(mobileMml, /\.mml-studio \.mml-main-grid\.is-track-list-collapsed \{[^}]*grid-template-rows: 0 16px minmax\(0, 1fr\);/s);
   assert.match(mobileMml, /\.mml-studio \.mml-main-grid > \.mml-track-collapse \{[^}]*position: static;[^}]*width: 100%;[^}]*height: 16px;[^}]*grid-row: 2;[^}]*border-radius: 0;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-work-area \{[^}]*grid-row: 3;/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 2px;[^}]*width: 15px;[^}]*transform: translateY\(-50%\);/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-reorder-handle \{[^}]*position: absolute;[^}]*left: 0;[^}]*width: 18px;[^}]*transform: translateY\(-50%\);/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \{[^}]*box-sizing: border-box;[^}]*width: 92px;[^}]*grid-template-columns: 18px minmax\(0, 1fr\);[^}]*grid-template-rows: 1fr;[^}]*column-gap: 4px;[^}]*padding: 0 6px;[^}]*border-right:/s);
-  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title strong \{[^}]*display: none;/s);
+  assert.doesNotMatch(studio, /className="mml-track-list-title">\s*<strong>트랙<\/strong>/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list\.is-mobile-collapsed > \* \{[^}]*display: none;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all \{[^}]*display: contents;[^}]*margin: 0;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all input \{[^}]*grid-column: 1;[^}]*grid-row: 1;[^}]*place-self: center;/s);
+  assert.doesNotMatch(mobileMml, /mml-track-list-dot/);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all \.mml-track-select-label-wide \{[^}]*display: none;/s);
+  assert.match(mobileMml, /\.mml-studio \.mml-track-list-title \.mml-track-select-all \.mml-track-select-label-compact \{[^}]*display: block;/s);
   assert.match(mobileMml, /\.mml-studio \.mml-track-card \{[^}]*width: 164px;[^}]*grid-template-columns: 18px minmax\(0, 1fr\) 58px;[^}]*padding: 5px 8px 5px 19px;/s);
   assert.doesNotMatch(mobileMml, /scroll-snap-(?:type|align)/);
   assert.match(mobileMml, /@container mml-studio \(max-width: 560px\) \{[\s\S]*?\.mml-studio \.mml-quick-settings,\s*\.mml-studio \.mml-track-settings \{[^}]*top: 144px;[^}]*left: 8px;/s);
@@ -840,7 +859,7 @@ test("keeps piano-roll and MML text selections synchronized", async () => {
   assert.match(studio, /const clearSourceSelection = useCallback/);
   assert.match(studio, /document\.addEventListener\("pointerdown", dismissSelection, true\)/);
   assert.match(studio, /target\?\.closest\("\.mml-note-block"\)/);
-  assert.match(studio, /relatedTarget as HTMLElement \| null\)\?\.closest\("\.mml-note-block"\)/);
+  assert.match(studio, /relatedTarget as HTMLElement \| null\)\?\.closest\("\.mml-note-block, \.mml-duration-menu"\)/);
   assert.match(studio, /className=\{`mml-note-select-toggle/);
   assert.match(studio, /pianoTouchPointersRef\.current\.size >= 2/);
   assert.match(css, /\.mml-note-block\.is-range-selected/);

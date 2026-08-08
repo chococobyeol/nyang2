@@ -32,7 +32,7 @@ import {
   tickToSeconds,
   TICKS_PER_QUARTER,
   transposeMmlText,
-  transposeMmlTextRange,
+  transposeMmlTextRangeWithSelection,
   upsertTempoCommand,
 } from "../mml/core.js";
 import { applyMmlImport, createProject, createTrack, importedMmlTitle, PROJECT_STORAGE_KEY, projectFilename, reorderProjectTrack, sanitizeProject, trackAudibilityPatch, trackMixStates } from "../mml/project.js";
@@ -586,15 +586,22 @@ export default function MmlStudio({
     const track = projectRef.current.tracks.find((item: any) => item.id === durationMenu.trackId);
     if (!track) return;
     try {
-      const sourceText = transposeMmlTextRange(track.sourceText, delta, durationMenu.start, durationMenu.end);
+      const result = transposeMmlTextRangeWithSelection(track.sourceText, delta, durationMenu.start, durationMenu.end);
       commit((draft: any) => {
         const target = draft.tracks.find((item: any) => item.id === track.id);
-        if (target) target.sourceText = sourceText;
+        if (target) target.sourceText = result.source;
         return draft;
       });
+      setSourceSelection({ trackId: track.id, start: result.selectionStart, end: result.selectionEnd });
       setDurationMenu(null);
       setRecordingMessage(`선택한 음을 ${delta > 0 ? "+" : ""}${delta}반음 이조했습니다.`);
-      window.requestAnimationFrame(() => editorRef.current?.focus());
+      window.requestAnimationFrame(() => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        editor.focus({ preventScroll: true });
+        editor.setSelectionRange(result.selectionStart, result.selectionEnd);
+        setSourceSelection({ trackId: track.id, start: result.selectionStart, end: result.selectionEnd });
+      });
     } catch (error) {
       setRecordingMessage((error as Error).message || "선택한 음을 이조하지 못했습니다.");
     }
@@ -1504,7 +1511,7 @@ export default function MmlStudio({
     setSettingsView(false);
     setTrackSettingsView(false);
     setFileMenuView(false);
-    setBatchTrackIds((current) => current.length === project.tracks.length
+    setBatchTrackIds((current) => current.length > 0
       ? []
       : project.tracks.map((track: any) => track.id));
   };
@@ -1520,7 +1527,7 @@ export default function MmlStudio({
 
   const openBatchSettings = (event: ReactMouseEvent<HTMLButtonElement>) => {
     const studio = event.currentTarget.closest(".mml-studio") as HTMLElement | null;
-    const panel = event.currentTarget.closest(".mml-track-batch-panel") as HTMLElement | null;
+    const panel = event.currentTarget.closest(".mml-track-list-title") as HTMLElement | null;
     let anchor: { x: number; y: number } | null = null;
     if (studio && panel && studio.clientWidth > 680) {
       const studioRect = studio.getBoundingClientRect();
@@ -1537,16 +1544,6 @@ export default function MmlStudio({
     setBatchSettingsAnchor(anchor);
     setBatchSettingsView(true);
   };
-
-  const renderBatchPanel = (placement: "sidebar" | "floating") => batchSelectedTracks.length > 0 && (
-    <div className={`mml-track-batch-panel mml-track-batch-${placement}`} role="dialog" aria-label="선택한 트랙 일괄 변경">
-      <strong>{batchSelectedTracks.length}개 선택</strong>
-      <div>
-        <button type="button" className="mml-batch-open" aria-label="일괄 설정" onClick={openBatchSettings}>설정</button>
-        <button type="button" onClick={() => setBatchTrackIds([])}>해제</button>
-      </div>
-    </div>
-  );
 
   const transposeTrackTexts = (trackIds: string[], delta: number) => {
     if (!trackIds.length || !delta || recordState !== "idle") return;
@@ -1735,7 +1732,9 @@ export default function MmlStudio({
       window.addEventListener("touchcancel", onTouchEnd, true);
     }
     document.documentElement.classList.add("is-track-reordering");
-    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* optional */ }
+    if (touchPointer) {
+      try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* optional */ }
+    }
     setTrackReorder({ trackId, targetId: null, placement: "before" });
   };
 
@@ -2637,7 +2636,7 @@ export default function MmlStudio({
           <div className="mml-action-menu-head"><strong>파일</strong><button type="button" className="mml-panel-close" onClick={() => setFileMenuView(false)} aria-label="파일 메뉴 닫기"><X aria-hidden="true" /></button></div>
           <div className="mml-action-menu-list">
             <button type="button" onClick={resetProject}><b><Plus aria-hidden="true" /></b><span><strong>새 프로젝트</strong><small>현재 작업을 비우고 새로 시작</small></span></button>
-            <button type="button" onClick={() => fileInputRef.current?.click()}><b><Upload aria-hidden="true" /></b><span><strong>불러오기</strong><small>MML·3MLE·마비꼬 MMI·냥 프로젝트·MIDI</small></span></button>
+            <button type="button" onClick={() => fileInputRef.current?.click()}><b><Upload aria-hidden="true" /></b><span><strong>불러오기</strong><small>MML·3MLE·MMI·냥·MIDI</small></span></button>
             <button type="button" onClick={() => { exportMidi(); setFileMenuView(false); }}><b><FileMusic aria-hidden="true" /></b><span><strong>MIDI 내보내기</strong><small>표준 MIDI 파일로 저장</small></span></button>
             <button type="button" onClick={() => { exportMml(); setFileMenuView(false); }}><b>M</b><span><strong>MML 내보내기</strong><small>주석을 제외한 호환 코드</small></span></button>
             <button type="button" onClick={() => { void navigator.clipboard.writeText(combineTracks(project.tracks.map((track: any) => track.sourceText), { removeComments: true })); setFileMenuView(false); }}><b><ClipboardCopy aria-hidden="true" /></b><span><strong>전체 MML 복사</strong><small>모든 트랙을 클립보드로</small></span></button>
@@ -2649,7 +2648,7 @@ export default function MmlStudio({
       {importPayload && (
         <div className="mml-import-dialog" role="dialog" aria-modal="true" aria-label="MML 불러오기 방식 선택">
           <div className="mml-import-card">
-            <div className="mml-action-menu-head"><strong>MML을 어떻게 넣을까요?</strong><button type="button" onClick={() => setImportPayload(null)}>취소</button></div>
+            <div className="mml-action-menu-head"><strong>MML을 어떻게 넣을까요?</strong><button type="button" className="mml-panel-close" onClick={() => setImportPayload(null)} aria-label="MML 불러오기 취소"><X aria-hidden="true" /></button></div>
             <button type="button" onClick={() => applyImport("replace")}><strong>전체 교체</strong><small>현재 트랙을 지우고 불러온 곡으로 교체</small></button>
             <button type="button" onClick={() => applyImport("append")}><strong>곡 뒤에 이어 붙이기</strong><small>각 트랙의 마지막에 추가</small></button>
             <button type="button" onClick={() => applyImport("tracks")}><strong>새 트랙으로 추가</strong><small>현재 곡은 유지하고 트랙만 추가</small></button>
@@ -2714,8 +2713,6 @@ export default function MmlStudio({
           <button type="button" className="mml-delete-track" onClick={() => { removeTrack(selectedTrack.id); setTrackSettingsView(false); setTrackSettingsAnchor(null); }} disabled={project.tracks.length <= 1}>이 트랙 삭제</button>
         </div>
       )}
-
-      {renderBatchPanel("floating")}
 
       {batchSettingsView && batchSelectedTracks.length > 0 && (
         <div
@@ -2785,14 +2782,24 @@ export default function MmlStudio({
             suppressTrackClickRef.current = false;
           }}
         >
-          <div className="mml-track-list-title">
-            <strong>트랙</strong>
+          <div className={`mml-track-list-title ${batchSelectedTracks.length > 0 ? "has-selection" : ""}`}>
             <label className="mml-track-select-all">
-              <input type="checkbox" checked={project.tracks.length > 0 && batchTrackIds.length === project.tracks.length} onChange={toggleAllBatchTracks} />
-              <span>{project.tracks.length > 0 && batchTrackIds.length === project.tracks.length ? "전체 해제" : "전체 선택"}</span>
+              <input
+                type="checkbox"
+                checked={batchSelectedTracks.length === project.tracks.length && project.tracks.length > 0}
+                ref={(input) => {
+                  if (input) input.indeterminate = batchSelectedTracks.length > 0 && batchSelectedTracks.length < project.tracks.length;
+                }}
+                onChange={toggleAllBatchTracks}
+                aria-label={batchSelectedTracks.length > 0 ? `${batchSelectedTracks.length}개 트랙 선택 해제` : "전체 트랙 선택"}
+              />
+              <span className="mml-track-select-label">
+                <span className="mml-track-select-label-wide">{batchSelectedTracks.length > 0 ? `${batchSelectedTracks.length}개 선택됨` : "전체 선택"}</span>
+                <span className="mml-track-select-label-compact">{batchSelectedTracks.length > 0 ? `${batchSelectedTracks.length}개` : "전체 선택"}</span>
+              </span>
             </label>
+            {batchSelectedTracks.length > 0 && <button type="button" className="mml-batch-open" aria-label="일괄 설정" onClick={openBatchSettings}>설정</button>}
           </div>
-          {renderBatchPanel("sidebar")}
           {project.tracks.map((track: any, index: number) => (
             <div
               className={`mml-track-card ${track.id === selectedTrack.id ? "is-selected" : ""} ${batchTrackIds.includes(track.id) ? "is-batch-selected" : ""} ${trackReorder?.trackId === track.id ? "is-reordering" : ""} ${trackReorder?.targetId === track.id ? `is-drop-${trackReorder.placement}` : ""}`}
@@ -3011,7 +3018,7 @@ export default function MmlStudio({
               {playbackSourceRange ? <>{selectedTrack.sourceText.slice(0, playbackSourceRange.start)}<mark>{selectedTrack.sourceText.slice(playbackSourceRange.start, playbackSourceRange.end)}</mark>{selectedTrack.sourceText.slice(playbackSourceRange.end)}</> : selectedTrack.sourceText}
             </pre>
           ) : <textarea ref={editorRef} className={parseError && project.tracks[parseError.trackIndex]?.id === selectedTrack.id ? "has-error" : ""} spellCheck={false} readOnly={recordState !== "idle"} value={selectedTrack.sourceText} onChange={(event) => updateTrack(selectedTrack.id, { sourceText: event.target.value })} onSelect={(event) => syncSourceSelectionFromEditor(event.currentTarget)} onKeyUp={(event) => syncSourceSelectionFromEditor(event.currentTarget)} onPointerUp={(event) => syncSourceSelectionFromEditor(event.currentTarget)} onBlur={(event) => {
-            if ((event.relatedTarget as HTMLElement | null)?.closest(".mml-note-block")) return;
+            if ((event.relatedTarget as HTMLElement | null)?.closest(".mml-note-block, .mml-duration-menu")) return;
             clearSourceSelection();
           }} onContextMenu={(event) => {
             const editor = event.currentTarget;

@@ -420,6 +420,46 @@ export function transposeMmlTextRange(source, semitones, selectionStart, selecti
   return result;
 }
 
+export function transposeMmlTextRangeWithSelection(source, semitones, selectionStart, selectionEnd) {
+  const original = String(source ?? "");
+  const rangeStart = Math.max(0, Math.min(original.length, Math.trunc(Number(selectionStart) || 0)));
+  const rangeEnd = Math.max(rangeStart, Math.min(original.length, Math.trunc(Number(selectionEnd) || 0)));
+  const selectedNotes = parseTrack(original).notes.filter((note) => note.sourceStart < rangeEnd && note.sourceEnd > rangeStart);
+  if (!selectedNotes.length) {
+    transposeMmlTextRange(original, semitones, rangeStart, rangeEnd);
+    throw new Error("선택한 범위에 이조할 음표가 없습니다.");
+  }
+
+  const tokenStart = Math.min(...selectedNotes.map((note) => note.sourceStart));
+  const tokenEnd = Math.max(...selectedNotes.map((note) => note.sourceEnd));
+  let markerIndex = 0;
+  let startMarker = "";
+  let endMarker = "";
+  do {
+    startMarker = `/*__nyang_selection_start_${markerIndex}__*/`;
+    endMarker = `/*__nyang_selection_end_${markerIndex}__*/`;
+    markerIndex += 1;
+  } while (original.includes(startMarker) || original.includes(endMarker));
+
+  const marked = `${original.slice(0, tokenStart)}${startMarker}${original.slice(tokenStart, tokenEnd)}${endMarker}${original.slice(tokenEnd)}`;
+  const shiftedMarked = transposeMmlTextRange(
+    marked,
+    semitones,
+    tokenStart + startMarker.length,
+    tokenEnd + startMarker.length,
+  );
+  const markedStart = shiftedMarked.indexOf(startMarker);
+  const contentStart = markedStart + startMarker.length;
+  const markedEnd = shiftedMarked.indexOf(endMarker, contentStart);
+  if (markedStart < 0 || markedEnd < 0) throw new Error("이조한 선택 범위를 복원하지 못했습니다.");
+
+  return {
+    source: `${shiftedMarked.slice(0, markedStart)}${shiftedMarked.slice(contentStart, markedEnd)}${shiftedMarked.slice(markedEnd + endMarker.length)}`,
+    selectionStart: markedStart,
+    selectionEnd: markedEnd - startMarker.length,
+  };
+}
+
 function splitTracks(source) {
   const clean = stripComments(source);
   const trimmedStart = clean.search(/\S/);

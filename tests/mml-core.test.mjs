@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, transposeMmlText, transposeMmlTextRange, upsertTempoCommand } from "../app/mml/core.js";
+import { combineTracks, deleteTempoCommand, mergeTempoEvents, parseMmlDocument, parseTrack, serializeTrackEvents, sourceRangeAtTick, stripComments, tempoAtTick, tickToSeconds, transposeMmlText, transposeMmlTextRange, transposeMmlTextRangeWithSelection, upsertTempoCommand } from "../app/mml/core.js";
 import { allocateInputs, appendLegatoContinuation, armedInputStartAt, closeShortLegatoOverlaps, countInBeats, elapsedSecondsToTicks, liveInputTicks, liveNotesEndTick, nextMetronomeBeatAt, quantizationGridTicks, quantizedInputsEndTick, quantizeInputs, recordingInputEndAt, recordingStartPlan, recordingToTrackTexts, resolveRecordingStartTick, snapTickToGrid, syncedPlaybackStartAt } from "../app/mml/recording.js";
 import { applyMmlImport, createProject, importedMmlTitle, reorderProjectTrack, sanitizeProject, trackAudibilityPatch, trackMixStates } from "../app/mml/project.js";
 import { adjacentMeasureTick, anchoredScrollOffset, buildMetronomeEvents, buildTimelineGrid, clampTimelineZoom, followTimelineScroll, normalizedWheelSteps, zoomPreviewTransform } from "../app/mml/timeline.js";
@@ -471,6 +471,17 @@ test("transposes only notes in the selected MML range and restores the surroundi
   assert.deepEqual(after.notes.map(({ tick, duration, velocity }) => ({ tick, duration, velocity })), before.notes.map(({ tick, duration, velocity }) => ({ tick, duration, velocity })));
   assert.match(shifted, /\/\/ keep/);
   assert.match(shifted, /o5co4c/);
+});
+
+test("keeps the rewritten MML range selected after transposition", () => {
+  const source = "o4b8c8";
+  const first = transposeMmlTextRangeWithSelection(source, 1, source.indexOf("b8"), source.indexOf("b8") + 2);
+  assert.equal(first.source.slice(first.selectionStart, first.selectionEnd), "o5c8o4");
+  assert.deepEqual(parseTrack(first.source).notes.map((note) => note.midi), [72, 60]);
+
+  const second = transposeMmlTextRangeWithSelection(first.source, 1, first.selectionStart, first.selectionEnd);
+  assert.ok(second.selectionEnd > second.selectionStart);
+  assert.deepEqual(parseTrack(second.source).notes.map((note) => note.midi), [73, 60]);
 });
 
 test("transposes selected absolute notes and complete tied notes without touching neighbors", () => {

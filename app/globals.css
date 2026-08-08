@@ -51,7 +51,7 @@ button {
   transition: filter 90ms ease, transform 90ms ease, background-color 90ms ease, border-color 90ms ease, box-shadow 90ms ease;
 }
 
-button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):active {
+button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):not(.mml-track-reorder-handle):active {
   filter: brightness(0.94);
   transform: translateY(1px) scale(0.98);
 }
@@ -2224,7 +2224,7 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
   padding: 12px;
   border: 2px solid var(--ink);
   border-radius: 13px;
-  background: #f7f1e8;
+  background: #f0e8dc;
   box-shadow: 6px 6px 0 rgba(31, 37, 36, 0.25);
 }
 
@@ -2248,14 +2248,32 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
 }
 
 .mml-track-list-title {
-  min-height: 28px;
-  margin-bottom: 7px;
+  display: grid;
+  min-height: 24px;
+  grid-template-columns: 15px minmax(0, 1fr) auto;
+  column-gap: 3px;
+  align-items: center;
+  margin-bottom: 6px;
   padding: 0 4px;
   font-size: 12px;
 }
 
+.mml-track-list-title .mml-batch-open {
+  grid-column: 3;
+  width: 38px;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #f0e8dc;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .mml-track-select-all {
   display: inline-flex;
+  grid-column: 2;
   align-items: center;
   gap: 4px;
   color: var(--muted);
@@ -2276,7 +2294,16 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
   cursor: pointer;
 }
 
+.mml-track-select-all input {
+  width: 18px;
+  height: 18px;
+}
+
 .mml-track-select-all input:checked {
+  background: var(--ink);
+}
+
+.mml-track-select-all input:indeterminate {
   background: var(--ink);
 }
 
@@ -2305,6 +2332,21 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
 .mml-track-select-all input:checked::after {
   border-color: #fffdf7;
   margin-top: 1px;
+}
+
+.mml-track-select-all input:indeterminate::after {
+  display: block;
+  width: 8px;
+  height: 2px;
+  margin: 7px auto 0;
+  border: 0;
+  background: #fffdf7;
+  content: "";
+  transform: none;
+}
+
+.mml-track-select-label-compact {
+  display: none;
 }
 
 .mml-track-list-title button {
@@ -2339,10 +2381,10 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
 .mml-track-reorder-handle {
   position: absolute;
   top: 50%;
-  left: 3px;
+  left: 1px;
   z-index: 2;
   display: grid;
-  width: 15px;
+  width: 18px;
   height: 42px;
   place-items: center;
   padding: 0;
@@ -2362,6 +2404,8 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
 
 .mml-track-reorder-handle:active {
   cursor: grabbing;
+  filter: none;
+  transform: translateY(-50%);
 }
 
 .mml-track-reorder-handle:focus-visible {
@@ -2555,83 +2599,6 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
 
 .mml-track-card.is-batch-selected {
   background: #f7f0e5;
-}
-
-.mml-track-batch-panel {
-  display: grid;
-  min-height: 28px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 6px;
-  padding: 2px 3px 2px 6px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #f7f0e5;
-}
-
-.mml-track-batch-panel > div {
-  display: grid;
-  grid-template-columns: repeat(2, 38px);
-  width: auto;
-  align-items: center;
-  gap: 3px;
-}
-
-.mml-track-batch-panel strong {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mml-track-batch-panel button {
-  width: 38px;
-  height: 22px;
-  min-height: 22px;
-  padding: 0 5px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.mml-track-batch-panel button.mml-batch-open {
-  border-color: var(--line);
-  background: #f0e8dc;
-  color: var(--ink);
-}
-
-.mml-track-batch-panel button:not(.mml-batch-open) {
-  background: #fffdf7;
-}
-
-.mml-track-batch-panel label {
-  display: grid;
-  gap: 4px;
-}
-
-.mml-track-batch-panel select {
-  width: 100%;
-  height: 28px;
-  min-width: 0;
-  padding: 0 5px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
-  font-size: 9px;
-  font-weight: 900;
-}
-
-.mml-track-batch-panel.mml-track-batch-floating {
-  display: none;
 }
 
 .mml-track-add-button {
@@ -3117,13 +3084,6 @@ button:not(:disabled):not(.paw-note):not(.control-button):not(.brand-mark):activ
 
   .mml-track-select-all span {
     display: none;
-  }
-
-  .mml-track-batch-panel {
-    flex: 0 0 150px;
-    width: 150px;
-    margin: 0;
-    padding: 4px;
   }
 
   .mml-track-card {
@@ -5778,36 +5738,9 @@ summary:focus-visible {
     -webkit-overflow-scrolling: touch;
   }
 
-  .mml-studio .mml-track-batch-sidebar {
-    display: none;
-  }
-
-  .mml-studio .mml-track-batch-panel.mml-track-batch-floating {
-    position: absolute;
-    z-index: 73;
-    top: 96px;
-    right: 8px;
-    left: 162px;
-    display: grid;
-    width: auto;
-    max-width: 230px;
-    margin: 0;
-    box-shadow: 4px 4px 0 rgba(31, 37, 36, 0.18);
-  }
-
   .mml-studio .mml-track-card {
     min-height: 54px;
     margin-bottom: 4px;
-  }
-
-  .mml-studio .mml-track-batch-panel {
-    gap: 4px;
-    margin-bottom: 4px;
-    padding: 2px 3px 2px 5px;
-  }
-
-  .mml-studio .mml-track-batch-panel select {
-    height: 24px;
   }
 
   .mml-studio .mml-quick-settings,
@@ -5892,6 +5825,23 @@ summary:focus-visible {
     border-right: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
   }
 
+  .mml-studio .mml-track-list-title.has-selection {
+    width: 92px;
+    flex-basis: 92px;
+    grid-template-columns: 18px minmax(0, 1fr) 32px;
+    column-gap: 2px;
+    padding: 0 6px;
+  }
+
+  .mml-studio .mml-track-list-title .mml-batch-open {
+    width: 32px;
+    grid-column: 3;
+    grid-row: 1;
+    place-self: center;
+    padding-inline: 2px;
+    font-size: 9px;
+  }
+
   .mml-studio .mml-main-grid > .mml-track-collapse {
     position: static;
     z-index: 19;
@@ -5922,10 +5872,6 @@ summary:focus-visible {
     white-space: nowrap;
   }
 
-  .mml-studio .mml-track-list-title strong {
-    display: none;
-  }
-
   .mml-studio .mml-track-list-title .mml-track-select-all {
     display: contents;
     margin: 0;
@@ -5940,7 +5886,7 @@ summary:focus-visible {
     place-self: center;
   }
 
-  .mml-studio .mml-track-list-title .mml-track-select-all span {
+  .mml-studio .mml-track-list-title .mml-track-select-all > .mml-track-select-label {
     display: block;
     grid-column: 2;
     grid-row: 1;
@@ -5951,6 +5897,14 @@ summary:focus-visible {
     line-height: 1;
     text-overflow: clip;
     white-space: nowrap;
+  }
+
+  .mml-studio .mml-track-list-title .mml-track-select-all .mml-track-select-label-wide {
+    display: none;
+  }
+
+  .mml-studio .mml-track-list-title .mml-track-select-all .mml-track-select-label-compact {
+    display: block;
   }
 
   .mml-studio .mml-work-area {
@@ -5971,8 +5925,8 @@ summary:focus-visible {
   .mml-studio .mml-track-reorder-handle {
     position: absolute;
     top: 50%;
-    left: 2px;
-    width: 15px;
+    left: 0;
+    width: 18px;
     height: 40px;
     transform: translateY(-50%);
   }
@@ -5998,14 +5952,6 @@ summary:focus-visible {
     display: none;
     width: 0;
     height: 0;
-  }
-
-  .mml-studio .mml-track-batch-panel.mml-track-batch-floating {
-    top: 144px;
-    right: 8px;
-    left: 8px;
-    width: auto;
-    max-width: 220px;
   }
 
   .mml-studio .mml-quick-settings,
